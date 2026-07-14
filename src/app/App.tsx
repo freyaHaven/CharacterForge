@@ -41,7 +41,15 @@ import {
 } from '../features/ability-scores/standardArrayDraft'
 import { validatePointBuyAssignment } from '../rules/point-buy'
 import { needsEditionChangeSpeciesConfirmation } from '../rules/species/speciesRules'
+import { buildCharacterForSave } from './buildCharacterForSave'
 import { canSaveCharacter } from './characterSavePolicy'
+import {
+  formatIncompleteRequiredStepsMessage,
+  getFinishPolicyResult,
+} from './characterFinishPolicy'
+import { buildReviewSummaries } from './reviewSummary'
+import { useReviewSpeciesDisplay } from './useReviewSpeciesDisplay'
+import { ReviewStep } from './wizard/steps/ReviewStep'
 import { CharacterWizard } from './wizard/CharacterWizard'
 import { DEFAULT_WIZARD_UI_STATE } from './wizard/steps'
 import { BasicsStep } from './wizard/steps/BasicsStep'
@@ -80,6 +88,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
   )
   const [basicsTouched, setBasicsTouched] = useState(false)
   const [abilityScoresTouched, setAbilityScoresTouched] = useState(false)
+  const [finishMessage, setFinishMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -171,6 +180,34 @@ export default function App({ randomSource = Math.random }: AppProps) {
     pointBuyValidation,
     rolledValidation,
   })
+  const speciesReviewDisplay = useReviewSpeciesDisplay(
+    speciesCatalog,
+    character.editionId,
+    character.species,
+    speciesDraft,
+  )
+  const finishPolicy = getFinishPolicyResult(stepStatuses)
+  const reviewSummaries = buildReviewSummaries(
+    {
+      character,
+      speciesDraft,
+      speciesDisplay: speciesReviewDisplay,
+      standardArrayValidation,
+      pointBuyValidation,
+      rolledValidation,
+    },
+    {
+      basics: stepStatuses.basics,
+      species: stepStatuses.species,
+      class: stepStatuses.class,
+      'ability-scores': stepStatuses['ability-scores'],
+      background: stepStatuses.background,
+      equipment: stepStatuses.equipment,
+    },
+  )
+  const finishBlockedMessage = formatIncompleteRequiredStepsMessage(
+    finishPolicy.canFinish ? [] : finishPolicy.incompleteRequiredSteps,
+  )
 
   function markAbilityScoresTouched() {
     setAbilityScoresTouched(true)
@@ -347,7 +384,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     setPendingEditionId(null)
   }
 
-  async function handleSave() {
+  async function handleSaveDraft() {
     if (!canSaveCharacterState) {
       setSaveMessage(
         speciesDraftIncomplete
@@ -361,34 +398,43 @@ export default function App({ randomSource = Math.random }: AppProps) {
       return
     }
 
-    const characterToSave = (() => {
-      if (
-        character.creationMethod === 'standard-array' &&
-        standardArrayDraft !== null
-      ) {
-        return {
-          ...character,
-          abilityScores: standardArrayDraftToAbilityScores(standardArrayDraft),
-        }
-      }
-      if (character.creationMethod === 'point-buy' && pointBuyDraft !== null) {
-        return {
-          ...character,
-          abilityScores: { ...pointBuyDraft },
-        }
-      }
-      if (character.creationMethod === 'rolled' && rolledDraft !== null) {
-        return {
-          ...character,
-          abilityScores: rolledDraftToAbilityScores(rolledDraft),
-        }
-      }
-      return character
-    })()
+    const characterToSave = buildCharacterForSave({
+      character,
+      standardArrayDraft,
+      pointBuyDraft,
+      rolledDraft,
+    })
 
     await repository.save(characterToSave)
     setCharacter(characterToSave)
     setSaveMessage('Character saved.')
+    setFinishMessage(null)
+  }
+
+  async function handleFinish() {
+    if (!finishPolicy.canFinish) {
+      setFinishMessage(finishBlockedMessage)
+      return
+    }
+
+    if (!canSaveCharacterState) {
+      setFinishMessage(
+        'Fix the remaining validation issues before finishing your character.',
+      )
+      return
+    }
+
+    const characterToSave = buildCharacterForSave({
+      character,
+      standardArrayDraft,
+      pointBuyDraft,
+      rolledDraft,
+    })
+
+    await repository.save(characterToSave)
+    setCharacter(characterToSave)
+    setFinishMessage('Character complete.')
+    setSaveMessage(null)
   }
 
   function handleCreationMethodChange(
@@ -506,6 +552,24 @@ export default function App({ randomSource = Math.random }: AppProps) {
           class: <ClassStep />,
           background: <BackgroundStep />,
           equipment: <EquipmentStep />,
+          review: (
+            <ReviewStep
+              stepStatuses={{
+                basics: stepStatuses.basics,
+                species: stepStatuses.species,
+                class: stepStatuses.class,
+                'ability-scores': stepStatuses['ability-scores'],
+                background: stepStatuses.background,
+                equipment: stepStatuses.equipment,
+              }}
+              summaries={reviewSummaries}
+              finishPolicy={finishPolicy}
+              finishBlockedMessage={finishBlockedMessage}
+              finishMessage={finishMessage}
+              onEditStep={setActiveStepId}
+              onFinish={() => void handleFinish()}
+            />
+          ),
         }}
       />
 
@@ -519,9 +583,9 @@ export default function App({ randomSource = Math.random }: AppProps) {
         <button
           type="button"
           disabled={!canSaveCharacterState}
-          onClick={() => void handleSave()}
+          onClick={() => void handleSaveDraft()}
         >
-          Save character
+          Save draft
         </button>
         {saveMessage !== null ? <p className="status">{saveMessage}</p> : null}
         {!canSaveCharacterState ? (

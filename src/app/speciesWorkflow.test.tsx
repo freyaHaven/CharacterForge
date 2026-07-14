@@ -117,7 +117,7 @@ describe('Species workflow in App', () => {
   it('saves only the stable species selection for Dwarf', async () => {
     const { user } = await renderLoadedApp()
 
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -144,7 +144,7 @@ describe('Species workflow in App', () => {
       await screen.findByText(/complete required choices to confirm/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /save character/i }),
+      screen.getByRole('button', { name: /save draft/i }),
     ).toBeDisabled()
     expect(saveMock).not.toHaveBeenCalled()
   })
@@ -189,7 +189,7 @@ describe('Species workflow in App', () => {
     expectSelectedSpecies('Dragonborn')
     expect(getAncestrySelect()).toHaveValue('red')
 
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -231,7 +231,7 @@ describe('Species workflow in App', () => {
     await openSpeciesStep(user)
 
     await user.selectOptions(getAncestrySelect(), 'silver')
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({

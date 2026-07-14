@@ -83,13 +83,13 @@ describe('Rolled workflow in App', () => {
     const { user } = await renderLoadedApp()
     await switchToRolled(user)
 
-    expect(screen.getByRole('button', { name: /save character/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
 
     await useManualRolls(user, [15, 14, 13, 12, 10, 8])
-    expect(screen.getByRole('button', { name: /save character/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
 
     await assignDefaultRolledPool(user)
-    expect(screen.getByRole('button', { name: /save character/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
   })
 
   it('does not overwrite numeric scores when switching to rolled before completion', async () => {
@@ -125,7 +125,7 @@ describe('Rolled workflow in App', () => {
 
     await useManualRolls(user, [15, 14, 13, 12, 10, 8])
     await assignDefaultRolledPool(user)
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledTimes(1)
@@ -160,7 +160,7 @@ describe('Rolled workflow in App', () => {
     expect(getAbilityFieldSelect(screen, 'Strength')).toHaveDisplayValue(
       ROLLED_UNASSIGNED_LABEL,
     )
-    expect(screen.getByRole('button', { name: /save character/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
   })
 
   it('generates all six rolls before playback and can skip all animations', async () => {

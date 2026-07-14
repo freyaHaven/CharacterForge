@@ -153,7 +153,7 @@ describe('Ability Scores wizard integration', () => {
     await goToAbilityScoresStep(user, screen)
 
     expect(
-      screen.getByRole('button', { name: /save character/i }),
+      screen.getByRole('button', { name: /save draft/i }),
     ).toBeEnabled()
     expect(getWizardStepButton(screen, 'Ability Scores')).toHaveAccessibleName(
       /complete/i,
@@ -167,7 +167,7 @@ describe('Ability Scores wizard integration', () => {
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(

@@ -54,7 +54,7 @@ describe('Standard Array workflow in App', () => {
     const { user } = await renderLoadedApp()
     await switchToStandardArray(user)
 
-    expect(screen.getByRole('button', { name: /save character/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
     expect(
       screen.getByText(/complete the standard array assignment before saving/i),
     ).toBeInTheDocument()
@@ -68,7 +68,7 @@ describe('Standard Array workflow in App', () => {
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
 
-    expect(screen.getByRole('button', { name: /save character/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
   })
 
   it('does not overwrite numeric scores when switching from manual to standard array', async () => {
@@ -104,7 +104,7 @@ describe('Standard Array workflow in App', () => {
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledTimes(1)
@@ -149,11 +149,11 @@ describe('Standard Array workflow in App', () => {
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
-    expect(screen.getByRole('button', { name: /save character/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
 
     await user.click(screen.getByRole('button', { name: /clear assignments/i }))
 
-    expect(screen.getByRole('button', { name: /save character/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
     expect(screen.getByText(/remaining scores:/i)).toHaveTextContent(
       '15, 14, 13, 12, 10, 8',
     )

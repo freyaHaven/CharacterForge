@@ -134,9 +134,9 @@ describe('Point Buy workflow in App', () => {
     expect(
       screen.getByText(/you still have 27 unspent points/i),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /save character/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: /save character/i }))
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
