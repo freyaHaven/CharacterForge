@@ -16,6 +16,7 @@ function createValidCharacter(): Character {
       wisdom: 10,
       charisma: 8,
     },
+    species: null,
   }
 }
 
@@ -66,6 +67,34 @@ describe('isCharacter', () => {
   it('returns false when abilityScores is null', () => {
     expect(
       isCharacter({ ...createValidCharacter(), abilityScores: null }),
+    ).toBe(false)
+  })
+
+  it('returns true when species is null', () => {
+    expect(isCharacter({ ...createValidCharacter(), species: null })).toBe(true)
+  })
+
+  it('returns true for a valid species selection', () => {
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        species: { speciesId: 'srd-2024:dwarf', choices: {} },
+      }),
+    ).toBe(true)
+  })
+
+  it('returns false when species is missing', () => {
+    const { species: _species, ...withoutSpecies } = createValidCharacter()
+
+    expect(isCharacter(withoutSpecies)).toBe(false)
+  })
+
+  it('returns false for an invalid species selection', () => {
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        species: { speciesId: '', choices: {} },
+      }),
     ).toBe(false)
   })
 })

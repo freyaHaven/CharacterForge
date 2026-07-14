@@ -1,9 +1,10 @@
 import type {
-  AbilityScores,
   Character,
   CharacterCreationMethod,
   EditionId,
 } from '../types'
+import { isSpeciesSelection } from '../species/isSpeciesSelection'
+import type { AbilityScores } from '../types'
 
 const ABILITY_KEYS: (keyof AbilityScores)[] = [
   'strength',
@@ -42,6 +43,10 @@ function isAbilityScores(value: unknown): value is AbilityScores {
   )
 }
 
+function isSpecies(value: unknown): boolean {
+  return value === null || isSpeciesSelection(value)
+}
+
 export function isCharacter(value: unknown): value is Character {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -55,6 +60,7 @@ export function isCharacter(value: unknown): value is Character {
     typeof candidate.name === 'string' &&
     isEditionId(candidate.editionId) &&
     isCharacterCreationMethod(candidate.creationMethod) &&
-    isAbilityScores(candidate.abilityScores)
+    isAbilityScores(candidate.abilityScores) &&
+    isSpecies(candidate.species)
   )
 }

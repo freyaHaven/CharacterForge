@@ -16,6 +16,7 @@ function createTestCharacter(): Character {
       wisdom: 10,
       charisma: 8,
     },
+    species: null,
   }
 }
 
@@ -67,6 +68,145 @@ describe('createLocalStorageCharacterRepository', () => {
     const loaded = await repository.load(character.id)
 
     expect(loaded).toEqual(character)
+  })
+
+  it('persists characters in a versioned envelope', async () => {
+    const repository = createLocalStorageCharacterRepository()
+    const character = createTestCharacter()
+
+    await repository.save(character)
+
+    expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
+      schemaVersion: 2,
+      character,
+    })
+  })
+
+  it('migrates a schema v1 save on load', async () => {
+    const v1Character = {
+      id: 'char-1',
+      name: 'Aldric',
+      editionId: 'srd-2014' as const,
+      creationMethod: 'manual' as const,
+      abilityScores: createTestCharacter().abilityScores,
+    }
+    localStorage.setItem(
+      'characterforge:character:char-1',
+      JSON.stringify({ schemaVersion: 1, character: v1Character }),
+    )
+
+    const repository = createLocalStorageCharacterRepository()
+    const loaded = await repository.load('char-1')
+
+    expect(loaded).toEqual({ ...v1Character, species: null })
+  })
+
+  it('migrates a legacy unversioned save on load', async () => {
+    const character = {
+      id: 'char-1',
+      name: 'Aldric',
+      editionId: 'srd-2014' as const,
+      creationMethod: 'manual' as const,
+      abilityScores: createTestCharacter().abilityScores,
+    }
+    localStorage.setItem(
+      'characterforge:character:char-1',
+      JSON.stringify(character),
+    )
+
+    const repository = createLocalStorageCharacterRepository()
+    const loaded = await repository.load('char-1')
+
+    expect(loaded).toEqual({ ...character, species: null })
+  })
+
+  it('saves and reloads a selected species', async () => {
+    const repository = createLocalStorageCharacterRepository()
+    const character = {
+      ...createTestCharacter(),
+      editionId: 'srd-2024' as const,
+      species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    }
+
+    await repository.save(character)
+    const loaded = await repository.load(character.id)
+
+    expect(loaded).toEqual(character)
+  })
+
+  it('saves and reloads a Dragonborn ancestry id', async () => {
+    const repository = createLocalStorageCharacterRepository()
+    const character = {
+      ...createTestCharacter(),
+      editionId: 'srd-2024' as const,
+      species: {
+        speciesId: 'srd-2024:dragonborn',
+        choices: { 'draconic-ancestry': 'red' },
+      },
+    }
+
+    await repository.save(character)
+    const loaded = await repository.load(character.id)
+
+    expect(loaded?.species).toEqual({
+      speciesId: 'srd-2024:dragonborn',
+      choices: { 'draconic-ancestry': 'red' },
+    })
+  })
+
+  it('preserves ability scores when loading a legacy save', async () => {
+    const character = {
+      ...createTestCharacter(),
+      creationMethod: 'rolled' as const,
+      abilityScores: {
+        strength: 18,
+        dexterity: 7,
+        constitution: 16,
+        intelligence: 9,
+        wisdom: 11,
+        charisma: 14,
+      },
+    }
+    localStorage.setItem(
+      'characterforge:character:char-1',
+      JSON.stringify(character),
+    )
+
+    const repository = createLocalStorageCharacterRepository()
+    const loaded = await repository.load('char-1')
+
+    expect(loaded?.abilityScores).toEqual(character.abilityScores)
+  })
+
+  it('preserves creation method when loading a legacy save', async () => {
+    const character = {
+      ...createTestCharacter(),
+      creationMethod: 'standard-array' as const,
+    }
+    localStorage.setItem(
+      'characterforge:character:char-1',
+      JSON.stringify(character),
+    )
+
+    const repository = createLocalStorageCharacterRepository()
+    const loaded = await repository.load('char-1')
+
+    expect(loaded?.creationMethod).toBe('standard-array')
+  })
+
+  it('returns null for an unsupported future schema version', async () => {
+    localStorage.setItem(
+      'characterforge:character:char-1',
+      JSON.stringify({
+        schemaVersion: 99,
+        character: createTestCharacter(),
+      }),
+    )
+
+    const repository = createLocalStorageCharacterRepository()
+    const loaded = await repository.load('char-1')
+
+    expect(loaded).toBeNull()
   })
 
   it('preserves edition id after save and reload', async () => {

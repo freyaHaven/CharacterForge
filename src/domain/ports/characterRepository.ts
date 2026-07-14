@@ -3,11 +3,8 @@ import type { Character } from '../types'
 /**
  * Persistence contract for characters.
  *
- * Implementations live in `src/adapters/`.
- *
- * TODO(storage): Before real character data ships, persist a versioned envelope
- * `{ schemaVersion, character }` and migrate older saves instead of rejecting
- * them. See `src/adapters/STORAGE.md`.
+ * Implementations live in `src/adapters/` and persist a versioned envelope
+ * `{ schemaVersion, character }`. See `src/adapters/STORAGE.md`.
  */
 export interface CharacterRepository {
   save(character: Character): Promise<void>

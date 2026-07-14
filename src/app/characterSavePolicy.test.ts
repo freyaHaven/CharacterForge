@@ -13,6 +13,7 @@ describe('canSaveCharacter', () => {
           remaining: -27,
         },
         rolledValidation: null,
+        speciesDraftIncomplete: false,
       }),
     ).toBe(false)
   })
@@ -27,6 +28,7 @@ describe('canSaveCharacter', () => {
           remaining: 27,
         },
         rolledValidation: null,
+        speciesDraftIncomplete: false,
       }),
     ).toBe(true)
   })
@@ -40,6 +42,7 @@ describe('canSaveCharacter', () => {
           valid: false,
           issues: [{ code: 'unassigned-ability', ability: 'strength' }],
         },
+        speciesDraftIncomplete: false,
       }),
     ).toBe(false)
   })
@@ -50,7 +53,19 @@ describe('canSaveCharacter', () => {
         standardArrayValidation: null,
         pointBuyValidation: null,
         rolledValidation: { valid: true },
+        speciesDraftIncomplete: false,
       }),
     ).toBe(true)
+  })
+
+  it('blocks saving while a species draft is incomplete', () => {
+    expect(
+      canSaveCharacter('manual', {
+        standardArrayValidation: null,
+        pointBuyValidation: null,
+        rolledValidation: null,
+        speciesDraftIncomplete: true,
+      }),
+    ).toBe(false)
   })
 })

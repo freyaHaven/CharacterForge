@@ -1,4 +1,21 @@
-export type EditionId = 'srd-2014' | 'srd-2024'
+import type { EditionId } from './edition'
+import type { SpeciesSelection } from './species/types'
+
+export type { EditionId } from './edition'
+export type {
+  ConditionId,
+  ContentSource,
+  CreatureSize,
+  DamageTypeId,
+  LicenceId,
+  MovementSpeed,
+  SpeciesChoice,
+  SpeciesChoiceOption,
+  SpeciesDefinition,
+  SpeciesEffect,
+  SpeciesSelection,
+  SpeciesTrait,
+} from './species/types'
 
 export type CharacterCreationMethod =
   | 'manual'
@@ -21,4 +38,5 @@ export type Character = {
   editionId: EditionId
   creationMethod: CharacterCreationMethod
   abilityScores: AbilityScores
+  species: SpeciesSelection | null
 }

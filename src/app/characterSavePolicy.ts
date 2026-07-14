@@ -7,12 +7,17 @@ type SaveValidationState = {
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
+  speciesDraftIncomplete: boolean
 }
 
 export function canSaveCharacter(
   creationMethod: CharacterCreationMethod,
   validation: SaveValidationState,
 ): boolean {
+  if (validation.speciesDraftIncomplete) {
+    return false
+  }
+
   if (creationMethod === 'standard-array') {
     return validation.standardArrayValidation?.valid === true
   }

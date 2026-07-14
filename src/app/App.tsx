@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
-import type { AbilityScores, Character } from '../domain/types'
+import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
+import type { AbilityScores, Character, EditionId } from '../domain/types'
 import { AbilityScoresForm } from '../features/ability-scores/AbilityScoresForm'
+import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
+import { SpeciesPicker } from '../features/species/SpeciesPicker'
+import {
+  isSpeciesDraftIncomplete,
+  type SpeciesSelectionDraft,
+} from '../features/species/speciesSelectionDraft'
 import {
   adjustPointBuyDraftScore,
   createMinimumPointBuyDraft,
@@ -25,6 +32,7 @@ import {
   validateStandardArrayDraft,
 } from '../features/ability-scores/standardArrayDraft'
 import { validatePointBuyAssignment } from '../rules/point-buy'
+import { needsEditionChangeSpeciesConfirmation } from '../rules/species/speciesRules'
 import { canSaveCharacter } from './characterSavePolicy'
 import './app.css'
 
@@ -45,9 +53,11 @@ const defaultCharacter: Character = {
   editionId: 'srd-2014',
   creationMethod: 'manual',
   abilityScores: defaultAbilityScores,
+  species: null,
 }
 
 const repository = createLocalStorageCharacterRepository()
+const speciesCatalog = createBundledSpeciesCatalog()
 
 type AppProps = {
   randomSource?: () => number
@@ -64,6 +74,12 @@ export default function App({ randomSource = Math.random }: AppProps) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [pendingEditionId, setPendingEditionId] = useState<EditionId | null>(
+    null,
+  )
+  const [speciesDraft, setSpeciesDraft] = useState<SpeciesSelectionDraft | null>(
+    null,
+  )
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -86,6 +102,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
       const stored = await repository.load(CHARACTER_ID)
       if (isActive && stored !== null) {
         setCharacter(stored)
+        setSpeciesDraft(null)
         if (stored.creationMethod === 'standard-array') {
           setStandardArrayDraft(
             abilityScoresToStandardArrayDraft(stored.abilityScores),
@@ -126,10 +143,15 @@ export default function App({ randomSource = Math.random }: AppProps) {
     character.creationMethod === 'rolled' && rolledDraft !== null
       ? validateRolledDraft(rolledDraft)
       : null
+  const speciesDraftIncomplete = isSpeciesDraftIncomplete(
+    speciesDraft,
+    character.species,
+  )
   const canSaveCharacterState = canSaveCharacter(character.creationMethod, {
     standardArrayValidation,
     pointBuyValidation,
     rolledValidation,
+    speciesDraftIncomplete,
   })
 
   function updateAbilityScore(ability: keyof AbilityScores, value: number) {
@@ -256,14 +278,56 @@ export default function App({ randomSource = Math.random }: AppProps) {
     setSaveMessage(null)
   }
 
+  async function handleEditionChange(nextEditionId: EditionId) {
+    if (nextEditionId === character.editionId) {
+      return
+    }
+
+    const needsConfirmation = await needsEditionChangeSpeciesConfirmation(
+      character.species,
+      nextEditionId,
+      (speciesId) => speciesCatalog.getSpecies(speciesId),
+    )
+
+    if (needsConfirmation) {
+      setPendingEditionId(nextEditionId)
+      return
+    }
+
+    setCharacter((current) => ({ ...current, editionId: nextEditionId }))
+    setSpeciesDraft(null)
+    setSaveMessage(null)
+  }
+
+  function confirmEditionChange() {
+    if (pendingEditionId === null) {
+      return
+    }
+
+    setCharacter((current) => ({
+      ...current,
+      editionId: pendingEditionId,
+      species: null,
+    }))
+    setSpeciesDraft(null)
+    setPendingEditionId(null)
+    setSaveMessage(null)
+  }
+
+  function cancelEditionChange() {
+    setPendingEditionId(null)
+  }
+
   async function handleSave() {
     if (!canSaveCharacterState) {
       setSaveMessage(
-        character.creationMethod === 'point-buy'
-          ? 'Fix the point-buy assignment before saving.'
-          : character.creationMethod === 'rolled'
-            ? 'Complete the rolled assignment before saving.'
-            : 'Complete the standard array assignment before saving.',
+        speciesDraftIncomplete
+          ? 'Complete the species selection before saving.'
+          : character.creationMethod === 'point-buy'
+            ? 'Fix the point-buy assignment before saving.'
+            : character.creationMethod === 'rolled'
+              ? 'Complete the rolled assignment before saving.'
+              : 'Complete the standard array assignment before saving.',
       )
       return
     }
@@ -306,7 +370,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     <main className="app">
       <header>
         <h1>CharacterForge</h1>
-        <p>Create a D&amp;D 5e character — ability scores first.</p>
+        <p>Create a D&amp;D 5e character — ability scores and species.</p>
       </header>
 
       <AbilityScoresForm
@@ -323,8 +387,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
           setSaveMessage(null)
         }}
         onEditionChange={(editionId) => {
-          setCharacter((current) => ({ ...current, editionId }))
-          setSaveMessage(null)
+          void handleEditionChange(editionId)
         }}
         onCreationMethodChange={(creationMethod) => {
           setCharacter((current) => ({ ...current, creationMethod }))
@@ -378,6 +441,24 @@ export default function App({ randomSource = Math.random }: AppProps) {
         randomSource={randomSource}
       />
 
+      <SpeciesPicker
+        editionId={character.editionId}
+        committedSelection={character.species}
+        draft={speciesDraft}
+        catalog={speciesCatalog}
+        onDraftChange={setSpeciesDraft}
+        onCommittedSelectionChange={(species) => {
+          setCharacter((current) => ({ ...current, species }))
+          setSaveMessage(null)
+        }}
+      />
+
+      <EditionChangeDialog
+        open={pendingEditionId !== null}
+        onConfirm={confirmEditionChange}
+        onCancel={cancelEditionChange}
+      />
+
       <div className="actions">
         <button
           type="button"
@@ -389,11 +470,13 @@ export default function App({ randomSource = Math.random }: AppProps) {
         {saveMessage !== null ? <p className="status">{saveMessage}</p> : null}
         {!canSaveCharacterState ? (
           <p className="status">
-            {character.creationMethod === 'point-buy'
-              ? 'Fix the point-buy assignment before saving.'
-              : character.creationMethod === 'rolled'
-                ? 'Complete the rolled assignment before saving.'
-                : 'Complete the standard array assignment before saving.'}
+            {speciesDraftIncomplete
+              ? 'Complete the species selection before saving.'
+              : character.creationMethod === 'point-buy'
+                ? 'Fix the point-buy assignment before saving.'
+                : character.creationMethod === 'rolled'
+                  ? 'Complete the rolled assignment before saving.'
+                  : 'Complete the standard array assignment before saving.'}
           </p>
         ) : null}
       </div>
