@@ -38,6 +38,11 @@ import {
 import { validatePointBuyAssignment } from '../rules/point-buy'
 import { needsEditionChangeSpeciesConfirmation } from '../rules/species/speciesRules'
 import { canSaveCharacter } from './characterSavePolicy'
+import { CharacterWizard } from './wizard/CharacterWizard'
+import { DEFAULT_WIZARD_UI_STATE } from './wizard/steps'
+import { BasicsStep } from './wizard/steps/BasicsStep'
+import { getAllStepStatuses } from './wizard/stepStatus'
+import type { WizardStepId } from './wizard/types'
 import './app.css'
 
 const repository = createLocalStorageCharacterRepository()
@@ -66,6 +71,11 @@ export default function App({ randomSource = Math.random }: AppProps) {
   const [speciesDraft, setSpeciesDraft] = useState<SpeciesSelectionDraft | null>(
     null,
   )
+  const [activeStepId, setActiveStepId] = useState<WizardStepId>(
+    DEFAULT_WIZARD_UI_STATE.activeStepId,
+  )
+  const [basicsTouched, setBasicsTouched] = useState(false)
+  const [abilityScoresTouched, setAbilityScoresTouched] = useState(false)
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -138,6 +148,17 @@ export default function App({ randomSource = Math.random }: AppProps) {
     pointBuyValidation,
     rolledValidation,
     speciesDraftIncomplete,
+  })
+  const stepStatuses = getAllStepStatuses({
+    character,
+    basicsTouched,
+    abilityScoresTouched,
+    speciesDraft,
+    speciesDraftValidation: null,
+    committedSpeciesValid: character.species !== null,
+    standardArrayValidation,
+    pointBuyValidation,
+    rolledValidation,
   })
 
   function updateAbilityScore(ability: keyof AbilityScores, value: number) {
@@ -359,23 +380,37 @@ export default function App({ randomSource = Math.random }: AppProps) {
         <p>Create a D&amp;D 5e character — ability scores and species.</p>
       </header>
 
+      <CharacterWizard
+        activeStepId={activeStepId}
+        stepStatuses={stepStatuses}
+        onStepChange={setActiveStepId}
+        stepContent={{
+          basics: (
+            <BasicsStep
+              name={character.name}
+              editionId={character.editionId}
+              onNameChange={(name) => {
+                setCharacter((current) => ({ ...current, name }))
+                setSaveMessage(null)
+              }}
+              onEditionChange={(editionId) => {
+                void handleEditionChange(editionId)
+              }}
+              onBasicsTouched={() => setBasicsTouched(true)}
+            />
+          ),
+        }}
+      />
+
       <AbilityScoresForm
-        name={character.name}
-        editionId={character.editionId}
         creationMethod={character.creationMethod}
         abilityScores={character.abilityScores}
         standardArrayDraft={standardArrayDraft}
         pointBuyDraft={pointBuyDraft}
         rolledDraft={rolledDraft}
         prefersReducedMotion={prefersReducedMotion}
-        onNameChange={(name) => {
-          setCharacter((current) => ({ ...current, name }))
-          setSaveMessage(null)
-        }}
-        onEditionChange={(editionId) => {
-          void handleEditionChange(editionId)
-        }}
         onCreationMethodChange={(creationMethod) => {
+          setAbilityScoresTouched(true)
           setCharacter((current) => ({ ...current, creationMethod }))
           setSaveMessage(null)
 
@@ -407,7 +442,10 @@ export default function App({ randomSource = Math.random }: AppProps) {
           setPointBuyDraft(null)
           setRolledDraft(null)
         }}
-        onAbilityScoreChange={updateAbilityScore}
+        onAbilityScoreChange={(ability, value) => {
+          setAbilityScoresTouched(true)
+          updateAbilityScore(ability, value)
+        }}
         onStandardArrayDraftChange={updateStandardArrayDraft}
         onClearStandardArray={() => {
           replaceStandardArrayDraft(createEmptyStandardArrayDraft())

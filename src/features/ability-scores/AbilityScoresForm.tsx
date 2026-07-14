@@ -1,10 +1,8 @@
 import { getAbilityModifier } from '../../domain/abilities'
 import { CREATION_METHOD_OPTIONS } from '../creation-method/creationMethodOptions'
-import { EDITION_OPTIONS } from '../edition-picker/editionOptions'
 import type {
   AbilityScores,
   CharacterCreationMethod,
-  EditionId,
 } from '../../domain/types'
 import { formatPointBuyValidation } from './formatPointBuyValidation'
 import { formatRolledValidation } from './formatRolledValidation'
@@ -47,16 +45,12 @@ const ABILITY_LABELS: { key: keyof AbilityScores; label: string }[] = [
 ]
 
 type AbilityScoresFormProps = {
-  name: string
-  editionId: EditionId
   creationMethod: CharacterCreationMethod
   abilityScores: AbilityScores
   standardArrayDraft: StandardArrayDraftScores | null
   pointBuyDraft: PointBuyDraftScores | null
   rolledDraft: RolledDraft | null
   prefersReducedMotion: boolean
-  onNameChange: (name: string) => void
-  onEditionChange: (editionId: EditionId) => void
   onCreationMethodChange: (creationMethod: CharacterCreationMethod) => void
   onAbilityScoreChange: (ability: keyof AbilityScores, value: number) => void
   onStandardArrayDraftChange: (
@@ -84,16 +78,12 @@ function formatModifier(modifier: number): string {
 }
 
 export function AbilityScoresForm({
-  name,
-  editionId,
   creationMethod,
   abilityScores,
   standardArrayDraft,
   pointBuyDraft,
   rolledDraft,
   prefersReducedMotion,
-  onNameChange,
-  onEditionChange,
   onCreationMethodChange,
   onAbilityScoreChange,
   onStandardArrayDraftChange,
@@ -145,29 +135,6 @@ export function AbilityScoresForm({
 
   return (
     <section className="ability-scores-form">
-      <label className="field">
-        <span>Character name</span>
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => onNameChange(event.target.value)}
-        />
-      </label>
-
-      <label className="field">
-        <span>Rules edition</span>
-        <select
-          value={editionId}
-          onChange={(event) => onEditionChange(event.target.value as EditionId)}
-        >
-          {EDITION_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <label className="field">
         <span>Ability score method</span>
         <select

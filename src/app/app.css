@@ -1,3 +1,8 @@
+.character-basics-fields {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .app {
   padding: 2rem 1.5rem 3rem;
   text-align: left;

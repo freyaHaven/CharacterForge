@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { goToNextStep, goToPreviousStep } from './navigation'
 import type { StepStatus, WizardStepId } from './types'
 import { WizardNav } from './WizardNav'
@@ -8,12 +9,14 @@ export type CharacterWizardProps = {
   activeStepId: WizardStepId
   stepStatuses: Record<WizardStepId, StepStatus>
   onStepChange: (stepId: WizardStepId) => void
+  stepContent?: Partial<Record<WizardStepId, ReactNode>>
 }
 
 export function CharacterWizard({
   activeStepId,
   stepStatuses,
   onStepChange,
+  stepContent,
 }: CharacterWizardProps) {
   const previousStepId = goToPreviousStep(activeStepId)
   const nextStepId = goToNextStep(activeStepId)
@@ -27,7 +30,10 @@ export function CharacterWizard({
       />
 
       <div className="character-wizard__content">
-        <WizardStepPanel activeStepId={activeStepId} />
+        <WizardStepPanel
+          activeStepId={activeStepId}
+          stepContent={stepContent}
+        />
 
         <div className="character-wizard__footer">
           <button

@@ -86,7 +86,7 @@ async function renderFreshApp() {
 }
 
 function getEditionSelect() {
-  return screen.getAllByRole('combobox')[0]!
+  return screen.getByRole('combobox', { name: /rules edition/i })
 }
 
 function getAncestrySelect() {

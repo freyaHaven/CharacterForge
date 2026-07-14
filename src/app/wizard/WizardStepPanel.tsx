@@ -1,15 +1,26 @@
+import type { ReactNode } from 'react'
 import { WIZARD_STEPS } from './steps'
 import type { WizardStepId } from './types'
 
 type WizardStepPanelProps = {
   activeStepId: WizardStepId
+  stepContent?: Partial<Record<WizardStepId, ReactNode>>
 }
 
 function getStepLabel(stepId: WizardStepId): string {
   return WIZARD_STEPS.find((step) => step.id === stepId)?.label ?? stepId
 }
 
-export function WizardStepPanel({ activeStepId }: WizardStepPanelProps) {
+export function WizardStepPanel({
+  activeStepId,
+  stepContent,
+}: WizardStepPanelProps) {
+  const customContent = stepContent?.[activeStepId]
+
+  if (customContent !== undefined) {
+    return <div className="wizard-step-panel">{customContent}</div>
+  }
+
   const label = getStepLabel(activeStepId)
   const headingId = `wizard-step-${activeStepId}-heading`
 

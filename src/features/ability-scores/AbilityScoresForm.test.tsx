@@ -7,8 +7,6 @@ import { AbilityScoresForm } from './AbilityScoresForm'
 import { createEmptyStandardArrayDraft } from './standardArrayDraft'
 
 const defaultProps = {
-  name: 'Aldric',
-  editionId: 'srd-2014' as const,
   creationMethod: 'standard-array' as const,
   abilityScores: {
     strength: 10,
@@ -22,8 +20,6 @@ const defaultProps = {
   pointBuyDraft: null,
   rolledDraft: null,
   prefersReducedMotion: false,
-  onNameChange: vi.fn(),
-  onEditionChange: vi.fn(),
   onCreationMethodChange: vi.fn(),
   onAbilityScoreChange: vi.fn(),
   onStandardArrayDraftChange: vi.fn(),
@@ -37,6 +33,17 @@ const defaultProps = {
 }
 
 describe('AbilityScoresForm standard array guidance', () => {
+  it('does not render character basics fields', () => {
+    render(<AbilityScoresForm {...defaultProps} />)
+
+    expect(
+      screen.queryByRole('textbox', { name: /character name/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('combobox', { name: /rules edition/i }),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows remaining values that update after an assignment', () => {
     const { rerender } = render(<AbilityScoresForm {...defaultProps} />)
 
