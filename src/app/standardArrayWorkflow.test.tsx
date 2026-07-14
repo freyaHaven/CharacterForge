@@ -9,6 +9,7 @@ import {
   getAbilityFieldSelect,
   getCreationMethodSelect,
 } from '../test/abilityScoreTestUtils'
+import { goToAbilityScoresStep } from '../test/wizardTestUtils'
 import { STANDARD_ARRAY_UNASSIGNED_LABEL } from '../features/ability-scores/StandardArrayAbilityInputs'
 import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '../rules/standard-array/standardArray'
 
@@ -31,6 +32,8 @@ async function renderLoadedApp() {
   await waitFor(() => {
     expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
   })
+
+  await goToAbilityScoresStep(user, screen)
 
   return { user }
 }

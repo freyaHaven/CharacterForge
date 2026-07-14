@@ -9,6 +9,7 @@ import {
   getAbilityFieldSelect,
   getCreationMethodSelect,
 } from '../test/abilityScoreTestUtils'
+import { goToAbilityScoresStep } from '../test/wizardTestUtils'
 import { ROLLED_UNASSIGNED_LABEL } from '../features/ability-scores/RolledAbilityInputs'
 import { createSeededRandomSource } from '../rules/rolled'
 
@@ -31,6 +32,8 @@ async function renderLoadedApp(randomSource = createSeededRandomSource(5)) {
   await waitFor(() => {
     expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
   })
+
+  await goToAbilityScoresStep(user, screen)
 
   return { user, ...utils }
 }

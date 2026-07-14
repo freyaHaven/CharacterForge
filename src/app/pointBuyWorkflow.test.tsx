@@ -8,6 +8,7 @@ import {
   getAbilityFieldNumberInput,
   getCreationMethodSelect,
 } from '../test/abilityScoreTestUtils'
+import { goToAbilityScoresStep } from '../test/wizardTestUtils'
 import { MINIMUM_POINT_BUY_ASSIGNMENT } from '../rules/point-buy'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
@@ -29,6 +30,8 @@ async function renderLoadedApp() {
   await waitFor(() => {
     expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
   })
+
+  await goToAbilityScoresStep(user, screen)
 
   return { user }
 }

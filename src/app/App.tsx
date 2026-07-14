@@ -6,7 +6,7 @@ import {
   DEFAULT_CHARACTER_ID,
 } from '../domain/character/defaults'
 import type { AbilityScores, Character, EditionId } from '../domain/types'
-import { AbilityScoresForm } from '../features/ability-scores/AbilityScoresForm'
+import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
 import { SpeciesPicker } from '../features/species/SpeciesPicker'
 import {
@@ -161,7 +161,12 @@ export default function App({ randomSource = Math.random }: AppProps) {
     rolledValidation,
   })
 
+  function markAbilityScoresTouched() {
+    setAbilityScoresTouched(true)
+  }
+
   function updateAbilityScore(ability: keyof AbilityScores, value: number) {
+    markAbilityScoresTouched()
     setCharacter((current) => ({
       ...current,
       abilityScores: {
@@ -173,6 +178,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
   }
 
   function replaceStandardArrayDraft(nextDraft: StandardArrayDraftScores) {
+    markAbilityScoresTouched()
     setStandardArrayDraft(nextDraft)
 
     if (validateStandardArrayDraft(nextDraft).valid) {
@@ -186,6 +192,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
   }
 
   function replacePointBuyDraft(nextDraft: PointBuyDraftScores) {
+    markAbilityScoresTouched()
     setPointBuyDraft(nextDraft)
 
     if (validatePointBuyAssignment(nextDraft).valid) {
@@ -202,6 +209,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     ability: keyof StandardArrayDraftScores,
     value: number | null,
   ) {
+    markAbilityScoresTouched()
     setStandardArrayDraft((current) => {
       if (current === null) {
         return current
@@ -229,6 +237,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     ability: keyof PointBuyDraftScores,
     delta: -1 | 1,
   ) {
+    markAbilityScoresTouched()
     setPointBuyDraft((current) => {
       if (current === null) {
         return current
@@ -249,6 +258,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
   }
 
   function replaceRolledDraft(nextDraft: RolledDraft) {
+    markAbilityScoresTouched()
     setRolledDraft(nextDraft)
 
     if (validateRolledDraft(nextDraft).valid) {
@@ -265,6 +275,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     ability: keyof RolledDraft['assignments'],
     rollId: string | null,
   ) {
+    markAbilityScoresTouched()
     setRolledDraft((current) => {
       if (current === null) {
         return current
@@ -369,6 +380,72 @@ export default function App({ randomSource = Math.random }: AppProps) {
     setSaveMessage('Character saved.')
   }
 
+  function handleCreationMethodChange(
+    creationMethod: Character['creationMethod'],
+  ) {
+    markAbilityScoresTouched()
+    setCharacter((current) => ({ ...current, creationMethod }))
+    setSaveMessage(null)
+
+    if (creationMethod === 'standard-array') {
+      setStandardArrayDraft(
+        abilityScoresToStandardArrayDraft(character.abilityScores),
+      )
+      setPointBuyDraft(null)
+      return
+    }
+
+    if (creationMethod === 'point-buy') {
+      setPointBuyDraft(
+        initializePointBuyDraftFromAbilityScores(character.abilityScores),
+      )
+      setStandardArrayDraft(null)
+      setRolledDraft(null)
+      return
+    }
+
+    if (creationMethod === 'rolled') {
+      setRolledDraft(null)
+      setStandardArrayDraft(null)
+      setPointBuyDraft(null)
+      return
+    }
+
+    setStandardArrayDraft(null)
+    setPointBuyDraft(null)
+    setRolledDraft(null)
+  }
+
+  const abilityScoresStep = (
+    <AbilityScoresStep
+      creationMethod={character.creationMethod}
+      abilityScores={character.abilityScores}
+      standardArrayDraft={standardArrayDraft}
+      pointBuyDraft={pointBuyDraft}
+      rolledDraft={rolledDraft}
+      prefersReducedMotion={prefersReducedMotion}
+      onCreationMethodChange={handleCreationMethodChange}
+      onAbilityScoreChange={updateAbilityScore}
+      onStandardArrayDraftChange={updateStandardArrayDraft}
+      onClearStandardArray={() => {
+        replaceStandardArrayDraft(createEmptyStandardArrayDraft())
+      }}
+      onApplyDefaultStandardArray={() => {
+        replaceStandardArrayDraft(defaultStandardArrayDraft())
+      }}
+      onStartPointBuy={() => {
+        replacePointBuyDraft(createMinimumPointBuyDraft())
+      }}
+      onResetPointBuy={() => {
+        replacePointBuyDraft(resetPointBuyDraft())
+      }}
+      onAdjustPointBuyScore={updatePointBuyDraft}
+      onRolledPoolReady={replaceRolledDraft}
+      onRolledAssignmentChange={updateRolledAssignment}
+      randomSource={randomSource}
+    />
+  )
+
   if (isLoading) {
     return <p className="status">Loading character...</p>
   }
@@ -399,70 +476,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
               onBasicsTouched={() => setBasicsTouched(true)}
             />
           ),
+          'ability-scores': abilityScoresStep,
         }}
-      />
-
-      <AbilityScoresForm
-        creationMethod={character.creationMethod}
-        abilityScores={character.abilityScores}
-        standardArrayDraft={standardArrayDraft}
-        pointBuyDraft={pointBuyDraft}
-        rolledDraft={rolledDraft}
-        prefersReducedMotion={prefersReducedMotion}
-        onCreationMethodChange={(creationMethod) => {
-          setAbilityScoresTouched(true)
-          setCharacter((current) => ({ ...current, creationMethod }))
-          setSaveMessage(null)
-
-          if (creationMethod === 'standard-array') {
-            setStandardArrayDraft(
-              abilityScoresToStandardArrayDraft(character.abilityScores),
-            )
-            setPointBuyDraft(null)
-            return
-          }
-
-          if (creationMethod === 'point-buy') {
-            setPointBuyDraft(
-              initializePointBuyDraftFromAbilityScores(character.abilityScores),
-            )
-            setStandardArrayDraft(null)
-            setRolledDraft(null)
-            return
-          }
-
-          if (creationMethod === 'rolled') {
-            setRolledDraft(null)
-            setStandardArrayDraft(null)
-            setPointBuyDraft(null)
-            return
-          }
-
-          setStandardArrayDraft(null)
-          setPointBuyDraft(null)
-          setRolledDraft(null)
-        }}
-        onAbilityScoreChange={(ability, value) => {
-          setAbilityScoresTouched(true)
-          updateAbilityScore(ability, value)
-        }}
-        onStandardArrayDraftChange={updateStandardArrayDraft}
-        onClearStandardArray={() => {
-          replaceStandardArrayDraft(createEmptyStandardArrayDraft())
-        }}
-        onApplyDefaultStandardArray={() => {
-          replaceStandardArrayDraft(defaultStandardArrayDraft())
-        }}
-        onStartPointBuy={() => {
-          replacePointBuyDraft(createMinimumPointBuyDraft())
-        }}
-        onResetPointBuy={() => {
-          replacePointBuyDraft(resetPointBuyDraft())
-        }}
-        onAdjustPointBuyScore={updatePointBuyDraft}
-        onRolledPoolReady={replaceRolledDraft}
-        onRolledAssignmentChange={updateRolledAssignment}
-        randomSource={randomSource}
       />
 
       <SpeciesPicker
