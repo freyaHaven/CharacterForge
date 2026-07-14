@@ -1,4 +1,23 @@
 import type { CharacterCreationMethod } from '../domain/types'
+
+export function formatSaveBlockedMessage(
+  creationMethod: CharacterCreationMethod,
+  speciesDraftIncomplete: boolean,
+): string {
+  if (speciesDraftIncomplete) {
+    return 'Complete the species selection before saving.'
+  }
+
+  if (creationMethod === 'point-buy') {
+    return 'Fix the point-buy assignment before saving.'
+  }
+
+  if (creationMethod === 'rolled') {
+    return 'Complete the rolled assignment before saving.'
+  }
+
+  return 'Complete the standard array assignment before saving.'
+}
 import type { PointBuyValidationResult } from '../rules/point-buy'
 import type { StandardArrayDraftValidationResult } from '../features/ability-scores/standardArrayDraft'
 import type { RolledAssignmentValidationResult } from '../rules/rolled'

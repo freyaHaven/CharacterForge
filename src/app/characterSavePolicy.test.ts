@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canSaveCharacter } from './characterSavePolicy'
+import { canSaveCharacter, formatSaveBlockedMessage } from './characterSavePolicy'
 
 describe('canSaveCharacter', () => {
   it('blocks saving for an invalid point-buy draft', () => {
@@ -67,5 +67,25 @@ describe('canSaveCharacter', () => {
         speciesDraftIncomplete: true,
       }),
     ).toBe(false)
+  })
+})
+
+describe('formatSaveBlockedMessage', () => {
+  it('returns species-specific guidance when a draft is incomplete', () => {
+    expect(formatSaveBlockedMessage('manual', true)).toBe(
+      'Complete the species selection before saving.',
+    )
+  })
+
+  it('returns creation-method-specific guidance for ability score drafts', () => {
+    expect(formatSaveBlockedMessage('point-buy', false)).toBe(
+      'Fix the point-buy assignment before saving.',
+    )
+    expect(formatSaveBlockedMessage('rolled', false)).toBe(
+      'Complete the rolled assignment before saving.',
+    )
+    expect(formatSaveBlockedMessage('standard-array', false)).toBe(
+      'Complete the standard array assignment before saving.',
+    )
   })
 })
