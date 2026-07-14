@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { EditionId } from '../../domain/types'
 import type {
@@ -6,15 +6,11 @@ import type {
   SpeciesSelection,
 } from '../../domain/species/types'
 import { validateSpeciesSelection } from '../../rules/species/speciesRules'
+import { filterSpeciesByName } from './filterSpeciesByName'
 import { formatSpeciesValidationIssue } from './formatSpeciesValidation'
+import { SpeciesCatalogCard } from './SpeciesCatalogCard'
 import { SpeciesIcon } from './SpeciesIcon'
-import {
-  SelectionCheckIcon,
-  SizeStatIcon,
-  SpeedStatIcon,
-  TraitIcon,
-} from './SpeciesUiIcons'
-import { getSpeciesCardSummary } from './speciesPresentation'
+import { SizeStatIcon, SpeedStatIcon, TraitIcon } from './SpeciesUiIcons'
 import {
   createSpeciesSelectionDraft,
   draftToSpeciesSelection,
@@ -47,6 +43,7 @@ export function SpeciesPicker({
 }: SpeciesPickerProps) {
   const [speciesList, setSpeciesList] = useState<SpeciesDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const activeSpeciesId =
     draft?.speciesId ?? committedSelection?.speciesId ?? null
@@ -57,6 +54,17 @@ export function SpeciesPicker({
       ? null
       : (speciesList.find((species) => species.id === activeSpeciesId) ?? null)
 
+  const filteredSpecies = useMemo(
+    () => filterSpeciesByName(speciesList, searchQuery),
+    [speciesList, searchQuery],
+  )
+
+  const normalizedSearchQuery = searchQuery.trim()
+  const isSelectedSpeciesHidden =
+    activeSpeciesId !== null &&
+    normalizedSearchQuery.length > 0 &&
+    !filteredSpecies.some((species) => species.id === activeSpeciesId)
+
   const draftValidation =
     draft === null
       ? null
@@ -65,6 +73,10 @@ export function SpeciesPicker({
           editionId,
           activeDefinition,
         )
+
+  useEffect(() => {
+    setSearchQuery('')
+  }, [editionId])
 
   useEffect(() => {
     let isActive = true
@@ -166,162 +178,164 @@ export function SpeciesPicker({
 
       {!isLoading && speciesList.length > 0 ? (
         <div className="species-picker__layout">
-          <ul className="species-picker__catalog" role="list">
-            {speciesList.map((species) => {
-              const isSelected = activeSpeciesId === species.id
-              const cardNameId = `species-card-${species.id}-name`
-
-              return (
-                <li key={species.id}>
-                  <button
-                    type="button"
-                    className={
-                      isSelected
-                        ? 'species-picker__card species-picker__card--selected'
-                        : 'species-picker__card'
-                    }
-                    aria-pressed={isSelected}
-                    aria-labelledby={cardNameId}
-                    onClick={() => {
-                      selectSpecies(species)
-                    }}
-                  >
-                    {isSelected ? (
-                      <span
-                        className="species-picker__card-badge"
-                        aria-hidden="true"
-                      >
-                        <SelectionCheckIcon />
-                      </span>
-                    ) : null}
-                    <span className="species-picker__card-icon">
-                      <SpeciesIcon speciesId={species.id} />
-                    </span>
-                    <span className="species-picker__card-body">
-                      <span
-                        id={cardNameId}
-                        className="species-picker__card-name"
-                      >
-                        {species.name}
-                      </span>
-                      <span
-                        className="species-picker__card-summary"
-                        aria-hidden="true"
-                      >
-                        {getSpeciesCardSummary(species)}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-
-          {activeDefinition !== null ? (
-            <article className="species-picker__detail">
-              <header className="species-picker__detail-header">
-                <div className="species-picker__detail-title-row">
-                  <span className="species-picker__detail-icon">
-                    <SpeciesIcon speciesId={activeDefinition.id} />
-                  </span>
-                  <h3>{activeDefinition.name}</h3>
-                </div>
-                <p className="species-picker__detail-lead">
-                  {activeDefinition.description}
-                </p>
-              </header>
-
-              <dl className="species-picker__metadata">
-                <div className="species-picker__metadata-item">
-                  <span
-                    className="species-picker__metadata-icon"
-                    aria-hidden="true"
-                  >
-                    <SizeStatIcon />
-                  </span>
-                  <dt>Size</dt>
-                  <dd>{formatSize(activeDefinition.size)}</dd>
-                </div>
-                <div className="species-picker__metadata-item">
-                  <span
-                    className="species-picker__metadata-icon"
-                    aria-hidden="true"
-                  >
-                    <SpeedStatIcon />
-                  </span>
-                  <dt>Speed</dt>
-                  <dd>{activeDefinition.speed.walk} feet</dd>
-                </div>
-              </dl>
-
-              {activeDefinition.traits.length > 0 ? (
-                <div className="species-picker__traits">
-                  <h4 className="species-picker__section-title">Traits</h4>
-                  <div className="species-picker__trait-cards">
-                    {activeDefinition.traits.map((trait) => (
-                      <article
-                        key={trait.id}
-                        className="species-picker__trait-card"
-                      >
-                        <span
-                          className="species-picker__trait-icon"
-                          aria-hidden="true"
-                        >
-                          <TraitIcon traitId={trait.id} />
-                        </span>
-                        <div className="species-picker__trait-content">
-                          <h5>{trait.name}</h5>
-                          <p>{trait.description}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {showChoicesForDetail ? (
-                <div className="species-picker__choices">
-                  {activeDefinition.choices.map((choice) => {
-                    const selectedOptionId = activeChoices[choice.id] ?? ''
-
-                    return (
-                      <label key={choice.id} className="field">
-                        <span>{choice.prompt}</span>
-                        <select
-                          value={selectedOptionId}
-                          onChange={(event) => {
-                            void handleChoiceChange(
-                              choice.id,
-                              event.target.value,
-                            )
-                          }}
-                        >
-                          <option value="">Select an ancestor…</option>
-                          {choice.options.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        {choice.id === 'draconic-ancestry' ? (
-                          <p className="helper-text">
-                            The damage type of your selected ancestor applies to
-                            your Breath Weapon and Damage Resistance.
-                          </p>
-                        ) : null}
-                      </label>
-                    )
-                  })}
-                </div>
-              ) : null}
-            </article>
-          ) : (
-            <div
-              className="species-picker__detail species-picker__detail--placeholder"
-              aria-hidden="true"
-            >
-              <p>Select a species to preview its traits and abilities.</p>
+          <div className="species-picker__catalog-panel">
+            <div className="species-picker__catalog-toolbar">
+              <label className="species-picker__search field">
+                <span>Search species</span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  placeholder="Search by name…"
+                  aria-controls="species-catalog-list"
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value)
+                  }}
+                />
+              </label>
+              <div
+                className="species-picker__catalog-filters"
+                hidden
+                aria-hidden="true"
+              />
             </div>
-          )}
+
+            {filteredSpecies.length === 0 ? (
+              <p className="species-picker__catalog-empty" role="status">
+                No species match &ldquo;{normalizedSearchQuery}&rdquo;.
+              </p>
+            ) : (
+              <ul
+                id="species-catalog-list"
+                className="species-picker__catalog"
+                role="list"
+              >
+                {filteredSpecies.map((species) => (
+                  <SpeciesCatalogCard
+                    key={species.id}
+                    species={species}
+                    isSelected={activeSpeciesId === species.id}
+                    onSelect={selectSpecies}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="species-picker__detail-panel">
+            {isSelectedSpeciesHidden ? (
+              <p className="species-picker__detail-hidden-note" role="status">
+                The selected species is hidden by the current search.
+              </p>
+            ) : null}
+
+            {activeDefinition !== null ? (
+              <article className="species-picker__detail">
+                <header className="species-picker__detail-header">
+                  <div className="species-picker__detail-title-row">
+                    <span className="species-picker__detail-icon">
+                      <SpeciesIcon speciesId={activeDefinition.id} />
+                    </span>
+                    <div className="species-picker__detail-text">
+                      <h3>{activeDefinition.name}</h3>
+                      <p className="species-picker__detail-lead">
+                        {activeDefinition.description}
+                      </p>
+                    </div>
+                  </div>
+                </header>
+
+                <dl className="species-picker__metadata">
+                  <div className="species-picker__metadata-item">
+                    <span
+                      className="species-picker__metadata-icon"
+                      aria-hidden="true"
+                    >
+                      <SizeStatIcon />
+                    </span>
+                    <dt>Size</dt>
+                    <dd>{formatSize(activeDefinition.size)}</dd>
+                  </div>
+                  <div className="species-picker__metadata-item">
+                    <span
+                      className="species-picker__metadata-icon"
+                      aria-hidden="true"
+                    >
+                      <SpeedStatIcon />
+                    </span>
+                    <dt>Speed</dt>
+                    <dd>{activeDefinition.speed.walk} feet</dd>
+                  </div>
+                </dl>
+
+                {activeDefinition.traits.length > 0 ? (
+                  <div className="species-picker__traits">
+                    <h4 className="species-picker__section-title">Traits</h4>
+                    <div className="species-picker__trait-cards">
+                      {activeDefinition.traits.map((trait) => (
+                        <article
+                          key={trait.id}
+                          className="species-picker__trait-card"
+                        >
+                          <span
+                            className="species-picker__trait-icon"
+                            aria-hidden="true"
+                          >
+                            <TraitIcon traitId={trait.id} />
+                          </span>
+                          <div className="species-picker__trait-content">
+                            <h5>{trait.name}</h5>
+                            <p>{trait.description}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {showChoicesForDetail ? (
+                  <div className="species-picker__choices">
+                    {activeDefinition.choices.map((choice) => {
+                      const selectedOptionId = activeChoices[choice.id] ?? ''
+
+                      return (
+                        <label key={choice.id} className="field">
+                          <span>{choice.prompt}</span>
+                          <select
+                            value={selectedOptionId}
+                            onChange={(event) => {
+                              void handleChoiceChange(
+                                choice.id,
+                                event.target.value,
+                              )
+                            }}
+                          >
+                            <option value="">Select an ancestor…</option>
+                            {choice.options.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          {choice.id === 'draconic-ancestry' ? (
+                            <p className="helper-text">
+                              The damage type of your selected ancestor applies
+                              to your Breath Weapon and Damage Resistance.
+                            </p>
+                          ) : null}
+                        </label>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </article>
+            ) : (
+              <div
+                className="species-picker__detail species-picker__detail--placeholder"
+                aria-hidden="true"
+              >
+                <p>Select a species to preview its traits and abilities.</p>
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
 

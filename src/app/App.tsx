@@ -36,7 +36,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     <main className="app">
       <header>
         <h1>CharacterForge</h1>
-        <p>Create a D&amp;D 5e character — ability scores and species.</p>
+        <p>A modern D&amp;D character creator.</p>
       </header>
 
       <CharacterWizard

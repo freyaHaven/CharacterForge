@@ -115,7 +115,7 @@ describe('SpeciesPicker', () => {
     )
   })
 
-  it('separates the species catalogue from the detail panel in the layout', async () => {
+  it('separates the catalogue panel from the detail panel in the layout', async () => {
     render(<SpeciesPickerHarness />)
 
     await waitFor(() => {
@@ -124,11 +124,69 @@ describe('SpeciesPicker', () => {
 
     const layout = document.querySelector('.species-picker__layout')
     expect(layout).not.toBeNull()
-    expect(layout?.querySelector('.species-picker__catalog')).not.toBeNull()
+    expect(layout?.querySelector('.species-picker__catalog-panel')).not.toBeNull()
+    expect(layout?.querySelector('.species-picker__detail-panel')).not.toBeNull()
     expect(
       layout?.querySelector(
         '.species-picker__detail, .species-picker__detail--placeholder',
       ),
+    ).not.toBeNull()
+  })
+
+  it('filters catalogue cards by species name without changing selection', async () => {
+    const user = userEvent.setup()
+    render(<SpeciesPickerHarness />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+    await user.type(screen.getByRole('searchbox', { name: /search species/i }), 'dragon')
+
+    expect(screen.queryByRole('button', { name: 'Dwarf' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Dragonborn' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Dwarf' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/selected species is hidden by the current search/i),
+    ).toBeInTheDocument()
+    expect(document.querySelector('.species-picker__selection')).toHaveTextContent(
+      'Selected: Dwarf',
+    )
+  })
+
+  it('shows an empty catalogue message when search matches nothing', async () => {
+    const user = userEvent.setup()
+    render(<SpeciesPickerHarness />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
+    })
+
+    await user.type(screen.getByRole('searchbox', { name: /search species/i }), 'elf')
+
+    expect(screen.getByRole('status')).toHaveTextContent(/no species match.*elf/i)
+    expect(screen.queryByRole('button', { name: 'Dwarf' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Dragonborn' })).not.toBeInTheDocument()
+  })
+
+  it('restores selected card styling after clearing search', async () => {
+    const user = userEvent.setup()
+    render(<SpeciesPickerHarness />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+    const search = screen.getByRole('searchbox', { name: /search species/i })
+    await user.type(search, 'dragon')
+    await user.clear(search)
+
+    const selectedCard = screen.getByRole('button', { name: 'Dwarf' })
+    expect(selectedCard).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      selectedCard.querySelector('.species-picker__card-badge[aria-hidden="true"]'),
     ).not.toBeNull()
   })
 
