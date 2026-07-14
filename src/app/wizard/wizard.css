@@ -1,0 +1,116 @@
+.character-wizard {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.character-wizard__content {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.character-wizard__footer {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.character-wizard__footer button {
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.character-wizard__footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.wizard-nav__list {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.wizard-nav__item {
+  flex: 0 0 auto;
+}
+
+.wizard-nav__step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wizard-nav__step--active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.wizard-nav__step--complete:not(.wizard-nav__step--active) {
+  border-color: color-mix(in srgb, var(--accent-border) 70%, var(--border));
+}
+
+.wizard-nav__step--warning {
+  border-color: color-mix(in srgb, #c97 55%, var(--border));
+}
+
+.wizard-nav__indicator {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.wizard-nav__label {
+  font-weight: 500;
+}
+
+.wizard-step-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.35rem;
+}
+
+.wizard-step-panel__placeholder {
+  margin: 0;
+  color: var(--text);
+}
+
+@media (min-width: 48rem) {
+  .character-wizard {
+    grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .wizard-nav__list {
+    flex-direction: column;
+    overflow-x: visible;
+    padding: 0;
+  }
+
+  .wizard-nav__step {
+    border-radius: 8px;
+    white-space: normal;
+  }
+}
