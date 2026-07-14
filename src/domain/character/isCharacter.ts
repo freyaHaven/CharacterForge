@@ -1,0 +1,60 @@
+import type {
+  AbilityScores,
+  Character,
+  CharacterCreationMethod,
+  EditionId,
+} from '../types'
+
+const ABILITY_KEYS: (keyof AbilityScores)[] = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'intelligence',
+  'wisdom',
+  'charisma',
+]
+
+function isEditionId(value: unknown): value is EditionId {
+  return value === 'srd-2014' || value === 'srd-2024'
+}
+
+function isCharacterCreationMethod(
+  value: unknown,
+): value is CharacterCreationMethod {
+  return (
+    value === 'manual' ||
+    value === 'standard-array' ||
+    value === 'point-buy' ||
+    value === 'rolled'
+  )
+}
+
+function isAbilityScores(value: unknown): value is AbilityScores {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const scores = value as Record<string, unknown>
+
+  return ABILITY_KEYS.every(
+    (key) =>
+      typeof scores[key] === 'number' && Number.isFinite(scores[key]),
+  )
+}
+
+export function isCharacter(value: unknown): value is Character {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+
+  return (
+    typeof candidate.id === 'string' &&
+    candidate.id.length > 0 &&
+    typeof candidate.name === 'string' &&
+    isEditionId(candidate.editionId) &&
+    isCharacterCreationMethod(candidate.creationMethod) &&
+    isAbilityScores(candidate.abilityScores)
+  )
+}

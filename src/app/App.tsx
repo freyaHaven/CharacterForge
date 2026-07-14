@@ -1,0 +1,402 @@
+import { useEffect, useState } from 'react'
+import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
+import type { AbilityScores, Character } from '../domain/types'
+import { AbilityScoresForm } from '../features/ability-scores/AbilityScoresForm'
+import {
+  adjustPointBuyDraftScore,
+  createMinimumPointBuyDraft,
+  initializePointBuyDraftFromAbilityScores,
+  resetPointBuyDraft,
+  type PointBuyDraftScores,
+} from '../features/ability-scores/pointBuyDraft'
+import {
+  assignRolledResult,
+  initializeRolledDraftFromAbilityScores,
+  rolledDraftToAbilityScores,
+  type RolledDraft,
+  validateRolledDraft,
+} from '../features/ability-scores/rolledDraft'
+import {
+  abilityScoresToStandardArrayDraft,
+  createEmptyStandardArrayDraft,
+  defaultStandardArrayDraft,
+  standardArrayDraftToAbilityScores,
+  type StandardArrayDraftScores,
+  validateStandardArrayDraft,
+} from '../features/ability-scores/standardArrayDraft'
+import { validatePointBuyAssignment } from '../rules/point-buy'
+import { canSaveCharacter } from './characterSavePolicy'
+import './app.css'
+
+const CHARACTER_ID = 'char-1'
+
+const defaultAbilityScores: AbilityScores = {
+  strength: 10,
+  dexterity: 10,
+  constitution: 10,
+  intelligence: 10,
+  wisdom: 10,
+  charisma: 10,
+}
+
+const defaultCharacter: Character = {
+  id: CHARACTER_ID,
+  name: '',
+  editionId: 'srd-2014',
+  creationMethod: 'manual',
+  abilityScores: defaultAbilityScores,
+}
+
+const repository = createLocalStorageCharacterRepository()
+
+type AppProps = {
+  randomSource?: () => number
+}
+
+export default function App({ randomSource = Math.random }: AppProps) {
+  const [character, setCharacter] = useState<Character>(defaultCharacter)
+  const [standardArrayDraft, setStandardArrayDraft] =
+    useState<StandardArrayDraftScores | null>(null)
+  const [pointBuyDraft, setPointBuyDraft] = useState<PointBuyDraftScores | null>(
+    null,
+  )
+  const [rolledDraft, setRolledDraft] = useState<RolledDraft | null>(null)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const updatePreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches)
+    }
+
+    updatePreference()
+    mediaQuery.addEventListener('change', updatePreference)
+
+    return () => {
+      mediaQuery.removeEventListener('change', updatePreference)
+    }
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    async function loadCharacter() {
+      const stored = await repository.load(CHARACTER_ID)
+      if (isActive && stored !== null) {
+        setCharacter(stored)
+        if (stored.creationMethod === 'standard-array') {
+          setStandardArrayDraft(
+            abilityScoresToStandardArrayDraft(stored.abilityScores),
+          )
+        }
+        if (stored.creationMethod === 'point-buy') {
+          setPointBuyDraft(
+            initializePointBuyDraftFromAbilityScores(stored.abilityScores),
+          )
+        }
+        if (stored.creationMethod === 'rolled') {
+          setRolledDraft(
+            initializeRolledDraftFromAbilityScores(stored.abilityScores),
+          )
+        }
+      }
+      if (isActive) {
+        setIsLoading(false)
+      }
+    }
+
+    void loadCharacter()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const standardArrayValidation =
+    character.creationMethod === 'standard-array' && standardArrayDraft !== null
+      ? validateStandardArrayDraft(standardArrayDraft)
+      : null
+  const pointBuyValidation =
+    character.creationMethod === 'point-buy' && pointBuyDraft !== null
+      ? validatePointBuyAssignment(pointBuyDraft)
+      : null
+  const rolledValidation =
+    character.creationMethod === 'rolled' && rolledDraft !== null
+      ? validateRolledDraft(rolledDraft)
+      : null
+  const canSaveCharacterState = canSaveCharacter(character.creationMethod, {
+    standardArrayValidation,
+    pointBuyValidation,
+    rolledValidation,
+  })
+
+  function updateAbilityScore(ability: keyof AbilityScores, value: number) {
+    setCharacter((current) => ({
+      ...current,
+      abilityScores: {
+        ...current.abilityScores,
+        [ability]: value,
+      },
+    }))
+    setSaveMessage(null)
+  }
+
+  function replaceStandardArrayDraft(nextDraft: StandardArrayDraftScores) {
+    setStandardArrayDraft(nextDraft)
+
+    if (validateStandardArrayDraft(nextDraft).valid) {
+      setCharacter((currentCharacter) => ({
+        ...currentCharacter,
+        abilityScores: standardArrayDraftToAbilityScores(nextDraft),
+      }))
+    }
+
+    setSaveMessage(null)
+  }
+
+  function replacePointBuyDraft(nextDraft: PointBuyDraftScores) {
+    setPointBuyDraft(nextDraft)
+
+    if (validatePointBuyAssignment(nextDraft).valid) {
+      setCharacter((currentCharacter) => ({
+        ...currentCharacter,
+        abilityScores: { ...nextDraft },
+      }))
+    }
+
+    setSaveMessage(null)
+  }
+
+  function updateStandardArrayDraft(
+    ability: keyof StandardArrayDraftScores,
+    value: number | null,
+  ) {
+    setStandardArrayDraft((current) => {
+      if (current === null) {
+        return current
+      }
+
+      const nextDraft = {
+        ...current,
+        [ability]: value,
+      }
+      const validation = validateStandardArrayDraft(nextDraft)
+
+      if (validation.valid) {
+        setCharacter((currentCharacter) => ({
+          ...currentCharacter,
+          abilityScores: standardArrayDraftToAbilityScores(nextDraft),
+        }))
+      }
+
+      return nextDraft
+    })
+    setSaveMessage(null)
+  }
+
+  function updatePointBuyDraft(
+    ability: keyof PointBuyDraftScores,
+    delta: -1 | 1,
+  ) {
+    setPointBuyDraft((current) => {
+      if (current === null) {
+        return current
+      }
+
+      const nextDraft = adjustPointBuyDraftScore(current, ability, delta)
+
+      if (validatePointBuyAssignment(nextDraft).valid) {
+        setCharacter((currentCharacter) => ({
+          ...currentCharacter,
+          abilityScores: { ...nextDraft },
+        }))
+      }
+
+      return nextDraft
+    })
+    setSaveMessage(null)
+  }
+
+  function replaceRolledDraft(nextDraft: RolledDraft) {
+    setRolledDraft(nextDraft)
+
+    if (validateRolledDraft(nextDraft).valid) {
+      setCharacter((currentCharacter) => ({
+        ...currentCharacter,
+        abilityScores: rolledDraftToAbilityScores(nextDraft),
+      }))
+    }
+
+    setSaveMessage(null)
+  }
+
+  function updateRolledAssignment(
+    ability: keyof RolledDraft['assignments'],
+    rollId: string | null,
+  ) {
+    setRolledDraft((current) => {
+      if (current === null) {
+        return current
+      }
+
+      const nextDraft = assignRolledResult(current, ability, rollId)
+      const validation = validateRolledDraft(nextDraft)
+
+      if (validation.valid) {
+        setCharacter((currentCharacter) => ({
+          ...currentCharacter,
+          abilityScores: rolledDraftToAbilityScores(nextDraft),
+        }))
+      }
+
+      return nextDraft
+    })
+    setSaveMessage(null)
+  }
+
+  async function handleSave() {
+    if (!canSaveCharacterState) {
+      setSaveMessage(
+        character.creationMethod === 'point-buy'
+          ? 'Fix the point-buy assignment before saving.'
+          : character.creationMethod === 'rolled'
+            ? 'Complete the rolled assignment before saving.'
+            : 'Complete the standard array assignment before saving.',
+      )
+      return
+    }
+
+    const characterToSave = (() => {
+      if (
+        character.creationMethod === 'standard-array' &&
+        standardArrayDraft !== null
+      ) {
+        return {
+          ...character,
+          abilityScores: standardArrayDraftToAbilityScores(standardArrayDraft),
+        }
+      }
+      if (character.creationMethod === 'point-buy' && pointBuyDraft !== null) {
+        return {
+          ...character,
+          abilityScores: { ...pointBuyDraft },
+        }
+      }
+      if (character.creationMethod === 'rolled' && rolledDraft !== null) {
+        return {
+          ...character,
+          abilityScores: rolledDraftToAbilityScores(rolledDraft),
+        }
+      }
+      return character
+    })()
+
+    await repository.save(characterToSave)
+    setCharacter(characterToSave)
+    setSaveMessage('Character saved.')
+  }
+
+  if (isLoading) {
+    return <p className="status">Loading character...</p>
+  }
+
+  return (
+    <main className="app">
+      <header>
+        <h1>CharacterForge</h1>
+        <p>Create a D&amp;D 5e character — ability scores first.</p>
+      </header>
+
+      <AbilityScoresForm
+        name={character.name}
+        editionId={character.editionId}
+        creationMethod={character.creationMethod}
+        abilityScores={character.abilityScores}
+        standardArrayDraft={standardArrayDraft}
+        pointBuyDraft={pointBuyDraft}
+        rolledDraft={rolledDraft}
+        prefersReducedMotion={prefersReducedMotion}
+        onNameChange={(name) => {
+          setCharacter((current) => ({ ...current, name }))
+          setSaveMessage(null)
+        }}
+        onEditionChange={(editionId) => {
+          setCharacter((current) => ({ ...current, editionId }))
+          setSaveMessage(null)
+        }}
+        onCreationMethodChange={(creationMethod) => {
+          setCharacter((current) => ({ ...current, creationMethod }))
+          setSaveMessage(null)
+
+          if (creationMethod === 'standard-array') {
+            setStandardArrayDraft(
+              abilityScoresToStandardArrayDraft(character.abilityScores),
+            )
+            setPointBuyDraft(null)
+            return
+          }
+
+          if (creationMethod === 'point-buy') {
+            setPointBuyDraft(
+              initializePointBuyDraftFromAbilityScores(character.abilityScores),
+            )
+            setStandardArrayDraft(null)
+            setRolledDraft(null)
+            return
+          }
+
+          if (creationMethod === 'rolled') {
+            setRolledDraft(null)
+            setStandardArrayDraft(null)
+            setPointBuyDraft(null)
+            return
+          }
+
+          setStandardArrayDraft(null)
+          setPointBuyDraft(null)
+          setRolledDraft(null)
+        }}
+        onAbilityScoreChange={updateAbilityScore}
+        onStandardArrayDraftChange={updateStandardArrayDraft}
+        onClearStandardArray={() => {
+          replaceStandardArrayDraft(createEmptyStandardArrayDraft())
+        }}
+        onApplyDefaultStandardArray={() => {
+          replaceStandardArrayDraft(defaultStandardArrayDraft())
+        }}
+        onStartPointBuy={() => {
+          replacePointBuyDraft(createMinimumPointBuyDraft())
+        }}
+        onResetPointBuy={() => {
+          replacePointBuyDraft(resetPointBuyDraft())
+        }}
+        onAdjustPointBuyScore={updatePointBuyDraft}
+        onRolledPoolReady={replaceRolledDraft}
+        onRolledAssignmentChange={updateRolledAssignment}
+        randomSource={randomSource}
+      />
+
+      <div className="actions">
+        <button
+          type="button"
+          disabled={!canSaveCharacterState}
+          onClick={() => void handleSave()}
+        >
+          Save character
+        </button>
+        {saveMessage !== null ? <p className="status">{saveMessage}</p> : null}
+        {!canSaveCharacterState ? (
+          <p className="status">
+            {character.creationMethod === 'point-buy'
+              ? 'Fix the point-buy assignment before saving.'
+              : character.creationMethod === 'rolled'
+                ? 'Complete the rolled assignment before saving.'
+                : 'Complete the standard array assignment before saving.'}
+          </p>
+        ) : null}
+      </div>
+    </main>
+  )
+}

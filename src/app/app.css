@@ -1,0 +1,363 @@
+.app {
+  padding: 2rem 1.5rem 3rem;
+  text-align: left;
+}
+
+.app header {
+  margin-bottom: 2rem;
+}
+
+.app h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+}
+
+.app header p {
+  margin: 0;
+}
+
+.ability-scores-form {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.field,
+.ability-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field input,
+.field select,
+.ability-field input,
+.ability-field select {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.ability-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.ability-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ability-field input[type='number'],
+.ability-field select {
+  width: 5rem;
+}
+
+.validation-message {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+}
+
+.validation-message p {
+  margin: 0 0 0.5rem;
+  color: var(--text-h);
+}
+
+.validation-message ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.standard-array-guidance,
+.standard-array-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.standard-array-actions {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, max-content));
+  gap: 0.75rem;
+}
+
+.standard-array-actions button {
+  width: fit-content;
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.point-buy-guidance,
+.point-buy-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.point-buy-actions {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, max-content));
+  gap: 0.75rem;
+}
+
+.point-buy-actions button,
+.score-stepper {
+  width: fit-content;
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.score-stepper {
+  min-width: 2.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.score-stepper:disabled,
+.point-buy-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.point-buy-budget {
+  margin: 0;
+  font-family: var(--mono);
+  color: var(--text-h);
+}
+
+.info-message {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--social-bg);
+  color: var(--text-h);
+}
+
+.point-buy-field .point-buy-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.point-buy-score {
+  min-width: 1.5rem;
+  text-align: center;
+  font-family: var(--mono);
+  color: var(--text-h);
+}
+
+.point-buy-cost {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+.remaining-values {
+  margin: 0;
+  font-family: var(--mono);
+  color: var(--text-h);
+}
+
+.standard-array-helper {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.standard-array-helper button {
+  width: fit-content;
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.helper-text {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.modifier {
+  font-family: var(--mono);
+  min-width: 2.5rem;
+  color: var(--text-h);
+}
+
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.actions button {
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.status {
+  margin: 0;
+  color: var(--text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.rolled-guidance,
+.rolled-panel,
+.rolled-panel__actions,
+.rolled-manual-entry {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rolled-panel__actions {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, max-content));
+}
+
+.rolled-panel__actions button,
+.rolled-manual-entry button {
+  width: fit-content;
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.rolled-panel__actions button:disabled,
+.rolled-manual-entry button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.rolled-pool-preview ul,
+.rolled-manual-entry__inputs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rolled-pool-preview li + li {
+  margin-top: 0.35rem;
+}
+
+.rolled-pool-preview__title,
+.rolled-manual-entry__title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.rolled-manual-entry__inputs {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+}
+
+.rolled-manual-entry__field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.rolled-animation {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--social-bg);
+}
+
+.rolled-animation__dice {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rolled-animation__text {
+  margin: 0;
+  font-family: var(--mono);
+  color: var(--text-h);
+}
+
+.rolled-die {
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.rolled-die--hidden {
+  opacity: 0.35;
+  transform: scale(0.92) rotate(-8deg);
+}
+
+.rolled-die--revealed {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.rolled-die--dropped {
+  opacity: 0.45;
+  border-color: var(--accent-border);
+  text-decoration: line-through;
+}
+
+.rolled-die__value {
+  font-family: var(--mono);
+  font-size: 1.25rem;
+  color: var(--text-h);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rolled-die {
+    transition: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .ability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
