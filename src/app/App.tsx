@@ -8,7 +8,8 @@ import {
 import type { AbilityScores, Character, EditionId } from '../domain/types'
 import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
-import { SpeciesPicker } from '../features/species/SpeciesPicker'
+import { SpeciesStep } from './wizard/steps/SpeciesStep'
+import { useSpeciesStepValidation } from './useSpeciesStepValidation'
 import {
   isSpeciesDraftIncomplete,
   type SpeciesSelectionDraft,
@@ -143,6 +144,13 @@ export default function App({ randomSource = Math.random }: AppProps) {
     speciesDraft,
     character.species,
   )
+  const { speciesDraftValidation, committedSpeciesValid } =
+    useSpeciesStepValidation(
+      speciesCatalog,
+      character.editionId,
+      character.species,
+      speciesDraft,
+    )
   const canSaveCharacterState = canSaveCharacter(character.creationMethod, {
     standardArrayValidation,
     pointBuyValidation,
@@ -154,8 +162,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
     basicsTouched,
     abilityScoresTouched,
     speciesDraft,
-    speciesDraftValidation: null,
-    committedSpeciesValid: character.species !== null,
+    speciesDraftValidation,
+    committedSpeciesValid,
     standardArrayValidation,
     pointBuyValidation,
     rolledValidation,
@@ -446,6 +454,20 @@ export default function App({ randomSource = Math.random }: AppProps) {
     />
   )
 
+  const speciesStep = (
+    <SpeciesStep
+      editionId={character.editionId}
+      committedSelection={character.species}
+      draft={speciesDraft}
+      catalog={speciesCatalog}
+      onDraftChange={setSpeciesDraft}
+      onCommittedSelectionChange={(species) => {
+        setCharacter((current) => ({ ...current, species }))
+        setSaveMessage(null)
+      }}
+    />
+  )
+
   if (isLoading) {
     return <p className="status">Loading character...</p>
   }
@@ -477,18 +499,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
             />
           ),
           'ability-scores': abilityScoresStep,
-        }}
-      />
-
-      <SpeciesPicker
-        editionId={character.editionId}
-        committedSelection={character.species}
-        draft={speciesDraft}
-        catalog={speciesCatalog}
-        onDraftChange={setSpeciesDraft}
-        onCommittedSelectionChange={(species) => {
-          setCharacter((current) => ({ ...current, species }))
-          setSaveMessage(null)
+          species: speciesStep,
         }}
       />
 

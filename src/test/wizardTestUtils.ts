@@ -21,3 +21,7 @@ export async function goToAbilityScoresStep(
 ) {
   await goToWizardStep(user, screen, 'Ability Scores')
 }
+
+export async function goToSpeciesStep(user: UserEvent, screen: Screen) {
+  await goToWizardStep(user, screen, 'Species')
+}

@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
+import { goToSpeciesStep, goToWizardStep } from '../test/wizardTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -44,6 +45,11 @@ async function waitForSpeciesLoaded() {
   })
 }
 
+async function openSpeciesStep(user: ReturnType<typeof userEvent.setup>) {
+  await goToSpeciesStep(user, screen)
+  await waitForSpeciesLoaded()
+}
+
 function expectSelectedSpecies(name: string) {
   const selection = document.querySelector('.species-picker__selection')
 
@@ -63,7 +69,6 @@ async function renderLoadedApp(character = createStoredCharacter()) {
   await waitFor(() => {
     expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
   })
-  await waitForSpeciesLoaded()
 
   return { user, character }
 }
@@ -80,7 +85,6 @@ async function renderFreshApp() {
   await waitFor(() => {
     expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
   })
-  await waitForSpeciesLoaded()
 
   return { user }
 }
@@ -101,7 +105,8 @@ describe('Species workflow in App', () => {
   })
 
   it('shows dwarf for srd-2024 and reflects a saved selection', async () => {
-    await renderLoadedApp()
+    const { user } = await renderLoadedApp()
+    await openSpeciesStep(user)
 
     expectSelectedSpecies('Dwarf')
     expect(
@@ -126,6 +131,7 @@ describe('Species workflow in App', () => {
       ...createStoredCharacter(),
       species: null,
     })
+    await openSpeciesStep(user)
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
@@ -147,7 +153,7 @@ describe('Species workflow in App', () => {
     const { user } = await renderFreshApp()
 
     expect(getEditionSelect()).toHaveValue('srd-2024')
-    await waitForSpeciesLoaded()
+    await openSpeciesStep(user)
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
@@ -169,6 +175,7 @@ describe('Species workflow in App', () => {
       ...createStoredCharacter(),
       species: null,
     })
+    await openSpeciesStep(user)
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
@@ -195,13 +202,14 @@ describe('Species workflow in App', () => {
   })
 
   it('reloads a saved Red Dragonborn ancestry through the catalogue', async () => {
-    await renderLoadedApp({
+    const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
       species: {
         speciesId: 'srd-2024:dragonborn',
         choices: { 'draconic-ancestry': 'red' },
       },
     })
+    await openSpeciesStep(user)
 
     expectSelectedSpecies('Dragonborn')
     expect(getAncestrySelect()).toHaveValue('red')
@@ -220,6 +228,7 @@ describe('Species workflow in App', () => {
         choices: { 'draconic-ancestry': 'red' },
       },
     })
+    await openSpeciesStep(user)
 
     await user.selectOptions(getAncestrySelect(), 'silver')
     await user.click(screen.getByRole('button', { name: /save character/i }))
@@ -257,6 +266,7 @@ describe('Species workflow in App', () => {
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 
     expect(getEditionSelect()).toHaveValue('srd-2024')
+    await openSpeciesStep(user)
     expectSelectedSpecies('Dwarf')
     expect(
       screen.queryByRole('alertdialog', { name: /change rules edition/i }),
@@ -270,6 +280,7 @@ describe('Species workflow in App', () => {
     await user.click(screen.getByRole('button', { name: /^continue$/i }))
 
     expect(getEditionSelect()).toHaveValue('srd-2014')
+    await openSpeciesStep(user)
     expect(document.querySelector('.species-picker__selection')).toBeNull()
     expect(
       screen.getByText(/no bundled species are available for this rules edition/i),
@@ -277,7 +288,8 @@ describe('Species workflow in App', () => {
   })
 
   it('reloads a saved dwarf selection through the catalogue', async () => {
-    await renderLoadedApp()
+    const { user } = await renderLoadedApp()
+    await openSpeciesStep(user)
 
     expect(await screen.findByText(/Stonecunning/i)).toBeInTheDocument()
     expect(screen.getByText('Medium')).toBeInTheDocument()
