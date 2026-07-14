@@ -95,6 +95,8 @@ describe('Class workflow in App', () => {
     expect(
       screen.getByRole('button', { name: 'Fighter', pressed: true }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Selected: Defense')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Fighting Style/i }))
     expect(screen.getByRole('radio', { name: /Defense/i })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Athletics' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Perception' })).toBeChecked()

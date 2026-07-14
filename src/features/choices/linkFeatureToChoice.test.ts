@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest'
+import type { ClassChoice } from '../../domain/class/types'
+import {
+  findSingleSelectChoiceForFeature,
+  getChoicesNotLinkedToFeatures,
+} from './linkFeatureToChoice'
+
+const FIGHTING_STYLE_CHOICE = {
+  id: 'fighting-style',
+  prompt: 'Choose a Fighting Style',
+  type: 'single-select',
+  required: true,
+  options: [{ id: 'defense', label: 'Defense' }],
+} as const satisfies ClassChoice
+
+const SKILL_CHOICE = {
+  id: 'skill-proficiencies',
+  prompt: 'Choose two skill proficiencies',
+  type: 'multi-select',
+  required: true,
+  min: 2,
+  max: 2,
+  options: [{ id: 'athletics', label: 'Athletics' }],
+} as const satisfies ClassChoice
+
+describe('linkFeatureToChoice', () => {
+  it('links a feature to a single-select choice with the same id', () => {
+    expect(
+      findSingleSelectChoiceForFeature('fighting-style', [
+        FIGHTING_STYLE_CHOICE,
+        SKILL_CHOICE,
+      ]),
+    ).toEqual(FIGHTING_STYLE_CHOICE)
+  })
+
+  it('returns null when no matching single-select choice exists', () => {
+    expect(
+      findSingleSelectChoiceForFeature('second-wind', [FIGHTING_STYLE_CHOICE]),
+    ).toBeNull()
+  })
+
+  it('excludes single-select choices already rendered on feature cards', () => {
+    expect(
+      getChoicesNotLinkedToFeatures(
+        [FIGHTING_STYLE_CHOICE, SKILL_CHOICE],
+        ['fighting-style', 'second-wind', 'weapon-mastery'],
+      ),
+    ).toEqual([SKILL_CHOICE])
+  })
+})

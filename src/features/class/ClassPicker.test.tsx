@@ -42,6 +42,15 @@ async function waitForClassesLoaded() {
   })
 }
 
+async function expandFightingStyleAccordion(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  const header = screen.getByRole('button', { name: /Fighting Style/i })
+  if (header.getAttribute('aria-expanded') === 'false') {
+    await user.click(header)
+  }
+}
+
 describe('ClassPicker', () => {
   it('shows fighter choices on the first click without committing', async () => {
     const user = userEvent.setup()
@@ -51,8 +60,12 @@ describe('ClassPicker', () => {
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
     expect(
-      screen.getByRole('group', { name: /choose a fighting style/i }),
+      screen.getByRole('button', { name: /Fighting Style/i }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Fighting Style/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('radio', { name: /Defense/i })).toBeInTheDocument()
     expect(
       screen.getByRole('group', { name: /choose two skill proficiencies/i }),
     ).toBeInTheDocument()
@@ -69,7 +82,7 @@ describe('ClassPicker', () => {
     fireEvent.focus(screen.getByRole('button', { name: 'Fighter' }))
 
     expect(
-      screen.queryByRole('group', { name: /choose a fighting style/i }),
+      screen.queryByRole('button', { name: /Fighting Style/i }),
     ).not.toBeInTheDocument()
   })
 
@@ -79,6 +92,7 @@ describe('ClassPicker', () => {
     await waitForClassesLoaded()
 
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await expandFightingStyleAccordion(user)
     await user.click(screen.getByRole('radio', { name: /Defense/i }))
     await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
     await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
@@ -105,6 +119,12 @@ describe('ClassPicker', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
     await user.click(screen.getByRole('checkbox', { name: 'Survival' }))
 
+    expect(screen.getByText('Selected: Archery')).toBeInTheDocument()
+    expect(
+      document.querySelector('.feature-choice-card__selection-description'),
+    ).toHaveTextContent(
+      /\+2 bonus to attack rolls you make with Ranged weapons/i,
+    )
     expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
       'Selected: Fighter',
     )
@@ -153,6 +173,7 @@ describe('ClassPicker', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
 
+    expect(screen.getByText('Selected: Defense')).toBeInTheDocument()
     expect(
       document.querySelector('.class-picker__selection'),
     ).toHaveTextContent(/Selecting:.*complete required choices to confirm/i)
@@ -167,6 +188,8 @@ describe('ClassPicker', () => {
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
     expect(screen.getByText('Weapon Mastery')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Second Wind/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Weapon Mastery/i })).not.toBeInTheDocument()
     expect(screen.getByText(/equipment step/i)).toBeInTheDocument()
     expect(screen.getByText(/three kinds of weapons/i)).toBeInTheDocument()
   })
