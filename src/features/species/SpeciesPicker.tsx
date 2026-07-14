@@ -7,6 +7,14 @@ import type {
 } from '../../domain/species/types'
 import { validateSpeciesSelection } from '../../rules/species/speciesRules'
 import { formatSpeciesValidationIssue } from './formatSpeciesValidation'
+import { SpeciesIcon } from './SpeciesIcon'
+import {
+  SelectionCheckIcon,
+  SizeStatIcon,
+  SpeedStatIcon,
+  TraitIcon,
+} from './SpeciesUiIcons'
+import { getSpeciesCardSummary } from './speciesPresentation'
 import {
   createSpeciesSelectionDraft,
   draftToSpeciesSelection,
@@ -158,9 +166,10 @@ export function SpeciesPicker({
 
       {!isLoading && speciesList.length > 0 ? (
         <div className="species-picker__layout">
-          <ul className="species-picker__list" role="list">
+          <ul className="species-picker__catalog" role="list">
             {speciesList.map((species) => {
               const isSelected = activeSpeciesId === species.id
+              const cardNameId = `species-card-${species.id}-name`
 
               return (
                 <li key={species.id}>
@@ -168,15 +177,40 @@ export function SpeciesPicker({
                     type="button"
                     className={
                       isSelected
-                        ? 'species-picker__option species-picker__option--selected'
-                        : 'species-picker__option'
+                        ? 'species-picker__card species-picker__card--selected'
+                        : 'species-picker__card'
                     }
                     aria-pressed={isSelected}
+                    aria-labelledby={cardNameId}
                     onClick={() => {
                       selectSpecies(species)
                     }}
                   >
-                    {species.name}
+                    {isSelected ? (
+                      <span
+                        className="species-picker__card-badge"
+                        aria-hidden="true"
+                      >
+                        <SelectionCheckIcon />
+                      </span>
+                    ) : null}
+                    <span className="species-picker__card-icon">
+                      <SpeciesIcon speciesId={species.id} />
+                    </span>
+                    <span className="species-picker__card-body">
+                      <span
+                        id={cardNameId}
+                        className="species-picker__card-name"
+                      >
+                        {species.name}
+                      </span>
+                      <span
+                        className="species-picker__card-summary"
+                        aria-hidden="true"
+                      >
+                        {getSpeciesCardSummary(species)}
+                      </span>
+                    </span>
                   </button>
                 </li>
               )
@@ -185,28 +219,63 @@ export function SpeciesPicker({
 
           {activeDefinition !== null ? (
             <article className="species-picker__detail">
-              <h3>{activeDefinition.name}</h3>
-              <p>{activeDefinition.description}</p>
-              <dl className="species-picker__stats">
-                <div>
+              <header className="species-picker__detail-header">
+                <div className="species-picker__detail-title-row">
+                  <span className="species-picker__detail-icon">
+                    <SpeciesIcon speciesId={activeDefinition.id} />
+                  </span>
+                  <h3>{activeDefinition.name}</h3>
+                </div>
+                <p className="species-picker__detail-lead">
+                  {activeDefinition.description}
+                </p>
+              </header>
+
+              <dl className="species-picker__metadata">
+                <div className="species-picker__metadata-item">
+                  <span
+                    className="species-picker__metadata-icon"
+                    aria-hidden="true"
+                  >
+                    <SizeStatIcon />
+                  </span>
                   <dt>Size</dt>
                   <dd>{formatSize(activeDefinition.size)}</dd>
                 </div>
-                <div>
+                <div className="species-picker__metadata-item">
+                  <span
+                    className="species-picker__metadata-icon"
+                    aria-hidden="true"
+                  >
+                    <SpeedStatIcon />
+                  </span>
                   <dt>Speed</dt>
                   <dd>{activeDefinition.speed.walk} feet</dd>
                 </div>
               </dl>
+
               {activeDefinition.traits.length > 0 ? (
                 <div className="species-picker__traits">
-                  <h4>Traits</h4>
-                  <ul>
+                  <h4 className="species-picker__section-title">Traits</h4>
+                  <div className="species-picker__trait-cards">
                     {activeDefinition.traits.map((trait) => (
-                      <li key={trait.id}>
-                        <strong>{trait.name}.</strong> {trait.description}
-                      </li>
+                      <article
+                        key={trait.id}
+                        className="species-picker__trait-card"
+                      >
+                        <span
+                          className="species-picker__trait-icon"
+                          aria-hidden="true"
+                        >
+                          <TraitIcon traitId={trait.id} />
+                        </span>
+                        <div className="species-picker__trait-content">
+                          <h5>{trait.name}</h5>
+                          <p>{trait.description}</p>
+                        </div>
+                      </article>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               ) : null}
               {showChoicesForDetail ? (
@@ -249,7 +318,9 @@ export function SpeciesPicker({
             <div
               className="species-picker__detail species-picker__detail--placeholder"
               aria-hidden="true"
-            />
+            >
+              <p>Select a species to preview its traits and abilities.</p>
+            </div>
           )}
         </div>
       ) : null}

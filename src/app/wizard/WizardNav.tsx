@@ -19,9 +19,10 @@ export function WizardNav({
   return (
     <nav aria-label="Character creation steps" className="wizard-nav">
       <ol className="wizard-nav__list">
-        {WIZARD_STEPS.map((step) => {
+        {WIZARD_STEPS.map((step, index) => {
           const status = stepStatuses[step.id]
           const isActive = step.id === activeStepId
+          const stepNumber = index + 1
 
           return (
             <li key={step.id} className="wizard-nav__item">
@@ -36,6 +37,9 @@ export function WizardNav({
                   status.completion === 'complete'
                     ? 'wizard-nav__step--complete'
                     : '',
+                  status.completion === 'not-started' && !isActive
+                    ? 'wizard-nav__step--upcoming'
+                    : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -47,11 +51,12 @@ export function WizardNav({
                   className="wizard-nav__indicator"
                   aria-hidden="true"
                   data-status={status.completion}
+                  data-step-number={stepNumber}
                   data-validation-warning={
                     status.hasValidationErrors ? 'true' : undefined
                   }
                 >
-                  {getStepStatusIndicator(status)}
+                  {getStepStatusIndicator(status, stepNumber)}
                 </span>
                 <span className="wizard-nav__label">{step.label}</span>
               </button>

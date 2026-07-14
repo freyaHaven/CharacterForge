@@ -24,7 +24,10 @@ export function formatStepNavAriaLabel(
   return `${stepLabel}, ${formatStepStatusDescription(status)}${activeSuffix}`
 }
 
-export function getStepStatusIndicator(status: StepStatus): string {
+export function getStepStatusIndicator(
+  status: StepStatus,
+  stepNumber: number,
+): string {
   if (status.hasValidationErrors) {
     return '!'
   }
@@ -33,9 +36,5 @@ export function getStepStatusIndicator(status: StepStatus): string {
     return '✓'
   }
 
-  if (status.completion === 'in-progress') {
-    return '•'
-  }
-
-  return '○'
+  return String(stepNumber)
 }

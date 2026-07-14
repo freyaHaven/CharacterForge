@@ -163,15 +163,26 @@ describe('CharacterWizard', () => {
     const basicsIndicator = within(getStepButton('Basics')).getByText('✓', {
       selector: '[aria-hidden="true"]',
     })
-    const speciesIndicator = within(getStepButton('Species')).getByText('•', {
+    const speciesIndicator = within(getStepButton('Species')).getByText('2', {
       selector: '[aria-hidden="true"]',
     })
-    const classIndicator = within(getStepButton('Class')).getByText('○', {
+    const classIndicator = within(getStepButton('Class')).getByText('3', {
       selector: '[aria-hidden="true"]',
     })
 
     expect(basicsIndicator).toHaveAttribute('data-status', 'complete')
     expect(speciesIndicator).toHaveAttribute('data-status', 'in-progress')
     expect(classIndicator).toHaveAttribute('data-status', 'not-started')
+  })
+
+  it('renders seven numbered step markers in the navigation list', () => {
+    render(<WizardHarness />)
+
+    const indicators = document.querySelectorAll(
+      '.wizard-nav__indicator[data-step-number]',
+    )
+    expect(indicators).toHaveLength(7)
+    expect(indicators[0]).toHaveAttribute('data-step-number', '1')
+    expect(indicators[6]).toHaveAttribute('data-step-number', '7')
   })
 })

@@ -114,4 +114,67 @@ describe('SpeciesPicker', () => {
       'Selected: Dragonborn',
     )
   })
+
+  it('separates the species catalogue from the detail panel in the layout', async () => {
+    render(<SpeciesPickerHarness />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
+    })
+
+    const layout = document.querySelector('.species-picker__layout')
+    expect(layout).not.toBeNull()
+    expect(layout?.querySelector('.species-picker__catalog')).not.toBeNull()
+    expect(
+      layout?.querySelector(
+        '.species-picker__detail, .species-picker__detail--placeholder',
+      ),
+    ).not.toBeNull()
+  })
+
+  it('renders metadata row and individual trait cards in the detail panel', async () => {
+    const user = userEvent.setup()
+    render(<SpeciesPickerHarness />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+
+    const detail = document.querySelector('.species-picker__detail')
+    expect(detail).not.toBeNull()
+    expect(detail?.querySelector('.species-picker__metadata')).not.toBeNull()
+    expect(detail?.querySelectorAll('.species-picker__metadata-item')).toHaveLength(
+      2,
+    )
+    expect(detail?.querySelectorAll('.species-picker__trait-icon')).toHaveLength(3)
+    expect(detail?.querySelectorAll('.species-picker__trait-card')).toHaveLength(3)
+    expect(screen.getByText('Medium')).toBeInTheDocument()
+    expect(screen.getByText('30 feet')).toBeInTheDocument()
+  })
+
+  it('shows a decorative check badge only on the selected catalogue card', async () => {
+    const user = userEvent.setup()
+    render(<SpeciesPickerHarness />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
+    })
+
+    expect(document.querySelector('.species-picker__card-badge')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+
+    const selectedCard = screen.getByRole('button', { name: 'Dwarf' })
+    expect(selectedCard).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      selectedCard.querySelector('.species-picker__card-badge[aria-hidden="true"]'),
+    ).not.toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Dragonborn' }).querySelector(
+        '.species-picker__card-badge',
+      ),
+    ).toBeNull()
+  })
 })
