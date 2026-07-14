@@ -1,11 +1,34 @@
 type EditionChangeDialogProps = {
   open: boolean
+  clearsSpecies: boolean
+  clearsClass: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
+function buildEditionChangeMessage(
+  clearsSpecies: boolean,
+  clearsClass: boolean,
+): string {
+  if (clearsSpecies && clearsClass) {
+    return 'Changing edition will clear your species and class selections because those definitions belong to the previous edition. Continue?'
+  }
+
+  if (clearsSpecies) {
+    return 'Changing edition will clear your species selection because the selected species definition belongs to the previous edition. Continue?'
+  }
+
+  if (clearsClass) {
+    return 'Changing edition will clear your class selection because the selected class definition belongs to the previous edition. Continue?'
+  }
+
+  return 'Changing edition will update the rules used for this character. Continue?'
+}
+
 export function EditionChangeDialog({
   open,
+  clearsSpecies,
+  clearsClass,
   onConfirm,
   onCancel,
 }: EditionChangeDialogProps) {
@@ -24,8 +47,7 @@ export function EditionChangeDialog({
       >
         <h2 id="edition-change-dialog-title">Change rules edition?</h2>
         <p id="edition-change-dialog-description">
-          Changing edition will clear your species selection because the selected
-          species definition belongs to the previous edition. Continue?
+          {buildEditionChangeMessage(clearsSpecies, clearsClass)}
         </p>
         <div className="dialog__actions">
           <button type="button" onClick={onConfirm}>

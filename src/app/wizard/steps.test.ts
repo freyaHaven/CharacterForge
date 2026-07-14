@@ -24,22 +24,22 @@ describe('WIZARD_STEPS', () => {
     expect(uniqueIds.size).toBe(ids.length)
   })
 
-  it('marks Basics, Species, and Ability Scores as required', () => {
+  it('marks Basics, Species, Class, and Ability Scores as required', () => {
     const requiredById = Object.fromEntries(
       WIZARD_STEPS.map((step) => [step.id, step.required]),
     ) as Record<WizardStepId, boolean>
 
     expect(requiredById.basics).toBe(true)
     expect(requiredById.species).toBe(true)
+    expect(requiredById.class).toBe(true)
     expect(requiredById['ability-scores']).toBe(true)
   })
 
-  it('marks Class, Background, Equipment, and Review as not required', () => {
+  it('marks Background, Equipment, and Review as not required', () => {
     const requiredById = Object.fromEntries(
       WIZARD_STEPS.map((step) => [step.id, step.required]),
     ) as Record<WizardStepId, boolean>
 
-    expect(requiredById.class).toBe(false)
     expect(requiredById.background).toBe(false)
     expect(requiredById.equipment).toBe(false)
     expect(requiredById.review).toBe(false)

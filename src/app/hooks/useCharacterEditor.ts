@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createDefaultCharacter, DEFAULT_CHARACTER_ID } from '../../domain/character/defaults'
 import type { CharacterRepository } from '../../domain/ports/characterRepository'
+import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { Character } from '../../domain/types'
+import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
 import { buildCharacterForSave } from '../buildCharacterForSave'
 import {
   canSaveCharacter,
@@ -13,23 +15,28 @@ import {
   getFinishPolicyResult,
 } from '../characterFinishPolicy'
 import { buildReviewSummaries } from '../reviewSummary'
+import { useReviewClassDisplay } from '../useReviewClassDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
 import { getAllStepStatuses } from '../wizard/stepStatus'
 import type { WizardStepId } from '../wizard/types'
 import { useAbilityScoresEditor } from './useAbilityScoresEditor'
+import { useClassEditor } from './useClassEditor'
+import { useEditionChange } from './useEditionChange'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { useSpeciesEditor } from './useSpeciesEditor'
 
 export type UseCharacterEditorOptions = {
   repository: CharacterRepository
   speciesCatalog: SpeciesCatalog
+  classCatalog?: ClassCatalog
   randomSource?: () => number
 }
 
 export function useCharacterEditor({
   repository,
   speciesCatalog,
+  classCatalog = createBundledClassCatalog(),
   randomSource = Math.random,
 }: UseCharacterEditorOptions) {
   const [character, setCharacter] = useState<Character>(() =>
@@ -62,6 +69,23 @@ export function useCharacterEditor({
     onDraftChange: clearSaveMessage,
   })
 
+  const classEditor = useClassEditor({
+    character,
+    setCharacter,
+    classCatalog,
+    onDraftChange: clearSaveMessage,
+  })
+
+  const editionChange = useEditionChange({
+    character,
+    setCharacter,
+    speciesCatalog,
+    classCatalog,
+    resetSpeciesDraft: species.resetSpeciesDraft,
+    resetClassDraft: classEditor.resetClassDraft,
+    onDraftChange: clearSaveMessage,
+  })
+
   const { hydrateFromCharacter } = abilityScores
 
   useEffect(() => {
@@ -72,6 +96,7 @@ export function useCharacterEditor({
       if (isActive && stored !== null) {
         setCharacter(stored)
         species.resetSpeciesDraft()
+        classEditor.resetClassDraft()
         hydrateFromCharacter(stored)
       }
       if (isActive) {
@@ -84,18 +109,25 @@ export function useCharacterEditor({
     return () => {
       isActive = false
     }
-  }, [hydrateFromCharacter, repository, species.resetSpeciesDraft])
+  }, [
+    classEditor.resetClassDraft,
+    hydrateFromCharacter,
+    repository,
+    species.resetSpeciesDraft,
+  ])
 
   const canSaveCharacterState = canSaveCharacter(character.creationMethod, {
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
     speciesDraftIncomplete: species.speciesDraftIncomplete,
+    classDraftIncomplete: classEditor.classDraftIncomplete,
   })
 
   const saveBlockedMessage = formatSaveBlockedMessage(
     character.creationMethod,
     species.speciesDraftIncomplete,
+    classEditor.classDraftIncomplete,
   )
 
   const stepStatuses = getAllStepStatuses({
@@ -105,6 +137,9 @@ export function useCharacterEditor({
     speciesDraft: species.speciesDraft,
     speciesDraftValidation: species.speciesDraftValidation,
     committedSpeciesValid: species.committedSpeciesValid,
+    classDraft: classEditor.classDraft,
+    classDraftValidation: classEditor.classDraftValidation,
+    committedClassValid: classEditor.committedClassValid,
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
@@ -117,12 +152,21 @@ export function useCharacterEditor({
     species.speciesDraft,
   )
 
+  const classReviewDisplay = useReviewClassDisplay(
+    classCatalog,
+    character.editionId,
+    character.class,
+    classEditor.classDraft,
+  )
+
   const finishPolicy = getFinishPolicyResult(stepStatuses)
   const reviewSummaries = buildReviewSummaries(
     {
       character,
       speciesDraft: species.speciesDraft,
       speciesDisplay: speciesReviewDisplay,
+      classDraft: classEditor.classDraft,
+      classDisplay: classReviewDisplay,
       standardArrayValidation: abilityScores.standardArrayValidation,
       pointBuyValidation: abilityScores.pointBuyValidation,
       rolledValidation: abilityScores.rolledValidation,
@@ -228,6 +272,9 @@ export function useCharacterEditor({
     setBasicsTouched,
     abilityScores,
     species,
+    classEditor,
+    classCatalog,
+    editionChange,
     speciesCatalog,
     handleSaveDraft,
     handleFinish,

@@ -5,6 +5,7 @@ import {
   getAbilityScoresStepStatus,
   getAllStepStatuses,
   getBasicsStepStatus,
+  getClassStepStatus,
   getNonReviewStepStatuses,
   getPlaceholderStepStatus,
   getReviewStepStatus,
@@ -22,6 +23,9 @@ function createContext(
     speciesDraft: null,
     speciesDraftValidation: null,
     committedSpeciesValid: false,
+    classDraft: null,
+    classDraftValidation: null,
+    committedClassValid: false,
     standardArrayValidation: null,
     pointBuyValidation: null,
     rolledValidation: null,
@@ -130,6 +134,61 @@ describe('getSpeciesStepStatus', () => {
             species: { speciesId: 'srd-2024:dwarf', choices: {} },
           }),
           committedSpeciesValid: false,
+        }),
+      ),
+    ).toEqual({
+      completion: 'in-progress',
+      hasValidationErrors: true,
+    })
+  })
+})
+
+describe('getClassStepStatus', () => {
+  it('is not-started when there is no committed selection and no draft', () => {
+    expect(getClassStepStatus(createContext())).toEqual({
+      completion: 'not-started',
+      hasValidationErrors: false,
+    })
+  })
+
+  it('is complete when a valid committed class exists and no incomplete draft is active', () => {
+    expect(
+      getClassStepStatus(
+        createContext({
+          character: createCharacter({
+            class: {
+              classId: 'srd-2024:fighter',
+              level: 1,
+              choices: {
+                'fighting-style': 'defense',
+                'skill-proficiencies': ['athletics', 'perception'],
+              },
+            },
+          }),
+          committedClassValid: true,
+        }),
+      ),
+    ).toEqual({
+      completion: 'complete',
+      hasValidationErrors: false,
+    })
+  })
+
+  it('is in-progress with validation errors when a draft is incomplete', () => {
+    expect(
+      getClassStepStatus(
+        createContext({
+          classDraft: {
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {},
+          },
+          classDraftValidation: {
+            ok: false,
+            issues: [
+              { code: 'missing-required-choice', choiceId: 'fighting-style' },
+            ],
+          },
         }),
       ),
     ).toEqual({
@@ -264,7 +323,7 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'complete', hasValidationErrors: false },
         species: { completion: 'complete', hasValidationErrors: false },
-        class: { completion: 'not-started', hasValidationErrors: false },
+        class: { completion: 'complete', hasValidationErrors: false },
         'ability-scores': { completion: 'complete', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },
         equipment: { completion: 'not-started', hasValidationErrors: false },
@@ -316,14 +375,24 @@ describe('getAllStepStatuses', () => {
         character: createCharacter({
           name: 'Aldric',
           species: { speciesId: 'srd-2024:dwarf', choices: {} },
+          class: {
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {
+              'fighting-style': 'defense',
+              'skill-proficiencies': ['athletics', 'perception'],
+            },
+          },
         }),
         committedSpeciesValid: true,
+        committedClassValid: true,
         abilityScoresTouched: true,
       }),
     )
 
     expect(statuses.basics.completion).toBe('complete')
     expect(statuses.species.completion).toBe('complete')
+    expect(statuses.class.completion).toBe('complete')
     expect(statuses['ability-scores'].completion).toBe('complete')
     expect(statuses.review).toEqual({
       completion: 'complete',

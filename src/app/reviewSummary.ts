@@ -1,5 +1,6 @@
 import { getAbilityModifier } from '../domain/abilities'
 import type { AbilityScores, Character } from '../domain/types'
+import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
 import { CREATION_METHOD_OPTIONS } from '../features/creation-method/creationMethodOptions'
 import { EDITION_OPTIONS } from '../features/edition-picker/editionOptions'
@@ -21,10 +22,18 @@ export type SpeciesReviewDisplay = {
   ancestryLabel: string | null
 }
 
+export type ClassReviewDisplay = {
+  className: string | null
+  fightingStyleLabel: string | null
+  skillLabels: string[]
+}
+
 export type ReviewSummaryContext = {
   character: Character
   speciesDraft: SpeciesSelectionDraft | null
   speciesDisplay: SpeciesReviewDisplay
+  classDraft: ClassSelectionDraft | null
+  classDisplay: ClassReviewDisplay
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
@@ -112,6 +121,42 @@ function buildSpeciesSummary(
   return ['Not selected']
 }
 
+function buildClassSummary(
+  context: ReviewSummaryContext,
+  status: StepStatus,
+): string[] {
+  if (status.completion === 'not-started') {
+    return ['Not selected']
+  }
+
+  const className = context.classDisplay.className
+
+  if (status.completion === 'complete') {
+    const lines = [`Class: ${className ?? 'Selected class'}`]
+    if (context.classDisplay.fightingStyleLabel !== null) {
+      lines.push(`Fighting Style: ${context.classDisplay.fightingStyleLabel}`)
+    }
+    if (context.classDisplay.skillLabels.length > 0) {
+      lines.push(`Skills: ${context.classDisplay.skillLabels.join(', ')}`)
+    }
+    return lines
+  }
+
+  if (status.hasValidationErrors) {
+    const lines =
+      className === null
+        ? ['Choice incomplete']
+        : [`Class: ${className}`, 'Choice incomplete']
+    return lines
+  }
+
+  if (className !== null) {
+    return [`Class: ${className}`, 'Confirm your selection']
+  }
+
+  return ['Not selected']
+}
+
 function buildAbilityScoresSummary(context: ReviewSummaryContext): string[] {
   const { character } = context
   const lines = [
@@ -155,7 +200,7 @@ export function buildReviewSummaries(
   return {
     basics: buildBasicsSummary(context),
     species: buildSpeciesSummary(context, stepStatuses.species),
-    class: buildPlaceholderSummary(),
+    class: buildClassSummary(context, stepStatuses.class),
     'ability-scores': buildAbilityScoresSummary(context),
     background: buildPlaceholderSummary(),
     equipment: buildPlaceholderSummary(),

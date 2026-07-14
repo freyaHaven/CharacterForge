@@ -12,6 +12,12 @@ function createContext(
     character: createDefaultCharacter(),
     speciesDraft: null,
     speciesDisplay: { speciesName: null, ancestryLabel: null },
+    classDraft: null,
+    classDisplay: {
+      className: null,
+      fightingStyleLabel: null,
+      skillLabels: [],
+    },
     standardArrayValidation: null,
     pointBuyValidation: null,
     rolledValidation: null,
@@ -121,10 +127,31 @@ describe('buildReviewSummaries', () => {
     )
   })
 
+  it('summarises a committed class with fighting style and skills', () => {
+    const summaries = buildReviewSummaries(
+      createContext({
+        classDisplay: {
+          className: 'Fighter',
+          fightingStyleLabel: 'Defense',
+          skillLabels: ['Athletics', 'Perception'],
+        },
+      }),
+      createStatuses({
+        class: { completion: 'complete', hasValidationErrors: false },
+      }),
+    )
+
+    expect(summaries.class).toEqual([
+      'Class: Fighter',
+      'Fighting Style: Defense',
+      'Skills: Athletics, Perception',
+    ])
+  })
+
   it('uses coming soon for optional placeholder steps', () => {
     const summaries = buildReviewSummaries(createContext(), createStatuses())
 
-    expect(summaries.class).toEqual(['Coming soon'])
+    expect(summaries.class).toEqual(['Not selected'])
     expect(summaries.background).toEqual(['Coming soon'])
     expect(summaries.equipment).toEqual(['Coming soon'])
   })

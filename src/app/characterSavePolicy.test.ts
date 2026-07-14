@@ -14,6 +14,7 @@ describe('canSaveCharacter', () => {
         },
         rolledValidation: null,
         speciesDraftIncomplete: false,
+        classDraftIncomplete: false,
       }),
     ).toBe(false)
   })
@@ -29,6 +30,7 @@ describe('canSaveCharacter', () => {
         },
         rolledValidation: null,
         speciesDraftIncomplete: false,
+        classDraftIncomplete: false,
       }),
     ).toBe(true)
   })
@@ -43,6 +45,7 @@ describe('canSaveCharacter', () => {
           issues: [{ code: 'unassigned-ability', ability: 'strength' }],
         },
         speciesDraftIncomplete: false,
+        classDraftIncomplete: false,
       }),
     ).toBe(false)
   })
@@ -54,6 +57,7 @@ describe('canSaveCharacter', () => {
         pointBuyValidation: null,
         rolledValidation: { valid: true },
         speciesDraftIncomplete: false,
+        classDraftIncomplete: false,
       }),
     ).toBe(true)
   })
@@ -65,6 +69,19 @@ describe('canSaveCharacter', () => {
         pointBuyValidation: null,
         rolledValidation: null,
         speciesDraftIncomplete: true,
+        classDraftIncomplete: false,
+      }),
+    ).toBe(false)
+  })
+
+  it('blocks saving while a class draft is incomplete', () => {
+    expect(
+      canSaveCharacter('manual', {
+        standardArrayValidation: null,
+        pointBuyValidation: null,
+        rolledValidation: null,
+        speciesDraftIncomplete: false,
+        classDraftIncomplete: true,
       }),
     ).toBe(false)
   })
@@ -72,19 +89,25 @@ describe('canSaveCharacter', () => {
 
 describe('formatSaveBlockedMessage', () => {
   it('returns species-specific guidance when a draft is incomplete', () => {
-    expect(formatSaveBlockedMessage('manual', true)).toBe(
+    expect(formatSaveBlockedMessage('manual', true, false)).toBe(
       'Complete the species selection before saving.',
     )
   })
 
+  it('returns class-specific guidance when a class draft is incomplete', () => {
+    expect(formatSaveBlockedMessage('manual', false, true)).toBe(
+      'Complete the class selection before saving.',
+    )
+  })
+
   it('returns creation-method-specific guidance for ability score drafts', () => {
-    expect(formatSaveBlockedMessage('point-buy', false)).toBe(
+    expect(formatSaveBlockedMessage('point-buy', false, false)).toBe(
       'Fix the point-buy assignment before saving.',
     )
-    expect(formatSaveBlockedMessage('rolled', false)).toBe(
+    expect(formatSaveBlockedMessage('rolled', false, false)).toBe(
       'Complete the rolled assignment before saving.',
     )
-    expect(formatSaveBlockedMessage('standard-array', false)).toBe(
+    expect(formatSaveBlockedMessage('standard-array', false, false)).toBe(
       'Complete the standard array assignment before saving.',
     )
   })

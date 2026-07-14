@@ -1,8 +1,11 @@
 import type { Character } from '../../domain/types'
+import type { ClassSelectionDraft } from '../../features/class/classSelectionDraft'
+import { isClassDraftIncomplete } from '../../features/class/classSelectionDraft'
 import type { SpeciesSelectionDraft } from '../../features/species/speciesSelectionDraft'
 import { isSpeciesDraftIncomplete } from '../../features/species/speciesSelectionDraft'
 import type { PointBuyValidationResult } from '../../rules/point-buy'
 import type { RolledAssignmentValidationResult } from '../../rules/rolled'
+import type { ClassValidationResult } from '../../rules/class/classRules'
 import type { SpeciesValidationResult } from '../../rules/species/speciesRules'
 import type { StandardArrayDraftValidationResult } from '../../features/ability-scores/standardArrayDraft'
 import { canSaveCharacter } from '../characterSavePolicy'
@@ -28,6 +31,12 @@ export type StepValidationContext = {
   /** Whether the committed species selection is valid for the current edition. */
   committedSpeciesValid: boolean
 
+  classDraft: ClassSelectionDraft | null
+  /** Validation of the active class draft; null when no draft exists. */
+  classDraftValidation: ClassValidationResult | null
+  /** Whether the committed class selection is valid for the current edition. */
+  committedClassValid: boolean
+
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
@@ -41,6 +50,7 @@ function isAbilityScoresMethodValid(context: StepValidationContext): boolean {
     pointBuyValidation: context.pointBuyValidation,
     rolledValidation: context.rolledValidation,
     speciesDraftIncomplete: false,
+    classDraftIncomplete: false,
   })
 }
 
@@ -77,6 +87,29 @@ export function getSpeciesStepStatus(context: StepValidationContext): StepStatus
   const hasValidationErrors =
     (speciesDraft !== null && context.speciesDraftValidation?.ok === false) ||
     (committed !== null && !context.committedSpeciesValid)
+
+  return { completion: 'in-progress', hasValidationErrors }
+}
+
+export function getClassStepStatus(context: StepValidationContext): StepStatus {
+  const { character, classDraft } = context
+  const committed = character.class
+
+  if (
+    committed !== null &&
+    context.committedClassValid &&
+    !isClassDraftIncomplete(classDraft, committed)
+  ) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  if (classDraft === null && committed === null) {
+    return { completion: 'not-started', hasValidationErrors: false }
+  }
+
+  const hasValidationErrors =
+    (classDraft !== null && context.classDraftValidation?.ok === false) ||
+    (committed !== null && !context.committedClassValid)
 
   return { completion: 'in-progress', hasValidationErrors }
 }
@@ -130,7 +163,7 @@ export function getNonReviewStepStatuses(
   return {
     basics: getBasicsStepStatus(context),
     species: getSpeciesStepStatus(context),
-    class: getPlaceholderStepStatus(),
+    class: getClassStepStatus(context),
     'ability-scores': getAbilityScoresStepStatus(context),
     background: getPlaceholderStepStatus(),
     equipment: getPlaceholderStepStatus(),

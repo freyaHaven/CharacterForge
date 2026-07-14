@@ -1,0 +1,529 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { ClassCatalog } from '../../domain/ports/classCatalog'
+import type { EditionId } from '../../domain/types'
+import type {
+  ClassChoice,
+  ClassChoiceValue,
+  ClassDefinition,
+  ClassSelection,
+} from '../../domain/class/types'
+import { getClassFeaturesForLevel } from '../../domain/class/featureProgression'
+import { SKILL_LABELS } from '../../domain/skills/types'
+import { validateClassSelection } from '../../rules/class/classRules'
+import { ClassCatalogCard } from './ClassCatalogCard'
+import { ClassIcon } from './ClassIcon'
+import {
+  formatAbilityList,
+  formatArmorProficiencies,
+  formatHitDie,
+  formatWeaponProficiencies,
+} from './formatClassDetails'
+import { filterClassesByName } from './filterClassesByName'
+import { formatClassValidationIssue } from './formatClassValidation'
+import {
+  createClassSelectionDraft,
+  draftToClassSelection,
+  initializeClassSelectionDraft,
+  tryCommitClassDraft,
+  updateClassDraftChoice,
+  type ClassSelectionDraft,
+} from './classSelectionDraft'
+
+function getSelectedOptionIds(value: ClassChoiceValue | undefined): string[] {
+  if (value === undefined) {
+    return []
+  }
+
+  return typeof value === 'string' ? [value] : [...value]
+}
+
+function toggleMultiSelectOption(
+  current: ClassChoiceValue | undefined,
+  optionId: string,
+  max: number,
+): ClassChoiceValue {
+  const selected = getSelectedOptionIds(current)
+
+  if (selected.includes(optionId)) {
+    return selected.filter((entry) => entry !== optionId)
+  }
+
+  if (selected.length >= max) {
+    return selected
+  }
+
+  return [...selected, optionId]
+}
+
+type ClassChoiceFieldProps = {
+  choice: ClassChoice
+  value: ClassChoiceValue | undefined
+  errorId: string | undefined
+  onChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
+}
+
+function ClassChoiceField({
+  choice,
+  value,
+  errorId,
+  onChange,
+}: ClassChoiceFieldProps) {
+  if (choice.type === 'single-select') {
+    const selectedOptionId =
+      typeof value === 'string' ? value : (value?.[0] ?? '')
+
+    return (
+      <fieldset
+        className="class-picker__choice-fieldset"
+        aria-describedby={errorId}
+      >
+        <legend>{choice.prompt}</legend>
+        <div className="class-picker__choice-options">
+          {choice.options.map((option) => {
+            const inputId = `class-choice-${choice.id}-${option.id}`
+
+            return (
+              <div key={option.id} className="class-picker__choice-option">
+                <input
+                  id={inputId}
+                  type="radio"
+                  name={`class-choice-${choice.id}`}
+                  value={option.id}
+                  checked={selectedOptionId === option.id}
+                  onChange={() => {
+                    onChange(choice.id, option.id)
+                  }}
+                />
+                <label htmlFor={inputId}>
+                  <span className="class-picker__choice-label">{option.label}</span>
+                  {option.description ? (
+                    <span className="class-picker__choice-description">
+                      {option.description}
+                    </span>
+                  ) : null}
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      </fieldset>
+    )
+  }
+
+  const selectedOptionIds = getSelectedOptionIds(value)
+
+  return (
+    <fieldset
+      className="class-picker__choice-fieldset"
+      aria-describedby={errorId}
+    >
+      <legend>{choice.prompt}</legend>
+      <p className="class-picker__choice-count" aria-live="polite">
+        Selected {selectedOptionIds.length} of {choice.max}
+      </p>
+      <div className="class-picker__choice-options class-picker__choice-options--multi">
+        {choice.options.map((option) => {
+          const inputId = `class-choice-${choice.id}-${option.id}`
+          const isChecked = selectedOptionIds.includes(option.id)
+          const isDisabled =
+            !isChecked && selectedOptionIds.length >= choice.max
+
+          return (
+            <div key={option.id} className="class-picker__choice-option">
+              <input
+                id={inputId}
+                type="checkbox"
+                name={`class-choice-${choice.id}`}
+                value={option.id}
+                checked={isChecked}
+                disabled={isDisabled}
+                onChange={() => {
+                  onChange(
+                    choice.id,
+                    toggleMultiSelectOption(value, option.id, choice.max),
+                  )
+                }}
+              />
+              <label htmlFor={inputId}>
+                <span className="class-picker__choice-label">
+                  {option.label ||
+                    (option.id in SKILL_LABELS
+                      ? SKILL_LABELS[option.id as keyof typeof SKILL_LABELS]
+                      : option.id)}
+                </span>
+              </label>
+            </div>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+type ClassPickerProps = {
+  editionId: EditionId
+  committedSelection: ClassSelection | null
+  draft: ClassSelectionDraft | null
+  catalog: ClassCatalog
+  onDraftChange: (draft: ClassSelectionDraft | null) => void
+  onCommittedSelectionChange: (selection: ClassSelection | null) => void
+}
+
+export function ClassPicker({
+  editionId,
+  committedSelection,
+  draft,
+  catalog,
+  onDraftChange,
+  onCommittedSelectionChange,
+}: ClassPickerProps) {
+  const [classList, setClassList] = useState<ClassDefinition[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const activeClassId = draft?.classId ?? committedSelection?.classId ?? null
+  const activeChoices = draft?.choices ?? committedSelection?.choices ?? {}
+  const activeLevel = draft?.level ?? committedSelection?.level ?? 1
+
+  const activeDefinition =
+    activeClassId === null
+      ? null
+      : (classList.find((entry) => entry.id === activeClassId) ?? null)
+
+  const filteredClasses = useMemo(
+    () => filterClassesByName(classList, searchQuery),
+    [classList, searchQuery],
+  )
+
+  const normalizedSearchQuery = searchQuery.trim()
+  const isSelectedClassHidden =
+    activeClassId !== null &&
+    normalizedSearchQuery.length > 0 &&
+    !filteredClasses.some((entry) => entry.id === activeClassId)
+
+  const draftValidation =
+    draft === null
+      ? null
+      : validateClassSelection(
+          draftToClassSelection(draft),
+          editionId,
+          activeDefinition,
+        )
+
+  const choiceIssueById = useMemo(() => {
+    const issues = draftValidation?.ok === false ? draftValidation.issues : []
+
+    return new Map(
+      issues
+        .filter((issue) => issue.choiceId !== undefined)
+        .map((issue) => [issue.choiceId as string, issue]),
+    )
+  }, [draftValidation])
+
+  const levelFeatures =
+    activeDefinition === null
+      ? []
+      : getClassFeaturesForLevel(activeDefinition, activeLevel)
+
+  useEffect(() => {
+    setSearchQuery('')
+  }, [editionId])
+
+  useEffect(() => {
+    let isActive = true
+    setIsLoading(true)
+
+    void catalog.listClasses(editionId).then((classes) => {
+      if (!isActive) {
+        return
+      }
+
+      setClassList(classes)
+      setIsLoading(false)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [catalog, editionId])
+
+  async function commitDraft(nextDraft: ClassSelectionDraft) {
+    const definition = await catalog.getClass(nextDraft.classId)
+    const { committed } = tryCommitClassDraft(
+      nextDraft,
+      editionId,
+      definition,
+    )
+
+    if (committed !== null) {
+      onDraftChange(null)
+      onCommittedSelectionChange(committed)
+      return
+    }
+
+    onDraftChange(nextDraft)
+    onCommittedSelectionChange(null)
+  }
+
+  function selectClass(classDefinition: ClassDefinition) {
+    const nextDraft = createClassSelectionDraft(classDefinition.id)
+    const { committed } = tryCommitClassDraft(
+      nextDraft,
+      editionId,
+      classDefinition,
+    )
+
+    if (committed !== null) {
+      onDraftChange(null)
+      onCommittedSelectionChange(committed)
+      return
+    }
+
+    onDraftChange(nextDraft)
+    onCommittedSelectionChange(null)
+  }
+
+  async function handleChoiceChange(
+    choiceId: string,
+    value: ClassChoiceValue | undefined,
+  ) {
+    const currentDraft =
+      draft ??
+      (activeClassId === null
+        ? null
+        : initializeClassSelectionDraft({
+            classId: activeClassId,
+            level: activeLevel,
+            choices: activeChoices,
+          }))
+
+    if (currentDraft === null) {
+      return
+    }
+
+    const nextDraft = updateClassDraftChoice(currentDraft, choiceId, value)
+    await commitDraft(nextDraft)
+  }
+
+  function clearSelection() {
+    onDraftChange(null)
+    onCommittedSelectionChange(null)
+  }
+
+  return (
+    <section className="class-picker" aria-labelledby="class-picker-heading">
+      <div className="class-picker__intro">
+        <h2 id="class-picker-heading">Class</h2>
+        <p className="helper-text">
+          Choose a class for your character. Complete required choices to confirm
+          your selection.
+        </p>
+      </div>
+
+      {isLoading ? <p className="status">Loading classes...</p> : null}
+
+      {!isLoading && classList.length === 0 ? (
+        <p className="status">
+          No bundled classes are available for this rules edition yet.
+        </p>
+      ) : null}
+
+      {!isLoading && classList.length > 0 ? (
+        <div className="class-picker__layout">
+          <div className="class-picker__catalog-panel">
+            <div className="class-picker__catalog-toolbar">
+              <label className="class-picker__search field">
+                <span>Search classes</span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  placeholder="Search by name…"
+                  aria-controls="class-catalog-list"
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value)
+                  }}
+                />
+              </label>
+            </div>
+
+            {filteredClasses.length === 0 ? (
+              <p className="class-picker__catalog-empty" role="status">
+                No classes match &ldquo;{normalizedSearchQuery}&rdquo;.
+              </p>
+            ) : (
+              <ul
+                id="class-catalog-list"
+                className="class-picker__catalog"
+                role="list"
+              >
+                {filteredClasses.map((classDefinition) => (
+                  <ClassCatalogCard
+                    key={classDefinition.id}
+                    classDefinition={classDefinition}
+                    isSelected={activeClassId === classDefinition.id}
+                    onSelect={selectClass}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="class-picker__detail-panel">
+            {isSelectedClassHidden ? (
+              <p className="class-picker__detail-hidden-note" role="status">
+                The selected class is hidden by the current search.
+              </p>
+            ) : null}
+
+            {activeDefinition !== null ? (
+              <article className="class-picker__detail">
+                <header className="class-picker__detail-header">
+                  <div className="class-picker__detail-title-row">
+                    <span className="class-picker__detail-icon">
+                      <ClassIcon classId={activeDefinition.id} />
+                    </span>
+                    <div className="class-picker__detail-text">
+                      <h3>{activeDefinition.name}</h3>
+                      <p className="class-picker__detail-lead">
+                        {activeDefinition.description}
+                      </p>
+                    </div>
+                  </div>
+                </header>
+
+                <dl className="class-picker__metadata">
+                  <div className="class-picker__metadata-item">
+                    <dt>Hit Die</dt>
+                    <dd>{formatHitDie(activeDefinition)}</dd>
+                  </div>
+                  <div className="class-picker__metadata-item">
+                    <dt>Primary Abilities</dt>
+                    <dd>
+                      {formatAbilityList(activeDefinition.primaryAbilities)}
+                    </dd>
+                  </div>
+                  <div className="class-picker__metadata-item">
+                    <dt>Saving Throws</dt>
+                    <dd>{formatAbilityList(activeDefinition.savingThrows)}</dd>
+                  </div>
+                  <div className="class-picker__metadata-item">
+                    <dt>Armour</dt>
+                    <dd>
+                      {formatArmorProficiencies(
+                        activeDefinition.proficiencies.armor,
+                      )}
+                    </dd>
+                  </div>
+                  <div className="class-picker__metadata-item">
+                    <dt>Weapons</dt>
+                    <dd>
+                      {formatWeaponProficiencies(
+                        activeDefinition.proficiencies.weapons,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+
+                {levelFeatures.length > 0 ? (
+                  <div className="class-picker__features">
+                    <h4 className="class-picker__section-title">
+                      Level {activeLevel} Features
+                    </h4>
+                    <div className="class-picker__feature-cards">
+                      {levelFeatures.map((feature) => (
+                        <article
+                          key={feature.id}
+                          className="class-picker__feature-card"
+                        >
+                          <h5>{feature.name}</h5>
+                          <p>{feature.description}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeDefinition.choices.length > 0 ? (
+                  <div className="class-picker__choices">
+                    {activeDefinition.choices.map((choice) => {
+                      const issue = choiceIssueById.get(choice.id)
+                      const errorId =
+                        issue === undefined
+                          ? undefined
+                          : `class-choice-error-${choice.id}`
+
+                      return (
+                        <div key={choice.id} className="class-picker__choice">
+                          <ClassChoiceField
+                            choice={choice}
+                            value={activeChoices[choice.id]}
+                            errorId={errorId}
+                            onChange={(choiceId, nextValue) => {
+                              void handleChoiceChange(choiceId, nextValue)
+                            }}
+                          />
+                          {issue !== undefined && errorId !== undefined ? (
+                            <p
+                              id={errorId}
+                              className="class-picker__choice-error"
+                              role="alert"
+                            >
+                              {formatClassValidationIssue(issue)}
+                            </p>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </article>
+            ) : (
+              <div
+                className="class-picker__detail class-picker__detail--placeholder"
+                aria-hidden="true"
+              >
+                <p>Select a class to preview its features and choices.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {activeDefinition !== null && committedSelection !== null ? (
+        <p className="class-picker__selection">
+          Selected: <strong>{activeDefinition.name}</strong>
+        </p>
+      ) : null}
+
+      {draft !== null && committedSelection === null ? (
+        <p className="class-picker__selection">
+          Selecting: <strong>{activeDefinition?.name ?? 'Class'}</strong>{' '}
+          (complete required choices to confirm)
+        </p>
+      ) : null}
+
+      {draftValidation !== null && !draftValidation.ok ? (
+        <div className="validation-message" role="alert">
+          <p>Complete the class selection:</p>
+          <ul>
+            {draftValidation.issues.map((issue) => (
+              <li key={`${issue.code}-${issue.choiceId ?? 'general'}`}>
+                {formatClassValidationIssue(issue)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {activeClassId !== null ? (
+        <button
+          type="button"
+          className="class-picker__clear"
+          onClick={clearSelection}
+        >
+          Clear class selection
+        </button>
+      ) : null}
+    </section>
+  )
+}

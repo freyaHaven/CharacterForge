@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
 import {
+  completeFighterSelection,
   getWizardStepButton,
   goToAbilityScoresStep,
   goToSpeciesStep,
@@ -40,7 +41,14 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
-    class: null,
+    class: {
+      classId: 'srd-2024:fighter',
+      level: 1,
+      choices: {
+        'fighting-style': 'defense',
+        'skill-proficiencies': ['athletics', 'perception'],
+      },
+    },
     ...overrides,
   }
 }
@@ -93,6 +101,8 @@ async function completeRequiredSteps(
     )
   }
 
+  await completeFighterSelection(user, screen)
+
   if (useStandardArray) {
     await goToAbilityScoresStep(user, screen)
     await user.selectOptions(
@@ -115,12 +125,19 @@ describe('Review wizard integration', () => {
     const { user } = await renderApp(createStoredCharacter())
     await openReviewStep(user)
 
-    expect(screen.getByRole('heading', { name: 'Basics', level: 3 })).toBeInTheDocument()
-    expect(screen.getByText('Name: Aldric')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Class: Fighter')).toBeInTheDocument()
+      expect(screen.getByText('Fighting Style: Defense')).toBeInTheDocument()
+    })
+    expect(
+      screen.getByRole('heading', { name: 'Basics', level: 3 }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Edition: D&D 5e 2024')).toBeInTheDocument()
     expect(screen.getByText('Species: Dwarf')).toBeInTheDocument()
     expect(screen.getByText('Method: Manual')).toBeInTheDocument()
-    expect(screen.getAllByText('Coming soon')).toHaveLength(3)
+    expect(screen.getByText('Class: Fighter')).toBeInTheDocument()
+    expect(screen.getByText('Fighting Style: Defense')).toBeInTheDocument()
+    expect(screen.getAllByText('Coming soon')).toHaveLength(2)
   })
 
   it('navigates to the selected step from an edit action', async () => {
@@ -168,6 +185,14 @@ describe('Review wizard integration', () => {
         expect.objectContaining({
           name: 'Aldric',
           species: { speciesId: 'srd-2024:dwarf', choices: {} },
+          class: {
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {
+              'fighting-style': 'defense',
+              'skill-proficiencies': ['athletics', 'perception'],
+            },
+          },
           creationMethod: 'standard-array',
           abilityScores: DEFAULT_STANDARD_ARRAY_ASSIGNMENT,
         }),

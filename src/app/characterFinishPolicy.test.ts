@@ -32,6 +32,7 @@ describe('getFinishPolicyResult', () => {
         createStatuses({
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'complete', hasValidationErrors: false },
+          class: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
         }),
       ),
@@ -47,6 +48,7 @@ describe('getFinishPolicyResult', () => {
         createStatuses({
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'in-progress', hasValidationErrors: true },
+          class: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
         }),
       ),
@@ -62,7 +64,7 @@ describe('getFinishPolicyResult', () => {
         createStatuses({
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'complete', hasValidationErrors: false },
-          class: { completion: 'not-started', hasValidationErrors: false },
+          class: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
           background: { completion: 'not-started', hasValidationErrors: false },
           equipment: { completion: 'not-started', hasValidationErrors: false },

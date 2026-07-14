@@ -3,9 +3,14 @@ import type { CharacterCreationMethod } from '../domain/types'
 export function formatSaveBlockedMessage(
   creationMethod: CharacterCreationMethod,
   speciesDraftIncomplete: boolean,
+  classDraftIncomplete: boolean,
 ): string {
   if (speciesDraftIncomplete) {
     return 'Complete the species selection before saving.'
+  }
+
+  if (classDraftIncomplete) {
+    return 'Complete the class selection before saving.'
   }
 
   if (creationMethod === 'point-buy') {
@@ -27,13 +32,14 @@ type SaveValidationState = {
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
   speciesDraftIncomplete: boolean
+  classDraftIncomplete: boolean
 }
 
 export function canSaveCharacter(
   creationMethod: CharacterCreationMethod,
   validation: SaveValidationState,
 ): boolean {
-  if (validation.speciesDraftIncomplete) {
+  if (validation.speciesDraftIncomplete || validation.classDraftIncomplete) {
     return false
   }
 

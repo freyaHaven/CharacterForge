@@ -34,7 +34,7 @@ describe('Placeholder wizard steps', () => {
     return { user }
   }
 
-  it('reports Class, Background, and Equipment as optional and not started', async () => {
+  it('reports Class as required and not started on a fresh character', async () => {
     await renderApp()
 
     expect(getWizardStepButton(screen, 'Class')).toHaveAccessibleName(
@@ -46,22 +46,19 @@ describe('Placeholder wizard steps', () => {
     expect(getWizardStepButton(screen, 'Equipment')).toHaveAccessibleName(
       /not started/i,
     )
-    expect(getWizardStepButton(screen, 'Class')).not.toHaveAccessibleName(
-      /needs attention/i,
-    )
   })
 
-  it('navigates between placeholder steps and shows their content', async () => {
+  it('navigates to the class picker and placeholder steps', async () => {
     const { user } = await renderApp()
 
     await goToWizardStep(user, screen, 'Class')
     expect(
       screen.getByRole('heading', { name: 'Class', level: 2 }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Coming soon')).toBeInTheDocument()
-    expect(
-      screen.queryByText(/class step content will appear here/i),
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText(/loading classes/i)).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: 'Fighter' })).toBeInTheDocument()
 
     await goToWizardStep(user, screen, 'Background')
     expect(

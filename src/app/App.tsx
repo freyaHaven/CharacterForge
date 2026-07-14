@@ -1,4 +1,5 @@
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
+import { createBundledClassCatalog } from '../adapters/bundledClassCatalog'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
 import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
@@ -14,6 +15,7 @@ import './app.css'
 
 const repository = createLocalStorageCharacterRepository()
 const speciesCatalog = createBundledSpeciesCatalog()
+const classCatalog = createBundledClassCatalog()
 
 type AppProps = {
   randomSource?: () => number
@@ -23,6 +25,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
   const editor = useCharacterEditor({
     repository,
     speciesCatalog,
+    classCatalog,
     randomSource,
   })
 
@@ -30,7 +33,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
     return <p className="status">Loading character...</p>
   }
 
-  const { character, abilityScores, species } = editor
+  const { character, abilityScores, species, classEditor, editionChange } =
+    editor
 
   return (
     <main className="app">
@@ -50,7 +54,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
               editionId={character.editionId}
               onNameChange={editor.updateName}
               onEditionChange={(editionId) => {
-                void species.handleEditionChange(editionId)
+                void editionChange.handleEditionChange(editionId)
               }}
               onBasicsTouched={() => editor.setBasicsTouched(true)}
             />
@@ -65,7 +69,16 @@ export default function App({ randomSource = Math.random }: AppProps) {
               onCommittedSelectionChange={species.commitSpeciesSelection}
             />
           ),
-          class: <ClassStep />,
+          class: (
+            <ClassStep
+              editionId={character.editionId}
+              committedSelection={character.class}
+              draft={classEditor.classDraft}
+              catalog={editor.classCatalog}
+              onDraftChange={classEditor.setClassDraft}
+              onCommittedSelectionChange={classEditor.commitClassSelection}
+            />
+          ),
           'ability-scores': (
             <AbilityScoresStep
               creationMethod={character.creationMethod}
@@ -111,9 +124,13 @@ export default function App({ randomSource = Math.random }: AppProps) {
       />
 
       <EditionChangeDialog
-        open={species.pendingEditionId !== null}
-        onConfirm={species.confirmEditionChange}
-        onCancel={species.cancelEditionChange}
+        open={editionChange.pendingEditionChange !== null}
+        clearsSpecies={
+          editionChange.pendingEditionChange?.clearsSpecies ?? false
+        }
+        clearsClass={editionChange.pendingEditionChange?.clearsClass ?? false}
+        onConfirm={editionChange.confirmEditionChange}
+        onCancel={editionChange.cancelEditionChange}
       />
 
       <div className="actions">
