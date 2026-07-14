@@ -3,6 +3,7 @@ import type {
   CharacterCreationMethod,
   EditionId,
 } from '../types'
+import { isClassSelection } from '../class/isClassSelection'
 import { isSpeciesSelection } from '../species/isSpeciesSelection'
 import type { AbilityScores } from '../types'
 
@@ -47,6 +48,10 @@ function isSpecies(value: unknown): boolean {
   return value === null || isSpeciesSelection(value)
 }
 
+function isClass(value: unknown): boolean {
+  return value === null || isClassSelection(value)
+}
+
 export function isCharacter(value: unknown): value is Character {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -61,6 +66,7 @@ export function isCharacter(value: unknown): value is Character {
     isEditionId(candidate.editionId) &&
     isCharacterCreationMethod(candidate.creationMethod) &&
     isAbilityScores(candidate.abilityScores) &&
-    isSpecies(candidate.species)
+    isSpecies(candidate.species) &&
+    isClass(candidate.class)
   )
 }

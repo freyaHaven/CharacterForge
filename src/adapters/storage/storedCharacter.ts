@@ -1,18 +1,23 @@
 import type { Character } from '../../domain/types'
 
-export const CURRENT_SCHEMA_VERSION = 2
+export const CURRENT_SCHEMA_VERSION = 3
 
 export type StoredCharacterV1 = {
   schemaVersion: 1
-  character: Omit<Character, 'species'>
+  character: Omit<Character, 'species' | 'class'>
 }
 
 export type StoredCharacterV2 = {
   schemaVersion: 2
+  character: Omit<Character, 'class'>
+}
+
+export type StoredCharacterV3 = {
+  schemaVersion: 3
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV2
+export type StoredCharacter = StoredCharacterV3
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -24,7 +29,7 @@ export type ParseStoredCharacterResult =
 export function isStoredCharacterEnvelope(
   value: unknown,
   schemaVersion: number,
-): value is StoredCharacterV1 | StoredCharacterV2 {
+): value is StoredCharacterV1 | StoredCharacterV2 | StoredCharacterV3 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

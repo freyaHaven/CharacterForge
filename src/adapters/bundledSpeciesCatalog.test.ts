@@ -36,5 +36,6 @@ describe('createBundledSpeciesCatalog', () => {
 
   it('returns null for an unknown species id', async () => {
     await expect(catalog.getSpecies('srd-2024:unknown')).resolves.toBeNull()
+    await expect(catalog.getSpecies('srd-2014:dwarf')).resolves.toBeNull()
   })
 })

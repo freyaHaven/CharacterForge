@@ -38,6 +38,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: null,
+    class: null,
     ...overrides,
   }
 }

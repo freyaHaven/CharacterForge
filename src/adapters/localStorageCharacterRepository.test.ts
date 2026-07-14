@@ -17,6 +17,7 @@ function createTestCharacter(): Character {
       charisma: 8,
     },
     species: null,
+    class: null,
   }
 }
 
@@ -77,7 +78,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       character,
     })
   })
@@ -98,7 +99,7 @@ describe('createLocalStorageCharacterRepository', () => {
     const repository = createLocalStorageCharacterRepository()
     const loaded = await repository.load('char-1')
 
-    expect(loaded).toEqual({ ...v1Character, species: null })
+    expect(loaded).toEqual({ ...v1Character, species: null, class: null })
   })
 
   it('migrates a legacy unversioned save on load', async () => {
@@ -117,7 +118,7 @@ describe('createLocalStorageCharacterRepository', () => {
     const repository = createLocalStorageCharacterRepository()
     const loaded = await repository.load('char-1')
 
-    expect(loaded).toEqual({ ...character, species: null })
+    expect(loaded).toEqual({ ...character, species: null, class: null })
   })
 
   it('saves and reloads a selected species', async () => {

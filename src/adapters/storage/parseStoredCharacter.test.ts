@@ -20,6 +20,7 @@ function createTestCharacter(
       charisma: 8,
     },
     species: null,
+    class: null,
     ...overrides,
   }
 }
@@ -54,7 +55,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: { ...legacy, species: null },
+      character: { ...legacy, species: null, class: null },
     })
   })
 
@@ -80,7 +81,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: { ...v1Character, species: null },
+      character: { ...v1Character, species: null, class: null },
     })
   })
 
@@ -112,7 +113,7 @@ describe('parseStoredCharacter', () => {
 
   it('rejects versioned saves with invalid character data', () => {
     const raw = JSON.stringify({
-      schemaVersion: 2,
+      schemaVersion: 3,
       character: { ...createTestCharacter(), editionId: 'srd-2020' },
     })
 
@@ -142,7 +143,7 @@ describe('parseStoredCharacter', () => {
 
     expect(result).toEqual({
       ok: true,
-      character: { ...legacy, species: null },
+      character: { ...legacy, species: null, class: null },
     })
   })
 
@@ -166,7 +167,7 @@ describe('parseStoredCharacter', () => {
 
     expect(result).toEqual({
       ok: true,
-      character: { ...legacy, species: null },
+      character: { ...legacy, species: null, class: null },
     })
   })
 })

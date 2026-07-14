@@ -1,15 +1,49 @@
 import type { EditionId } from './edition'
+import type { ClassSelection } from './class/types'
 import type { SpeciesSelection } from './species/types'
 
 export type { CharacterLifecycle } from './character/lifecycle'
 export type { EditionId } from './edition'
 export { DEFAULT_EDITION_ID } from './edition'
+export type { AbilityId } from './abilities/types'
+export { ABILITY_IDS, isAbilityId } from './abilities/types'
+export type { ContentSource, LicenceId } from './content/types'
+export type {
+  ArmorProficiency,
+  ClassChoice,
+  ClassChoiceEffect,
+  ClassChoiceOption,
+  ClassChoiceValue,
+  ClassDefinition,
+  ClassFeature,
+  ClassLevelFeatures,
+  ClassLevel,
+  ClassSelection,
+  HitDie,
+  ResolvedClassEffect,
+  ToolProficiency,
+  WeaponProficiency,
+} from './class/types'
+export {
+  getClassFeaturesForLevel,
+  getClassFeaturesUpToLevel,
+} from './class/featureProgression'
+export {
+  MAX_CLASS_LEVEL,
+  MIN_CLASS_LEVEL,
+} from './class/types'
+export type {
+  SkillId,
+} from './skills/types'
+export {
+  isSkillId,
+  SKILL_IDS,
+  SKILL_LABELS,
+} from './skills/types'
 export type {
   ConditionId,
-  ContentSource,
   CreatureSize,
   DamageTypeId,
-  LicenceId,
   MovementSpeed,
   SpeciesChoice,
   SpeciesChoiceOption,
@@ -41,4 +75,5 @@ export type Character = {
   creationMethod: CharacterCreationMethod
   abilityScores: AbilityScores
   species: SpeciesSelection | null
+  class: ClassSelection | null
 }

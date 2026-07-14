@@ -1,15 +1,7 @@
 import type { EditionId } from '../edition'
+import type { ContentSource } from '../content/types'
 
-export type LicenceId = string
-
-export type ContentSource = {
-  id: string
-  name: string
-  version: string
-  licence: LicenceId
-  attribution: string
-  documentUrl: string
-}
+export type { ContentSource, LicenceId } from '../content/types'
 
 export type CreatureSize =
   | 'tiny'

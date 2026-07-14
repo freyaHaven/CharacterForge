@@ -1,11 +1,11 @@
 import type { Character } from '../../domain/types'
 import {
   CURRENT_SCHEMA_VERSION,
-  type StoredCharacterV2,
+  type StoredCharacter,
 } from './storedCharacter'
 
 export function serializeCharacter(character: Character): string {
-  const envelope: StoredCharacterV2 = {
+  const envelope: StoredCharacter = {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     character,
   }

@@ -17,6 +17,7 @@ function createValidCharacter(): Character {
       charisma: 8,
     },
     species: null,
+    class: null,
   }
 }
 
@@ -96,5 +97,31 @@ describe('isCharacter', () => {
         species: { speciesId: '', choices: {} },
       }),
     ).toBe(false)
+  })
+
+  it('returns false when class is missing', () => {
+    const { class: _class, ...withoutClass } = createValidCharacter()
+
+    expect(isCharacter(withoutClass)).toBe(false)
+  })
+
+  it('returns true when class is null', () => {
+    expect(isCharacter({ ...createValidCharacter(), class: null })).toBe(true)
+  })
+
+  it('returns true for a valid class selection', () => {
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        class: {
+          classId: 'srd-2024:fighter',
+          level: 1,
+          choices: {
+            'fighting-style': 'defense',
+            'skill-proficiencies': ['athletics', 'perception'],
+          },
+        },
+      }),
+    ).toBe(true)
   })
 })

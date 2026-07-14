@@ -40,6 +40,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    class: null,
     ...overrides,
   }
 }

@@ -22,6 +22,7 @@ export function createDefaultCharacter(
     creationMethod: 'manual',
     abilityScores: DEFAULT_ABILITY_SCORES,
     species: null,
+    class: null,
     ...overrides,
   }
 }
