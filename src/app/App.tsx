@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
+import {
+  createDefaultCharacter,
+  DEFAULT_CHARACTER_ID,
+} from '../domain/character/defaults'
 import type { AbilityScores, Character, EditionId } from '../domain/types'
 import { AbilityScoresForm } from '../features/ability-scores/AbilityScoresForm'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
@@ -36,26 +40,6 @@ import { needsEditionChangeSpeciesConfirmation } from '../rules/species/speciesR
 import { canSaveCharacter } from './characterSavePolicy'
 import './app.css'
 
-const CHARACTER_ID = 'char-1'
-
-const defaultAbilityScores: AbilityScores = {
-  strength: 10,
-  dexterity: 10,
-  constitution: 10,
-  intelligence: 10,
-  wisdom: 10,
-  charisma: 10,
-}
-
-const defaultCharacter: Character = {
-  id: CHARACTER_ID,
-  name: '',
-  editionId: 'srd-2014',
-  creationMethod: 'manual',
-  abilityScores: defaultAbilityScores,
-  species: null,
-}
-
 const repository = createLocalStorageCharacterRepository()
 const speciesCatalog = createBundledSpeciesCatalog()
 
@@ -64,7 +48,9 @@ type AppProps = {
 }
 
 export default function App({ randomSource = Math.random }: AppProps) {
-  const [character, setCharacter] = useState<Character>(defaultCharacter)
+  const [character, setCharacter] = useState<Character>(() =>
+    createDefaultCharacter(),
+  )
   const [standardArrayDraft, setStandardArrayDraft] =
     useState<StandardArrayDraftScores | null>(null)
   const [pointBuyDraft, setPointBuyDraft] = useState<PointBuyDraftScores | null>(
@@ -99,7 +85,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     let isActive = true
 
     async function loadCharacter() {
-      const stored = await repository.load(CHARACTER_ID)
+      const stored = await repository.load(DEFAULT_CHARACTER_ID)
       if (isActive && stored !== null) {
         setCharacter(stored)
         setSpeciesDraft(null)

@@ -1,7 +1,9 @@
 import type { EditionId } from './edition'
 import type { SpeciesSelection } from './species/types'
 
+export type { CharacterLifecycle } from './character/lifecycle'
 export type { EditionId } from './edition'
+export { DEFAULT_EDITION_ID } from './edition'
 export type {
   ConditionId,
   ContentSource,

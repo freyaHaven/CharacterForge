@@ -146,12 +146,7 @@ describe('Species workflow in App', () => {
   it('shows the ancestry selector after one Dragonborn click in a fresh app on srd-2024', async () => {
     const { user } = await renderFreshApp()
 
-    expect(getEditionSelect()).toHaveValue('srd-2014')
-    expect(
-      screen.getByText(/no bundled species are available for this rules edition/i),
-    ).toBeInTheDocument()
-
-    await user.selectOptions(getEditionSelect(), 'srd-2024')
+    expect(getEditionSelect()).toHaveValue('srd-2024')
     await waitForSpeciesLoaded()
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
