@@ -127,7 +127,10 @@ describe('Review wizard integration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Class: Fighter')).toBeInTheDocument()
-      expect(screen.getByText('Fighting Style: Defense')).toBeInTheDocument()
+      expect(screen.getByText('Level: 1')).toBeInTheDocument()
+      expect(
+        screen.getByText('Choose a Fighting Style: Defense'),
+      ).toBeInTheDocument()
     })
     expect(
       screen.getByRole('heading', { name: 'Basics', level: 3 }),
@@ -136,7 +139,10 @@ describe('Review wizard integration', () => {
     expect(screen.getByText('Species: Dwarf')).toBeInTheDocument()
     expect(screen.getByText('Method: Manual')).toBeInTheDocument()
     expect(screen.getByText('Class: Fighter')).toBeInTheDocument()
-    expect(screen.getByText('Fighting Style: Defense')).toBeInTheDocument()
+    expect(screen.getByText('Level: 1')).toBeInTheDocument()
+    expect(
+      screen.getByText('Choose a Fighting Style: Defense'),
+    ).toBeInTheDocument()
     expect(screen.getAllByText('Coming soon')).toHaveLength(2)
   })
 

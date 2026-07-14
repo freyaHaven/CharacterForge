@@ -47,4 +47,17 @@ describe('fighterSrd2024', () => {
     expect(weaponMastery?.description).toMatch(/three kinds of weapons/i)
     expect(weaponMastery?.description).toMatch(/equipment step/i)
   })
+
+  it('declares the level at which each choice becomes available', () => {
+    expect(
+      fighterSrd2024.choices.map((choice) => ({
+        id: choice.id,
+        level: choice.level,
+      })),
+    ).toEqual([
+      { id: 'fighting-style', level: 1 },
+      { id: 'skill-proficiencies', level: 1 },
+      { id: 'martial-archetype', level: 3 },
+    ])
+  })
 })

@@ -4,6 +4,7 @@ import type {
   ClassDefinition,
   ClassSelection,
 } from '../../domain/class/types'
+import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import type { EditionId } from '../../domain/types'
 
 export type ClassValidationIssueCode =
@@ -91,15 +92,19 @@ export function validateClassSelection(
   }
 
   const issues: ClassValidationIssue[] = []
+  const availableChoices = getChoicesAvailableAtLevel(definition, selection.level)
+  const availableChoiceIds = new Set(
+    availableChoices.map((choice) => choice.id),
+  )
 
-  for (const choice of definition.choices) {
+  for (const choice of availableChoices) {
     issues.push(
       ...validateChoiceValue(choice, selection.choices[choice.id]),
     )
   }
 
   for (const choiceId of Object.keys(selection.choices)) {
-    if (!definition.choices.some((choice) => choice.id === choiceId)) {
+    if (!availableChoiceIds.has(choiceId)) {
       issues.push({ code: 'unknown-choice', choiceId })
     }
   }

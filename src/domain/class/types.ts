@@ -52,6 +52,7 @@ export type ClassChoiceOption = {
 export type ClassChoice =
   | {
       id: string
+      level: ClassLevel
       prompt: string
       type: 'single-select'
       required: boolean
@@ -59,6 +60,7 @@ export type ClassChoice =
     }
   | {
       id: string
+      level: ClassLevel
       prompt: string
       type: 'multi-select'
       required: boolean

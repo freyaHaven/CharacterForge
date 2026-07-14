@@ -99,4 +99,71 @@ describe('validateClassSelection', () => {
       issues: [{ code: 'unknown-choice', choiceId: 'weapon-mastery' }],
     })
   })
+
+  it('does not require higher-level choices at level 1', () => {
+    expect(
+      validateClassSelection(
+        createValidFighterSelection(),
+        'srd-2024',
+        fighterSrd2024,
+      ),
+    ).toEqual({ ok: true })
+  })
+
+  it('requires martial archetype at level 3', () => {
+    const result = validateClassSelection(
+      createValidFighterSelection({
+        level: 3,
+        choices: {
+          'fighting-style': 'defense',
+          'skill-proficiencies': ['athletics', 'perception'],
+        },
+      }),
+      'srd-2024',
+      fighterSrd2024,
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [
+        { code: 'missing-required-choice', choiceId: 'martial-archetype' },
+      ],
+    })
+  })
+
+  it('rejects pruned higher-level choices still present at level 1', () => {
+    const result = validateClassSelection(
+      createValidFighterSelection({
+        choices: {
+          'fighting-style': 'defense',
+          'skill-proficiencies': ['athletics', 'perception'],
+          'martial-archetype': 'champion',
+        },
+      }),
+      'srd-2024',
+      fighterSrd2024,
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [{ code: 'unknown-choice', choiceId: 'martial-archetype' }],
+    })
+  })
+
+  it('accepts a complete fighter selection at level 5', () => {
+    expect(
+      validateClassSelection(
+        createValidFighterSelection({
+          level: 5,
+          choices: {
+            'fighting-style': 'defense',
+            'skill-proficiencies': ['athletics', 'perception'],
+            'martial-archetype': 'champion',
+          },
+        }),
+        'srd-2024',
+        fighterSrd2024,
+      ),
+    ).toEqual({ ok: true })
+  })
 })

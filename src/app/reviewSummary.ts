@@ -24,8 +24,8 @@ export type SpeciesReviewDisplay = {
 
 export type ClassReviewDisplay = {
   className: string | null
-  fightingStyleLabel: string | null
-  skillLabels: string[]
+  level: number | null
+  choiceLines: { prompt: string; summary: string }[]
 }
 
 export type ReviewSummaryContext = {
@@ -133,11 +133,11 @@ function buildClassSummary(
 
   if (status.completion === 'complete') {
     const lines = [`Class: ${className ?? 'Selected class'}`]
-    if (context.classDisplay.fightingStyleLabel !== null) {
-      lines.push(`Fighting Style: ${context.classDisplay.fightingStyleLabel}`)
+    if (context.classDisplay.level !== null) {
+      lines.push(`Level: ${context.classDisplay.level}`)
     }
-    if (context.classDisplay.skillLabels.length > 0) {
-      lines.push(`Skills: ${context.classDisplay.skillLabels.join(', ')}`)
+    for (const choiceLine of context.classDisplay.choiceLines) {
+      lines.push(`${choiceLine.prompt}: ${choiceLine.summary}`)
     }
     return lines
   }
@@ -146,12 +146,24 @@ function buildClassSummary(
     const lines =
       className === null
         ? ['Choice incomplete']
-        : [`Class: ${className}`, 'Choice incomplete']
+        : [
+            `Class: ${className}`,
+            ...(context.classDisplay.level !== null
+              ? [`Level: ${context.classDisplay.level}`]
+              : []),
+            'Choice incomplete',
+          ]
     return lines
   }
 
   if (className !== null) {
-    return [`Class: ${className}`, 'Confirm your selection']
+    return [
+      `Class: ${className}`,
+      ...(context.classDisplay.level !== null
+        ? [`Level: ${context.classDisplay.level}`]
+        : []),
+      'Confirm your selection',
+    ]
   }
 
   return ['Not selected']

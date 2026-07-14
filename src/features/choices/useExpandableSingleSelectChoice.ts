@@ -4,10 +4,14 @@ import type { ChoiceAccordionOption } from './ChoiceAccordion'
 export function useExpandableSingleSelectChoice({
   selectedOptionId,
   defaultExpanded,
+  expanded: controlledExpanded,
+  onExpandedChange,
   onSelect,
 }: {
   selectedOptionId: string | null | undefined
   defaultExpanded?: boolean
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
   onSelect: (optionId: string) => void
 }) {
   const hasSelection =
@@ -15,17 +19,29 @@ export function useExpandableSingleSelectChoice({
     selectedOptionId !== undefined &&
     selectedOptionId.length > 0
 
-  const [isExpanded, setIsExpanded] = useState(
+  const [internalExpanded, setInternalExpanded] = useState(
     () => defaultExpanded ?? !hasSelection,
   )
 
+  const isControlled = controlledExpanded !== undefined
+  const isExpanded = isControlled ? controlledExpanded : internalExpanded
+
+  function setExpanded(nextExpanded: boolean) {
+    if (isControlled) {
+      onExpandedChange?.(nextExpanded)
+      return
+    }
+
+    setInternalExpanded(nextExpanded)
+  }
+
   function toggleExpanded() {
-    setIsExpanded((current) => !current)
+    setExpanded(!isExpanded)
   }
 
   function handleSelect(optionId: string) {
     onSelect(optionId)
-    setIsExpanded(false)
+    setExpanded(false)
   }
 
   return {

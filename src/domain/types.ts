@@ -25,6 +25,7 @@ export type {
   WeaponProficiency,
 } from './class/types'
 export {
+  getClassFeatureProgressionUpToLevel,
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
 } from './class/featureProgression'

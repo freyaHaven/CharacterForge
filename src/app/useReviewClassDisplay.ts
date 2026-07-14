@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ClassCatalog } from '../domain/ports/classCatalog'
+import { getChoicesAvailableAtLevel } from '../domain/class/choiceAvailability'
 import type { EditionId } from '../domain/types'
 import type { ClassSelection } from '../domain/class/types'
 import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
@@ -7,8 +8,18 @@ import type { ClassReviewDisplay } from './reviewSummary'
 
 const EMPTY_DISPLAY: ClassReviewDisplay = {
   className: null,
-  fightingStyleLabel: null,
-  skillLabels: [],
+  level: null,
+  choiceLines: [],
+}
+
+function formatChoiceSummary(
+  prompt: string,
+  labels: string[],
+): { prompt: string; summary: string } {
+  return {
+    prompt,
+    summary: labels.join(', '),
+  }
 }
 
 export function useReviewClassDisplay(
@@ -46,11 +57,15 @@ export function useReviewClassDisplay(
         return
       }
 
-      let fightingStyleLabel: string | null = null
-      const skillLabels: string[] = []
+      const choiceLines: { prompt: string; summary: string }[] = []
+      const availableChoices = getChoicesAvailableAtLevel(
+        definition,
+        activeSelection.level,
+      )
 
-      for (const choice of definition.choices) {
+      for (const choice of availableChoices) {
         const selectedValue = activeSelection.choices[choice.id]
+
         if (selectedValue === undefined) {
           continue
         }
@@ -59,29 +74,31 @@ export function useReviewClassDisplay(
           const option = choice.options.find(
             (candidate) => candidate.id === selectedValue,
           )
+
           if (option !== undefined) {
-            if (choice.id === 'fighting-style') {
-              fightingStyleLabel = option.label
-            }
+            choiceLines.push(formatChoiceSummary(choice.prompt, [option.label]))
           }
         }
 
         if (choice.type === 'multi-select' && Array.isArray(selectedValue)) {
-          for (const optionId of selectedValue) {
-            const option = choice.options.find(
-              (candidate) => candidate.id === optionId,
+          const labels = selectedValue
+            .map(
+              (optionId) =>
+                choice.options.find((candidate) => candidate.id === optionId)
+                  ?.label,
             )
-            if (option !== undefined) {
-              skillLabels.push(option.label)
-            }
+            .filter((label): label is string => label !== undefined)
+
+          if (labels.length > 0) {
+            choiceLines.push(formatChoiceSummary(choice.prompt, labels))
           }
         }
       }
 
       setDisplay({
         className: definition.name,
-        fightingStyleLabel,
-        skillLabels,
+        level: activeSelection.level,
+        choiceLines,
       })
     })
 

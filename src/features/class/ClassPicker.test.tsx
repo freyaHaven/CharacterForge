@@ -51,6 +51,16 @@ async function expandFightingStyleAccordion(
   }
 }
 
+async function setStartingLevel(level: number) {
+  const input = screen.getByRole('spinbutton', { name: /starting level/i })
+  fireEvent.change(input, { target: { value: String(level) } })
+  fireEvent.blur(input)
+
+  await waitFor(() => {
+    expect(input).toHaveValue(level)
+  })
+}
+
 describe('ClassPicker', () => {
   it('shows fighter choices on the first click without committing', async () => {
     const user = userEvent.setup()
@@ -69,9 +79,9 @@ describe('ClassPicker', () => {
     expect(
       screen.getByRole('group', { name: /choose two skill proficiencies/i }),
     ).toBeInTheDocument()
-    expect(
-      document.querySelector('.class-picker__selection'),
-    ).toHaveTextContent(/Selecting:.*complete required choices to confirm/i)
+    expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
+      /Selecting:.*level 1.*complete required choices to confirm/i,
+    )
     expect(screen.queryByText(/^Selected: Fighter$/i)).not.toBeInTheDocument()
   })
 
@@ -105,7 +115,7 @@ describe('ClassPicker', () => {
       screen.getByText(/selected class is hidden by the current search/i),
     ).toBeInTheDocument()
     expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
-      'Selected: Fighter',
+      'Selected: Fighter (level 1)',
     )
   })
 
@@ -126,7 +136,7 @@ describe('ClassPicker', () => {
       /\+2 bonus to attack rolls you make with Ranged weapons/i,
     )
     expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
-      'Selected: Fighter',
+      'Selected: Fighter (level 1)',
     )
     expect(
       document.querySelector('.class-picker__selection'),
@@ -174,9 +184,9 @@ describe('ClassPicker', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
 
     expect(screen.getByText('Selected: Defense')).toBeInTheDocument()
-    expect(
-      document.querySelector('.class-picker__selection'),
-    ).toHaveTextContent(/Selecting:.*complete required choices to confirm/i)
+    expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
+      /Selecting:.*level 1.*complete required choices to confirm/i,
+    )
     expect(screen.queryByText(/^Selected: Fighter$/i)).not.toBeInTheDocument()
   })
 
@@ -188,10 +198,103 @@ describe('ClassPicker', () => {
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
     expect(screen.getByText('Weapon Mastery')).toBeInTheDocument()
+    expect(screen.getByText('Level 1')).toBeInTheDocument()
+    expect(screen.queryByText('Level 3')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Second Wind/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Weapon Mastery/i })).not.toBeInTheDocument()
     expect(screen.getByText(/equipment step/i)).toBeInTheDocument()
     expect(screen.getByText(/three kinds of weapons/i)).toBeInTheDocument()
+  })
+
+  it('shows level 3 features and requires martial archetype before commit', async () => {
+    const user = userEvent.setup()
+    render(<ClassPickerHarness />)
+    await waitForClassesLoaded()
+
+    await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await user.click(screen.getByRole('radio', { name: /Defense/i }))
+    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+
+    await waitFor(() => {
+      expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
+        'Selected: Fighter (level 1)',
+      )
+    })
+
+    await setStartingLevel(3)
+
+    expect(screen.getByText('Level 3')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Martial Archetype/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(
+      document.querySelector('.class-picker__selection'),
+    ).toHaveTextContent(/Selecting:.*level 3.*complete required choices to confirm/i)
+  })
+
+  it('shows level 5 features after completing level 3 choices', async () => {
+    const user = userEvent.setup()
+    render(<ClassPickerHarness />)
+    await waitForClassesLoaded()
+
+    await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await user.click(screen.getByRole('radio', { name: /Defense/i }))
+    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+    await setStartingLevel(3)
+    await user.click(
+      screen.getByRole('radio', { name: /Champion \(placeholder\)/i }),
+    )
+
+    await waitFor(() => {
+      expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
+        'Selected: Fighter (level 3)',
+      )
+    })
+
+    await setStartingLevel(5)
+
+    expect(screen.getByText('Extra Attack')).toBeInTheDocument()
+    expect(screen.getByText('Level 5')).toBeInTheDocument()
+    expect(document.querySelector('.class-picker__selection')).toHaveTextContent(
+      'Selected: Fighter (level 5)',
+    )
+  })
+
+  it('preserves feature choice expansion state across level changes', async () => {
+    const user = userEvent.setup()
+    render(<ClassPickerHarness />)
+    await waitForClassesLoaded()
+
+    await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await user.click(screen.getByRole('radio', { name: /Defense/i }))
+    await user.click(screen.getByRole('button', { name: /Fighting Style/i }))
+
+    expect(
+      screen.getByRole('button', { name: /Fighting Style/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+
+    await setStartingLevel(3)
+
+    expect(
+      screen.getByRole('button', { name: /Fighting Style/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(
+      screen.getByRole('button', { name: /Martial Archetype/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(
+      screen.getByRole('radio', { name: /Champion \(placeholder\)/i }),
+    )
+    await setStartingLevel(1)
+
+    expect(
+      screen.queryByRole('button', { name: /Martial Archetype/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Fighting Style/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('uses real buttons with a non-colour-only selected state', async () => {

@@ -55,10 +55,33 @@ export const fighterSrd2024: ClassDefinition = {
         },
       ],
     },
+    {
+      level: 3,
+      features: [
+        {
+          id: 'martial-archetype',
+          name: 'Martial Archetype',
+          description:
+            'You gain a Martial Archetype feat of your choice. Choose one option below.',
+        },
+      ],
+    },
+    {
+      level: 5,
+      features: [
+        {
+          id: 'extra-attack',
+          name: 'Extra Attack',
+          description:
+            'You can attack twice, instead of once, whenever you take the Attack action on your turn.',
+        },
+      ],
+    },
   ],
   choices: [
     {
       id: 'fighting-style',
+      level: 1,
       prompt: 'Choose a Fighting Style',
       type: 'single-select',
       required: true,
@@ -99,6 +122,7 @@ export const fighterSrd2024: ClassDefinition = {
     },
     {
       id: 'skill-proficiencies',
+      level: 1,
       prompt: 'Choose two skill proficiencies',
       type: 'multi-select',
       required: true,
@@ -109,6 +133,21 @@ export const fighterSrd2024: ClassDefinition = {
         label: SKILL_LABELS[skillId],
         effects: [{ kind: 'skill-proficiency', skillId }],
       })),
+    },
+    {
+      id: 'martial-archetype',
+      level: 3,
+      prompt: 'Choose a Martial Archetype',
+      type: 'single-select',
+      required: true,
+      options: [
+        {
+          id: 'champion',
+          label: 'Champion (placeholder)',
+          description:
+            'A placeholder Martial Archetype for starting-level support until full subclass data is added.',
+        },
+      ],
     },
   ],
 }

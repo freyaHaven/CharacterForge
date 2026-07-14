@@ -3,6 +3,7 @@ import type {
   ClassSelection,
   ResolvedClassEffect,
 } from '../../domain/class/types'
+import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 
 export function resolveClassEffects(
   definition: ClassDefinition,
@@ -24,7 +25,7 @@ export function resolveClassEffects(
     })),
   ]
 
-  for (const choice of definition.choices) {
+  for (const choice of getChoicesAvailableAtLevel(definition, selection.level)) {
     const value = selection.choices[choice.id]
 
     if (value === undefined) {

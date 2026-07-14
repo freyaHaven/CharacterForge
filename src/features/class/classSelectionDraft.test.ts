@@ -7,6 +7,7 @@ import {
   isClassDraftIncomplete,
   tryCommitClassDraft,
   updateClassDraftChoice,
+  updateClassDraftLevel,
 } from './classSelectionDraft'
 
 describe('classSelectionDraft', () => {
@@ -79,5 +80,67 @@ describe('classSelectionDraft', () => {
         choices: {},
       }),
     ).toBe(false)
+  })
+
+  it('prunes unavailable choices when lowering the level', () => {
+    const draft = updateClassDraftLevel(
+      {
+        classId: 'srd-2024:fighter',
+        level: 5,
+        choices: {
+          'fighting-style': 'archery',
+          'skill-proficiencies': ['athletics', 'perception'],
+          'martial-archetype': 'champion',
+        },
+      },
+      1,
+      fighterSrd2024,
+    )
+
+    expect(draft).toEqual({
+      classId: 'srd-2024:fighter',
+      level: 1,
+      choices: {
+        'fighting-style': 'archery',
+        'skill-proficiencies': ['athletics', 'perception'],
+      },
+    })
+  })
+
+  it('commits after lowering the level when remaining choices are valid', () => {
+    const lowered = updateClassDraftLevel(
+      {
+        classId: 'srd-2024:fighter',
+        level: 5,
+        choices: {
+          'fighting-style': 'archery',
+          'skill-proficiencies': ['athletics', 'perception'],
+          'martial-archetype': 'champion',
+        },
+      },
+      1,
+      fighterSrd2024,
+    )
+
+    expect(tryCommitClassDraft(lowered, 'srd-2024', fighterSrd2024)).toEqual({
+      committed: lowered,
+      validation: { ok: true },
+    })
+  })
+
+  it('keeps a raised level draft uncommitted until new required choices are complete', () => {
+    const completeLevelOne = updateClassDraftChoice(
+      updateClassDraftChoice(
+        createClassSelectionDraft('srd-2024:fighter'),
+        'fighting-style',
+        'defense',
+      ),
+      'skill-proficiencies',
+      ['athletics', 'perception'],
+    )
+
+    const raised = updateClassDraftLevel(completeLevelOne, 3, fighterSrd2024)
+
+    expect(tryCommitClassDraft(raised, 'srd-2024', fighterSrd2024).committed).toBeNull()
   })
 })

@@ -17,6 +17,8 @@ export type FeatureChoiceCardProps = {
   name: string
   describedBy?: string
   defaultExpanded?: boolean
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
   onSelect: (optionId: string) => void
 }
 
@@ -30,6 +32,8 @@ export function FeatureChoiceCard({
   name,
   describedBy,
   defaultExpanded,
+  expanded,
+  onExpandedChange,
   onSelect,
 }: FeatureChoiceCardProps) {
   const reactId = useId()
@@ -41,6 +45,8 @@ export function FeatureChoiceCard({
     useExpandableSingleSelectChoice({
       selectedOptionId,
       defaultExpanded,
+      expanded,
+      onExpandedChange,
       onSelect,
     })
 

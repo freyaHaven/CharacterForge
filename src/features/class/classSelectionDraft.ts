@@ -1,8 +1,13 @@
 import type {
   ClassChoiceValue,
   ClassDefinition,
+  ClassLevel,
   ClassSelection,
 } from '../../domain/class/types'
+import {
+  getChoicesAvailableAtLevel,
+  pruneClassChoicesForLevel,
+} from '../../domain/class/choiceAvailability'
 import type { EditionId } from '../../domain/types'
 import {
   validateClassSelection,
@@ -59,6 +64,20 @@ export function updateClassDraftChoice(
   return {
     ...draft,
     choices: nextChoices,
+  }
+}
+
+export function updateClassDraftLevel(
+  draft: ClassSelectionDraft,
+  level: ClassLevel,
+  definition: ClassDefinition,
+): ClassSelectionDraft {
+  const availableChoices = getChoicesAvailableAtLevel(definition, level)
+
+  return {
+    ...draft,
+    level,
+    choices: pruneClassChoicesForLevel(draft.choices, availableChoices),
   }
 }
 

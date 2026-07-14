@@ -15,8 +15,8 @@ function createContext(
     classDraft: null,
     classDisplay: {
       className: null,
-      fightingStyleLabel: null,
-      skillLabels: [],
+      level: null,
+      choiceLines: [],
     },
     standardArrayValidation: null,
     pointBuyValidation: null,
@@ -127,13 +127,26 @@ describe('buildReviewSummaries', () => {
     )
   })
 
-  it('summarises a committed class with fighting style and skills', () => {
+  it('summarises a committed class with level and choices', () => {
     const summaries = buildReviewSummaries(
       createContext({
         classDisplay: {
           className: 'Fighter',
-          fightingStyleLabel: 'Defense',
-          skillLabels: ['Athletics', 'Perception'],
+          level: 3,
+          choiceLines: [
+            {
+              prompt: 'Choose a Fighting Style',
+              summary: 'Defense',
+            },
+            {
+              prompt: 'Choose two skill proficiencies',
+              summary: 'Athletics, Perception',
+            },
+            {
+              prompt: 'Choose a Martial Archetype',
+              summary: 'Champion (placeholder)',
+            },
+          ],
         },
       }),
       createStatuses({
@@ -143,8 +156,10 @@ describe('buildReviewSummaries', () => {
 
     expect(summaries.class).toEqual([
       'Class: Fighter',
-      'Fighting Style: Defense',
-      'Skills: Athletics, Perception',
+      'Level: 3',
+      'Choose a Fighting Style: Defense',
+      'Choose two skill proficiencies: Athletics, Perception',
+      'Choose a Martial Archetype: Champion (placeholder)',
     ])
   })
 

@@ -1,4 +1,18 @@
-import type { ClassDefinition, ClassFeature, ClassLevel } from './types'
+import type {
+  ClassDefinition,
+  ClassFeature,
+  ClassLevel,
+  ClassLevelFeatures,
+} from './types'
+
+export function getClassFeatureProgressionUpToLevel(
+  definition: ClassDefinition,
+  level: ClassLevel,
+): ClassLevelFeatures[] {
+  return definition.featureProgression
+    .filter((entry) => entry.level <= level)
+    .sort((left, right) => left.level - right.level)
+}
 
 export function getClassFeaturesForLevel(
   definition: ClassDefinition,

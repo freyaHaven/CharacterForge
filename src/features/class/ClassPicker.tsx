@@ -7,16 +7,24 @@ import type {
   ClassDefinition,
   ClassSelection,
 } from '../../domain/class/types'
-import { getClassFeaturesForLevel } from '../../domain/class/featureProgression'
+import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
+import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { SKILL_LABELS } from '../../domain/skills/types'
 import { validateClassSelection } from '../../rules/class/classRules'
 import { FeatureChoiceCard } from '../choices/FeatureChoiceCard'
+import {
+  getFeatureChoiceExpanded,
+  pruneFeatureChoiceExpansionState,
+  setFeatureChoiceExpanded,
+  type FeatureChoiceExpansionState,
+} from '../choices/featureChoiceExpansionState'
 import {
   findSingleSelectChoiceForFeature,
   getChoicesNotLinkedToFeatures,
 } from '../choices/linkFeatureToChoice'
 import { ClassCatalogCard } from './ClassCatalogCard'
 import { ClassIcon } from './ClassIcon'
+import { LevelStepper } from './LevelStepper'
 import {
   formatAbilityList,
   formatArmorProficiencies,
@@ -31,6 +39,7 @@ import {
   initializeClassSelectionDraft,
   tryCommitClassDraft,
   updateClassDraftChoice,
+  updateClassDraftLevel,
   type ClassSelectionDraft,
 } from './classSelectionDraft'
 
@@ -40,6 +49,23 @@ function getSelectedOptionIds(value: ClassChoiceValue | undefined): string[] {
   }
 
   return typeof value === 'string' ? [value] : [...value]
+}
+
+function getFeatureLinkedChoiceIds(
+  definition: ClassDefinition,
+  level: number,
+): string[] {
+  const availableChoices = getChoicesAvailableAtLevel(definition, level)
+  const featureIds = getClassFeatureProgressionUpToLevel(definition, level)
+    .flatMap((entry) => entry.features)
+    .map((feature) => feature.id)
+
+  return availableChoices
+    .filter(
+      (choice) =>
+        choice.type === 'single-select' && featureIds.includes(choice.id),
+    )
+    .map((choice) => choice.id)
 }
 
 function toggleMultiSelectOption(
@@ -143,6 +169,8 @@ export function ClassPicker({
   const [classList, setClassList] = useState<ClassDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [choiceExpansionState, setChoiceExpansionState] =
+    useState<FeatureChoiceExpansionState>({})
 
   const activeClassId = draft?.classId ?? committedSelection?.classId ?? null
   const activeChoices = draft?.choices ?? committedSelection?.choices ?? {}
@@ -183,17 +211,24 @@ export function ClassPicker({
     )
   }, [draftValidation])
 
-  const levelFeatures =
+  const availableChoices =
     activeDefinition === null
       ? []
-      : getClassFeaturesForLevel(activeDefinition, activeLevel)
+      : getChoicesAvailableAtLevel(activeDefinition, activeLevel)
+
+  const featureProgression =
+    activeDefinition === null
+      ? []
+      : getClassFeatureProgressionUpToLevel(activeDefinition, activeLevel)
 
   const unlinkedChoices =
     activeDefinition === null
       ? []
       : getChoicesNotLinkedToFeatures(
-          activeDefinition.choices,
-          levelFeatures.map((feature) => feature.id),
+          availableChoices,
+          featureProgression.flatMap((entry) =>
+            entry.features.map((feature) => feature.id),
+          ),
         )
 
   useEffect(() => {
@@ -236,7 +271,24 @@ export function ClassPicker({
     onCommittedSelectionChange(null)
   }
 
+  function ensureDraft(): ClassSelectionDraft | null {
+    if (draft !== null) {
+      return draft
+    }
+
+    if (activeClassId === null) {
+      return null
+    }
+
+    return initializeClassSelectionDraft({
+      classId: activeClassId,
+      level: activeLevel,
+      choices: activeChoices,
+    })
+  }
+
   function selectClass(classDefinition: ClassDefinition) {
+    setChoiceExpansionState({})
     const nextDraft = createClassSelectionDraft(classDefinition.id)
     const { committed } = tryCommitClassDraft(
       nextDraft,
@@ -258,15 +310,7 @@ export function ClassPicker({
     choiceId: string,
     value: ClassChoiceValue | undefined,
   ) {
-    const currentDraft =
-      draft ??
-      (activeClassId === null
-        ? null
-        : initializeClassSelectionDraft({
-            classId: activeClassId,
-            level: activeLevel,
-            choices: activeChoices,
-          }))
+    const currentDraft = ensureDraft()
 
     if (currentDraft === null) {
       return
@@ -276,7 +320,35 @@ export function ClassPicker({
     await commitDraft(nextDraft)
   }
 
+  async function handleLevelChange(level: number) {
+    if (activeDefinition === null) {
+      return
+    }
+
+    const currentDraft = ensureDraft()
+
+    if (currentDraft === null) {
+      return
+    }
+
+    const nextDraft = updateClassDraftLevel(
+      currentDraft,
+      level,
+      activeDefinition,
+    )
+
+    setChoiceExpansionState((current) =>
+      pruneFeatureChoiceExpansionState(
+        current,
+        getFeatureLinkedChoiceIds(activeDefinition, level),
+      ),
+    )
+
+    await commitDraft(nextDraft)
+  }
+
   function clearSelection() {
+    setChoiceExpansionState({})
     onDraftChange(null)
     onCommittedSelectionChange(null)
   }
@@ -362,6 +434,15 @@ export function ClassPicker({
                   </div>
                 </header>
 
+                <div className="class-picker__level-row">
+                  <LevelStepper
+                    value={activeLevel}
+                    onChange={(level) => {
+                      void handleLevelChange(level)
+                    }}
+                  />
+                </div>
+
                 <dl className="class-picker__metadata">
                   <div className="class-picker__metadata-item">
                     <dt>Hit Die</dt>
@@ -395,79 +476,105 @@ export function ClassPicker({
                   </div>
                 </dl>
 
-                {levelFeatures.length > 0 ? (
+                {featureProgression.length > 0 ? (
                   <div className="class-picker__features">
                     <h4 className="class-picker__section-title">
-                      Level {activeLevel} Features
+                      Class Features
                     </h4>
-                    <div className="class-picker__feature-cards">
-                      {levelFeatures.map((feature) => {
-                        const linkedChoice =
-                          activeDefinition === null
-                            ? null
-                            : findSingleSelectChoiceForFeature(
-                                feature.id,
-                                activeDefinition.choices,
-                              )
-                        const issue =
-                          linkedChoice === null
-                            ? undefined
-                            : choiceIssueById.get(linkedChoice.id)
-                        const errorId =
-                          issue === undefined
-                            ? undefined
-                            : `class-choice-error-${linkedChoice.id}`
+                    {featureProgression.map((levelEntry) => (
+                      <div
+                        key={levelEntry.level}
+                        className="class-picker__feature-level"
+                      >
+                        <h5 className="class-picker__feature-level-title">
+                          Level {levelEntry.level}
+                        </h5>
+                        <div className="class-picker__feature-cards">
+                          {levelEntry.features.map((feature) => {
+                            const linkedChoice = findSingleSelectChoiceForFeature(
+                              feature.id,
+                              availableChoices,
+                            )
+                            const issue =
+                              linkedChoice === null
+                                ? undefined
+                                : choiceIssueById.get(linkedChoice.id)
+                            const errorId =
+                              issue === undefined
+                                ? undefined
+                                : `class-choice-error-${linkedChoice.id}`
 
-                        if (linkedChoice !== null) {
-                          const selectedOptionId =
-                            typeof activeChoices[linkedChoice.id] === 'string'
-                              ? activeChoices[linkedChoice.id]
-                              : null
+                            if (linkedChoice !== null) {
+                              const selectedOptionId =
+                                typeof activeChoices[linkedChoice.id] ===
+                                'string'
+                                  ? activeChoices[linkedChoice.id]
+                                  : null
+                              const hasSelection =
+                                selectedOptionId !== null &&
+                                selectedOptionId.length > 0
 
-                          return (
-                            <div
-                              key={feature.id}
-                              className="class-picker__feature-choice"
-                            >
-                              <FeatureChoiceCard
-                                id={`class-feature-${feature.id}`}
-                                title={feature.name}
-                                description={feature.description}
-                                options={linkedChoice.options}
-                                selectedOptionId={selectedOptionId}
-                                name={`class-choice-${linkedChoice.id}`}
-                                describedBy={errorId}
-                                onSelect={(optionId) => {
-                                  void handleChoiceChange(
-                                    linkedChoice.id,
-                                    optionId,
-                                  )
-                                }}
-                              />
-                              {issue !== undefined && errorId !== undefined ? (
-                                <p
-                                  id={errorId}
-                                  className="class-picker__choice-error"
-                                  role="alert"
+                              return (
+                                <div
+                                  key={feature.id}
+                                  className="class-picker__feature-choice"
                                 >
-                                  {formatClassValidationIssue(issue)}
-                                </p>
-                              ) : null}
-                            </div>
-                          )
-                        }
+                                  <FeatureChoiceCard
+                                    id={`class-feature-${feature.id}`}
+                                    title={feature.name}
+                                    description={feature.description}
+                                    options={linkedChoice.options}
+                                    selectedOptionId={selectedOptionId}
+                                    name={`class-choice-${linkedChoice.id}`}
+                                    describedBy={errorId}
+                                    expanded={getFeatureChoiceExpanded(
+                                      choiceExpansionState,
+                                      linkedChoice.id,
+                                      hasSelection,
+                                    )}
+                                    onExpandedChange={(expanded) => {
+                                      setChoiceExpansionState((current) =>
+                                        setFeatureChoiceExpanded(
+                                          current,
+                                          linkedChoice.id,
+                                          expanded,
+                                        ),
+                                      )
+                                    }}
+                                    onSelect={(optionId) => {
+                                      void handleChoiceChange(
+                                        linkedChoice.id,
+                                        optionId,
+                                      )
+                                    }}
+                                  />
+                                  {issue !== undefined &&
+                                  errorId !== undefined ? (
+                                    <p
+                                      id={errorId}
+                                      className="class-picker__choice-error"
+                                      role="alert"
+                                    >
+                                      {formatClassValidationIssue(issue)}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              )
+                            }
 
-                        return (
-                          <article
-                            key={feature.id}
-                            className="class-picker__feature-card"
-                          >
-                            <h5>{feature.name}</h5>
-                            <p>{feature.description}</p>
-                          </article>
-                        )
-                      })}
-                    </div>
+                            return (
+                              <article
+                                key={feature.id}
+                                className="class-picker__feature-card"
+                              >
+                                <h6>{feature.name}</h6>
+                                <p>{feature.description}</p>
+                              </article>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : null}
 
@@ -519,14 +626,15 @@ export function ClassPicker({
 
       {activeDefinition !== null && committedSelection !== null ? (
         <p className="class-picker__selection">
-          Selected: <strong>{activeDefinition.name}</strong>
+          Selected: <strong>{activeDefinition.name}</strong> (level{' '}
+          {committedSelection.level})
         </p>
       ) : null}
 
       {draft !== null && committedSelection === null ? (
         <p className="class-picker__selection">
-          Selecting: <strong>{activeDefinition?.name ?? 'Class'}</strong>{' '}
-          (complete required choices to confirm)
+          Selecting: <strong>{activeDefinition?.name ?? 'Class'}</strong> (level{' '}
+          {draft.level}) (complete required choices to confirm)
         </p>
       ) : null}
 

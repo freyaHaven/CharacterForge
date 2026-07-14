@@ -1097,6 +1097,97 @@
   line-height: 1.55;
 }
 
+.class-picker__level-row {
+  margin: 0.875rem 0 0;
+}
+
+.level-stepper {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 11rem;
+}
+
+.level-stepper__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-h);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.level-stepper__control {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem;
+  align-items: stretch;
+  border: 1px solid color-mix(in srgb, var(--accent-border) 35%, var(--border));
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--accent-bg) 28%, var(--bg));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+}
+
+.level-stepper__button {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--accent-bg) 55%, var(--bg));
+  color: var(--text-h);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.level-stepper__button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-bg) 75%, var(--bg));
+}
+
+.level-stepper__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.level-stepper__input {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.45rem 0.25rem;
+  border: 0;
+  border-inline: 1px solid color-mix(in srgb, var(--accent-border) 35%, var(--border));
+  background: transparent;
+  color: var(--text-h);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  appearance: textfield;
+}
+
+.level-stepper__input::-webkit-outer-spin-button,
+.level-stepper__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.level-stepper__input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent-border) 65%, transparent);
+  outline-offset: -2px;
+}
+
+.class-picker__feature-level + .class-picker__feature-level {
+  margin-top: 1rem;
+}
+
+.class-picker__feature-level-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-h) 82%, var(--text));
+}
+
 .class-picker__metadata {
   display: flex;
   flex-wrap: wrap;
@@ -1152,7 +1243,8 @@
   background: color-mix(in srgb, var(--accent-bg) 38%, var(--bg));
 }
 
-.class-picker__feature-card h5 {
+.class-picker__feature-card h5,
+.class-picker__feature-card h6 {
   margin: 0 0 0.35rem;
   font-size: 1rem;
   font-weight: 700;
