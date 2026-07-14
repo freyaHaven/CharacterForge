@@ -97,6 +97,17 @@
   color: var(--text);
 }
 
+.wizard-step-panel__intro {
+  margin: 0 0 0.75rem;
+  color: var(--text);
+}
+
+.wizard-step-panel__coming-soon {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
 @media (min-width: 48rem) {
   .character-wizard {
     grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);

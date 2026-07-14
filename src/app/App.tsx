@@ -7,6 +7,9 @@ import {
 } from '../domain/character/defaults'
 import type { AbilityScores, Character, EditionId } from '../domain/types'
 import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
+import { BackgroundStep } from './wizard/steps/BackgroundStep'
+import { ClassStep } from './wizard/steps/ClassStep'
+import { EquipmentStep } from './wizard/steps/EquipmentStep'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
 import { SpeciesStep } from './wizard/steps/SpeciesStep'
 import { useSpeciesStepValidation } from './useSpeciesStepValidation'
@@ -500,6 +503,9 @@ export default function App({ randomSource = Math.random }: AppProps) {
           ),
           'ability-scores': abilityScoresStep,
           species: speciesStep,
+          class: <ClassStep />,
+          background: <BackgroundStep />,
+          equipment: <EquipmentStep />,
         }}
       />
 
