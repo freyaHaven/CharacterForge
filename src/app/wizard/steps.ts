@@ -1,4 +1,4 @@
-import type { WizardStepDefinition, WizardStepId, WizardUiState } from './types'
+import type { WizardStepDefinition, WizardUiState } from './types'
 
 export const WIZARD_STEPS: readonly WizardStepDefinition[] = [
   { id: 'basics', label: 'Basics', required: true },
