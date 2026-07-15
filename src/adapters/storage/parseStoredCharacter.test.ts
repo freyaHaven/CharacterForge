@@ -86,7 +86,7 @@ describe('parseStoredCharacter', () => {
     })
   })
 
-  it('migrates a schema v4 save by removing derived background bonuses', () => {
+  it('migrates a schema v4 save by removing derived background bonuses and equipment choices', () => {
     const v4Character = {
       id: 'char-1',
       name: 'Aldric',
@@ -137,7 +137,59 @@ describe('parseStoredCharacter', () => {
           },
           choices: {
             'gaming-set': 'dice-set',
-            'starting-equipment': 'equipment-package',
+          },
+        },
+      },
+    })
+  })
+
+  it('migrates a schema v5 save by removing background equipment choices', () => {
+    const v5Character = {
+      id: 'char-1',
+      name: 'Aldric',
+      editionId: 'srd-2024' as const,
+      creationMethod: 'manual' as const,
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      species: null,
+      class: null,
+      background: {
+        backgroundId: 'srd-2024:soldier',
+        abilityScoreIncrease: {
+          mode: 'two-and-one' as const,
+          plusTwo: 'strength' as const,
+          plusOne: 'constitution' as const,
+        },
+        choices: {
+          'gaming-set': 'dice-set',
+          'starting-equipment': 'gold-alternative',
+        },
+      },
+    }
+    const raw = JSON.stringify({
+      schemaVersion: 5,
+      character: v5Character,
+    })
+
+    expect(parseStoredCharacter(raw)).toEqual({
+      ok: true,
+      character: {
+        ...v5Character,
+        background: {
+          backgroundId: 'srd-2024:soldier',
+          abilityScoreIncrease: {
+            mode: 'two-and-one',
+            plusTwo: 'strength',
+            plusOne: 'constitution',
+          },
+          choices: {
+            'gaming-set': 'dice-set',
           },
         },
       },

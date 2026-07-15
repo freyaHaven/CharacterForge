@@ -18,7 +18,6 @@ describe('backgroundSelectionDraft', () => {
       },
       choices: {
         'gaming-set': 'dice-set',
-        'starting-equipment': 'equipment-package',
       },
     }
 
@@ -56,7 +55,6 @@ describe('backgroundSelectionDraft', () => {
   it('derives fresh bonuses when the ability score increase changes', () => {
     const sharedChoices = {
       'gaming-set': 'dice-set',
-      'starting-equipment': 'equipment-package',
     }
 
     const twoAndOneDraft = {

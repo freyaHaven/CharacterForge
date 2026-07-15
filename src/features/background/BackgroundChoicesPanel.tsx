@@ -7,7 +7,7 @@ import { getBackgroundChoiceDefinition } from '../../rules/background/background
 import type { BackgroundValidationIssue } from '../../rules/background/backgroundRules'
 import { AbilityScoreIncreaseChoice } from './AbilityScoreIncreaseChoice'
 import { formatBackgroundValidationIssue } from './formatBackgroundValidation'
-import { SingleSelectChoiceOptions } from '../choices/SingleSelectChoiceOptions'
+import { SingleSelectCardGrid } from '../choices/SingleSelectCardGrid'
 
 type BackgroundSingleSelectFieldProps = {
   choice: BackgroundChoice
@@ -22,13 +22,15 @@ function BackgroundSingleSelectField({
   errorId,
   onChange,
 }: BackgroundSingleSelectFieldProps) {
+  const legendId = `background-choice-${choice.id}-legend`
+
   return (
     <fieldset
       className="background-picker__choice-fieldset"
       aria-describedby={errorId}
     >
-      <legend>{choice.prompt}</legend>
-      <SingleSelectChoiceOptions
+      <legend id={legendId}>{choice.prompt}</legend>
+      <SingleSelectCardGrid
         id={`background-choice-${choice.id}`}
         name={`background-choice-${choice.id}`}
         options={choice.options.map((option) => ({
@@ -37,6 +39,8 @@ function BackgroundSingleSelectField({
           description: option.description,
         }))}
         selectedOptionId={value ?? null}
+        ariaLabelledBy={legendId}
+        ariaDescribedBy={errorId}
         onSelect={(optionId) => {
           onChange(choice.id, optionId)
         }}
@@ -62,8 +66,6 @@ function getPlayerChoiceIds(definition: BackgroundDefinition): string[] {
   if (definition.toolProficiency.kind === 'choice') {
     choiceIds.push(definition.toolProficiency.choiceId)
   }
-
-  choiceIds.push(definition.equipment.choiceId)
 
   for (const choice of definition.choices) {
     choiceIds.push(choice.id)

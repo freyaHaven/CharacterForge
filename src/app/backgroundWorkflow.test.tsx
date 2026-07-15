@@ -85,10 +85,9 @@ function createCompleteSoldierBackground(): NonNullable<Character['background']>
       plusTwo: 'strength',
       plusOne: 'constitution',
     },
-    choices: {
-      'gaming-set': 'dice-set',
-      'starting-equipment': 'gold-alternative',
-    },
+      choices: {
+        'gaming-set': 'dice-set',
+      },
   }
 }
 
@@ -123,7 +122,6 @@ async function completeSoldierSelection(
   await user.selectOptions(screen.getByLabelText('+2 Ability'), 'strength')
   await user.selectOptions(screen.getByLabelText('+1 Ability'), 'constitution')
   await user.click(screen.getByLabelText('Dice Set'))
-  await user.click(screen.getByRole('radio', { name: /50 gp/i }))
 }
 
 function expectSelectedBackground(name: string) {
@@ -180,7 +178,10 @@ describe('Background workflow', () => {
 
     expect(screen.getByText(/Strength \+2/i)).toBeInTheDocument()
     expect(screen.getByText(/Constitution \+1/i)).toBeInTheDocument()
-    expect(screen.getByText('50 GP', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.getByText(/Spear, Shortbow/i, { selector: 'dd' })).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Choose starting equipment/i),
+    ).not.toBeInTheDocument()
     expect(getWizardStepButton(screen, 'Background')).toHaveAccessibleName(
       /complete/i,
     )
@@ -195,7 +196,6 @@ describe('Background workflow', () => {
     await user.selectOptions(screen.getByLabelText('+2 Ability'), 'strength')
     await user.selectOptions(screen.getByLabelText('+1 Ability'), 'constitution')
     await user.click(screen.getByLabelText('Dice Set'))
-    await user.click(screen.getByRole('radio', { name: /50 gp/i }))
 
     expect(screen.getByText(/Strength \+2/i)).toBeInTheDocument()
 
@@ -268,7 +268,8 @@ describe('Background workflow', () => {
     expect(screen.getByText(/Ability Score Bonuses:/i)).toBeInTheDocument()
     expect(screen.getByText(/Strength \+2/i)).toBeInTheDocument()
     expect(screen.getByText(/Equipment:/i)).toBeInTheDocument()
-    expect(screen.getByText(/50 GP/i)).toBeInTheDocument()
+    expect(screen.getByText(/Spear, Shortbow/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Choose starting equipment/i)).not.toBeInTheDocument()
   })
 
   it('prompts to clear background when changing edition', async () => {

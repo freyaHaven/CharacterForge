@@ -59,23 +59,15 @@ export function formatToolProficiencySummary(
 
 export function formatEquipmentSummary(
   definition: BackgroundDefinition,
-  selection: BackgroundSelection | null,
+  _selection?: BackgroundSelection | null,
 ): string {
-  const selectedId = selection?.choices[definition.equipment.choiceId]
+  const equipmentPackage = definition.equipment.packages[0]
 
-  if (selectedId === undefined) {
-    return 'Not chosen yet'
-  }
-
-  if (selectedId === 'gold-alternative') {
-    return definition.equipment.goldAlternative.label
-  }
-
-  const equipmentPackage = definition.equipment.packages.find(
-    (entry) => entry.id === selectedId,
+  return (
+    equipmentPackage?.summary ??
+    equipmentPackage?.label ??
+    'Standard equipment package'
   )
-
-  return equipmentPackage?.summary ?? equipmentPackage?.label ?? selectedId
 }
 
 export function formatBackgroundChoiceSummary(

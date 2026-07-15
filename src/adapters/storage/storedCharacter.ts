@@ -1,6 +1,6 @@
 import type { Character } from '../../domain/types'
 
-export const CURRENT_SCHEMA_VERSION = 5
+export const CURRENT_SCHEMA_VERSION = 6
 
 export type StoredCharacterV1 = {
   schemaVersion: 1
@@ -27,7 +27,12 @@ export type StoredCharacterV5 = {
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV5
+export type StoredCharacterV6 = {
+  schemaVersion: 6
+  character: Character
+}
+
+export type StoredCharacter = StoredCharacterV6
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -44,7 +49,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV2
   | StoredCharacterV3
   | StoredCharacterV4
-  | StoredCharacterV5 {
+  | StoredCharacterV5
+  | StoredCharacterV6 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

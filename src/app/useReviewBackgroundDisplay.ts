@@ -89,10 +89,6 @@ export function useReviewBackgroundDisplay(
           continue
         }
 
-        if (choiceId === definition.equipment.choiceId) {
-          continue
-        }
-
         if (
           definition.toolProficiency.kind === 'choice' &&
           choiceId === definition.toolProficiency.choiceId

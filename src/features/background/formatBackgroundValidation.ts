@@ -2,7 +2,6 @@ import type { BackgroundValidationIssue } from '../../rules/background/backgroun
 
 const CHOICE_MESSAGES: Record<string, string> = {
   'gaming-set': 'Choose a Gaming Set.',
-  'starting-equipment': 'Choose starting equipment or take 50 GP.',
 }
 
 export function formatBackgroundValidationIssue(

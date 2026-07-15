@@ -78,8 +78,6 @@ function getRequiredChoiceIds(definition: BackgroundDefinition): string[] {
     choiceIds.push(definition.toolProficiency.choiceId)
   }
 
-  choiceIds.push(definition.equipment.choiceId)
-
   return choiceIds
 }
 
@@ -105,27 +103,6 @@ function getChoiceDefinition(
       type: 'single-select',
       required: true,
       options: definition.toolProficiency.options,
-    }
-  }
-
-  if (definition.equipment.choiceId === choiceId) {
-    return {
-      id: definition.equipment.choiceId,
-      prompt: definition.equipment.prompt,
-      type: 'single-select',
-      required: true,
-      options: [
-        ...definition.equipment.packages.map((entry) => ({
-          id: entry.id,
-          label: entry.label,
-          description: entry.summary,
-        })),
-        {
-          id: 'gold-alternative',
-          label: definition.equipment.goldAlternative.label,
-          description: `Take ${definition.equipment.goldAlternative.goldPieces} GP instead of the equipment package.`,
-        },
-      ],
     }
   }
 

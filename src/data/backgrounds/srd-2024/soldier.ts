@@ -21,7 +21,7 @@ export const soldierSrd2024: BackgroundDefinition = {
   toolProficiency: {
     kind: 'choice',
     choiceId: 'gaming-set',
-    prompt: 'Choose one kind of Gaming Set',
+    prompt: 'Choose a Gaming Set',
     options: createGamingSetOptions(),
   },
   equipment: createStandardEquipmentChoice(

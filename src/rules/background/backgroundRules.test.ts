@@ -18,13 +18,41 @@ describe('validateBackgroundSelection', () => {
       },
       choices: {
         'gaming-set': 'dice-set',
-        'starting-equipment': 'equipment-package',
       },
     }
 
     expect(
       validateBackgroundSelection(selection, 'srd-2024', soldierSrd2024).ok,
     ).toBe(true)
+  })
+
+  it('rejects legacy background equipment choices', () => {
+    const selection = {
+      backgroundId: soldierSrd2024.id,
+      abilityScoreIncrease: {
+        mode: 'two-and-one' as const,
+        plusTwo: 'strength' as const,
+        plusOne: 'constitution' as const,
+      },
+      choices: {
+        'gaming-set': 'dice-set',
+        'starting-equipment': 'equipment-package',
+      },
+    }
+
+    const result = validateBackgroundSelection(
+      selection,
+      'srd-2024',
+      soldierSrd2024,
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.issues).toContainEqual({
+        code: 'unknown-choice',
+        choiceId: 'starting-equipment',
+      })
+    }
   })
 
   it('rejects ability score increases outside eligible abilities', () => {
@@ -37,7 +65,6 @@ describe('validateBackgroundSelection', () => {
       },
       choices: {
         'gaming-set': 'dice-set',
-        'starting-equipment': 'gold-alternative',
       },
     }
 
@@ -69,6 +96,30 @@ describe('validateBackgroundSelection', () => {
     )
 
     expect(committed).toBeNull()
+  })
+
+  it('commits Soldier with ability scores and gaming set only', () => {
+    const draft = {
+      backgroundId: soldierSrd2024.id,
+      abilityScoreIncrease: { mode: 'three-one' as const },
+      choices: {
+        'gaming-set': 'dice-set',
+      },
+    }
+
+    const { committed } = tryCommitBackgroundDraft(
+      draft,
+      'srd-2024',
+      soldierSrd2024,
+    )
+
+    expect(committed).toEqual({
+      backgroundId: soldierSrd2024.id,
+      abilityScoreIncrease: { mode: 'three-one' },
+      choices: {
+        'gaming-set': 'dice-set',
+      },
+    })
   })
 })
 

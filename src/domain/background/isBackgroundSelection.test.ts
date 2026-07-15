@@ -13,7 +13,6 @@ describe('isBackgroundSelection', () => {
         },
         choices: {
           'gaming-set': 'dice-set',
-          'starting-equipment': 'equipment-package',
         },
       }),
     ).toBe(true)
