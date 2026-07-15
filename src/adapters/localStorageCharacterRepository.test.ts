@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createLocalStorageCharacterRepository } from './localStorageCharacterRepository'
+import { createDefaultCharacter } from '../domain/character/defaults'
+import { createDefaultCharacterDetails } from '../domain/character/details'
 import type { Character } from '../domain/types'
 
 function createTestCharacter(): Character {
-  return {
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2014',
@@ -16,10 +18,19 @@ function createTestCharacter(): Character {
       wisdom: 10,
       charisma: 8,
     },
-    species: null,
-    class: null,
-    background: null,
-  }
+  })
+}
+
+function withMigratedDefaults(
+  character: Omit<Character, 'details'> & Partial<Pick<Character, 'details'>>,
+): Character {
+  return {
+    ...character,
+    species: character.species ?? null,
+    class: character.class ?? null,
+    background: character.background ?? null,
+    details: character.details ?? createDefaultCharacterDetails(),
+  } as Character
 }
 
 function createLocalStorageMock(): Storage {
@@ -79,7 +90,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 6,
+      schemaVersion: 8,
       character,
     })
   })
@@ -100,7 +111,7 @@ describe('createLocalStorageCharacterRepository', () => {
     const repository = createLocalStorageCharacterRepository()
     const loaded = await repository.load('char-1')
 
-    expect(loaded).toEqual({ ...v1Character, species: null, class: null, background: null })
+    expect(loaded).toEqual(withMigratedDefaults(v1Character))
   })
 
   it('migrates a legacy unversioned save on load', async () => {
@@ -119,7 +130,7 @@ describe('createLocalStorageCharacterRepository', () => {
     const repository = createLocalStorageCharacterRepository()
     const loaded = await repository.load('char-1')
 
-    expect(loaded).toEqual({ ...character, species: null, class: null, background: null })
+    expect(loaded).toEqual(withMigratedDefaults(character))
   })
 
   it('saves and reloads a selected species', async () => {

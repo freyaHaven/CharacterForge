@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
+import { createDefaultCharacter } from '../domain/character/defaults'
 import {
   completeFighterSelection,
   getWizardStepButton,
@@ -27,19 +28,11 @@ vi.mock('../adapters/localStorageCharacterRepository', () => ({
 }))
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
-  return {
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2024',
     creationMethod: 'manual',
-    abilityScores: {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
-      wisdom: 10,
-      charisma: 10,
-    },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
     class: {
       classId: 'srd-2024:fighter',
@@ -51,7 +44,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     },
     background: null,
     ...overrides,
-  }
+  })
 }
 
 async function renderApp(character: Character | null = null) {
@@ -102,8 +95,6 @@ async function completeRequiredSteps(
     )
   }
 
-  await completeFighterSelection(user, screen)
-
   if (useStandardArray) {
     await goToAbilityScoresStep(user, screen)
     await user.selectOptions(
@@ -114,6 +105,8 @@ async function completeRequiredSteps(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
   }
+
+  await completeFighterSelection(user, screen)
 }
 
 describe('Review wizard integration', () => {

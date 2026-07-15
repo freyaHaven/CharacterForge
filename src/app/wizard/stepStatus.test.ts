@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { createDefaultCharacterDetails } from '../../domain/character/details'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import type { Character } from '../../domain/types'
 import {
   getAbilityScoresStepStatus,
+  getCharacterDetailsStepStatus,
   getAllStepStatuses,
   getBasicsStepStatus,
   getClassStepStatus,
@@ -19,6 +21,7 @@ function createContext(
   return {
     character: createDefaultCharacter(),
     basicsTouched: false,
+    detailsTouched: false,
     abilityScoresTouched: false,
     speciesDraft: null,
     speciesDraftValidation: null,
@@ -350,6 +353,42 @@ describe('getReviewStepStatus', () => {
     ).toEqual({
       completion: 'in-progress',
       hasValidationErrors: true,
+    })
+  })
+})
+
+describe('getCharacterDetailsStepStatus', () => {
+  it('is not-started when untouched and empty', () => {
+    expect(getCharacterDetailsStepStatus(createContext())).toEqual({
+      completion: 'not-started',
+      hasValidationErrors: false,
+    })
+  })
+
+  it('is in-progress when touched but empty', () => {
+    expect(
+      getCharacterDetailsStepStatus(createContext({ detailsTouched: true })),
+    ).toEqual({
+      completion: 'in-progress',
+      hasValidationErrors: false,
+    })
+  })
+
+  it('is complete when any field is populated', () => {
+    expect(
+      getCharacterDetailsStepStatus(
+        createContext({
+          character: createCharacter({
+            details: {
+              ...createDefaultCharacterDetails(),
+              backstoryNotes: 'A note',
+            },
+          }),
+        }),
+      ),
+    ).toEqual({
+      completion: 'complete',
+      hasValidationErrors: false,
     })
   })
 })

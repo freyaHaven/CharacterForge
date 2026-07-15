@@ -1,4 +1,4 @@
-import { WIZARD_STEPS } from './steps'
+import { getVisibleWizardSteps, type WizardStepContext } from './stepVisibility'
 import type { StepStatus, WizardStepId } from './types'
 import {
   formatStepNavAriaLabel,
@@ -7,19 +7,23 @@ import {
 
 type WizardNavProps = {
   activeStepId: WizardStepId
+  stepContext: WizardStepContext
   stepStatuses: Record<WizardStepId, StepStatus>
   onStepChange: (stepId: WizardStepId) => void
 }
 
 export function WizardNav({
   activeStepId,
+  stepContext,
   stepStatuses,
   onStepChange,
 }: WizardNavProps) {
+  const visibleSteps = getVisibleWizardSteps(stepContext)
+
   return (
     <nav aria-label="Character creation steps" className="wizard-nav">
       <ol className="wizard-nav__list">
-        {WIZARD_STEPS.map((step, index) => {
+        {visibleSteps.map((step, index) => {
           const status = stepStatuses[step.id]
           const isActive = step.id === activeStepId
           const stepNumber = index + 1

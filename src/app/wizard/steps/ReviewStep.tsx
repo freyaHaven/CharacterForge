@@ -1,16 +1,21 @@
 import type { FinishPolicyResult } from '../../characterFinishPolicy'
-import type { ReviewableStepId } from '../../reviewSummary'
+import type {
+  CharacterDetailsReviewSections,
+  ReviewableStepId,
+} from '../../reviewSummary'
 import {
   formatReviewStatusLabel,
   getReviewStepLabel,
-  REVIEWABLE_STEP_IDS,
+  hasCharacterDetailsReviewContent,
 } from '../../reviewSummary'
+import { CharacterDetailsReviewContent } from '../../../features/character-details/CharacterDetailsReviewContent'
 import type { StepStatus } from '../types'
 
 type ReviewSummaryCardProps = {
   stepId: ReviewableStepId
   status: StepStatus
   summaryLines: string[]
+  characterDetailsReview?: CharacterDetailsReviewSections
   onEdit: (stepId: ReviewableStepId) => void
 }
 
@@ -18,11 +23,21 @@ function ReviewSummaryCard({
   stepId,
   status,
   summaryLines,
+  characterDetailsReview,
   onEdit,
 }: ReviewSummaryCardProps) {
   const label = getReviewStepLabel(stepId)
   const headingId = `review-summary-${stepId}-heading`
   const statusLabel = formatReviewStatusLabel(status)
+
+  if (
+    stepId === 'character-details' &&
+    (characterDetailsReview === undefined
+      ? summaryLines.length === 0
+      : !hasCharacterDetailsReviewContent(characterDetailsReview))
+  ) {
+    return null
+  }
 
   return (
     <section
@@ -47,11 +62,15 @@ function ReviewSummaryCard({
         </p>
       </div>
 
-      <ul className="review-summary-card__details">
-        {summaryLines.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
+      {stepId === 'character-details' && characterDetailsReview !== undefined ? (
+        <CharacterDetailsReviewContent sections={characterDetailsReview} />
+      ) : (
+        <ul className="review-summary-card__details">
+          {summaryLines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
 
       <button type="button" onClick={() => onEdit(stepId)}>
         Edit {label}
@@ -61,8 +80,10 @@ function ReviewSummaryCard({
 }
 
 export type ReviewStepProps = {
+  reviewableStepIds: ReviewableStepId[]
   stepStatuses: Record<ReviewableStepId, StepStatus>
   summaries: Record<ReviewableStepId, string[]>
+  characterDetailsReview: CharacterDetailsReviewSections
   finishPolicy: FinishPolicyResult
   finishBlockedMessage: string
   finishMessage: string | null
@@ -71,8 +92,10 @@ export type ReviewStepProps = {
 }
 
 export function ReviewStep({
+  reviewableStepIds,
   stepStatuses,
   summaries,
+  characterDetailsReview,
   finishPolicy,
   finishBlockedMessage,
   finishMessage,
@@ -91,12 +114,15 @@ export function ReviewStep({
       </p>
 
       <div className="review-step__summaries">
-        {REVIEWABLE_STEP_IDS.map((stepId) => (
+        {reviewableStepIds.map((stepId) => (
           <ReviewSummaryCard
             key={stepId}
             stepId={stepId}
             status={stepStatuses[stepId]}
             summaryLines={summaries[stepId]}
+            characterDetailsReview={
+              stepId === 'character-details' ? characterDetailsReview : undefined
+            }
             onEdit={onEditStep}
           />
         ))}

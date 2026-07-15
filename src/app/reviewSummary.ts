@@ -3,19 +3,33 @@ import type { AbilityScores, Character } from '../domain/types'
 import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../features/background/backgroundSelectionDraft'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
+import { formatCharacterDetailsReviewLines, formatCharacterDetailsReviewSections, hasCharacterDetailsReviewContent, type CharacterDetailsReviewSections } from '../features/character-details/formatCharacterDetailsReview'
 import { CREATION_METHOD_OPTIONS } from '../features/creation-method/creationMethodOptions'
 import { EDITION_OPTIONS } from '../features/edition-picker/editionOptions'
 import type { PointBuyValidationResult } from '../rules/point-buy'
 import type { RolledAssignmentValidationResult } from '../rules/rolled'
 import type { StandardArrayDraftValidationResult } from '../features/ability-scores/standardArrayDraft'
 import { WIZARD_STEPS } from './wizard/steps'
+import {
+  createWizardStepContext,
+  getVisibleWizardSteps,
+  type WizardStepContext,
+} from './wizard/stepVisibility'
 import type { StepStatus, WizardStepId } from './wizard/types'
 import { formatStepStatusDescription } from './wizard/formatStepStatus'
 
 export type ReviewableStepId = Exclude<WizardStepId, 'review'>
 
+export function getReviewableStepIds(
+  context: WizardStepContext,
+): ReviewableStepId[] {
+  return getVisibleWizardSteps(context)
+    .filter((step): step is { id: ReviewableStepId } => step.id !== 'review')
+    .map((step) => step.id)
+}
+
 export const REVIEWABLE_STEP_IDS: readonly ReviewableStepId[] = WIZARD_STEPS.filter(
-  (step): step is ReviewableStepId => step.id !== 'review',
+  (step): step is { id: ReviewableStepId } => step.id !== 'review',
 ).map((step) => step.id)
 
 export type SpeciesReviewDisplay = {
@@ -242,6 +256,18 @@ function buildAbilityScoresSummary(context: ReviewSummaryContext): string[] {
   return lines
 }
 
+function buildCharacterDetailsSummary(context: ReviewSummaryContext): string[] {
+  return formatCharacterDetailsReviewLines(context.character.details)
+}
+
+export function buildCharacterDetailsReviewSections(
+  context: ReviewSummaryContext,
+): CharacterDetailsReviewSections {
+  return formatCharacterDetailsReviewSections(context.character.details)
+}
+
+export { hasCharacterDetailsReviewContent, type CharacterDetailsReviewSections }
+
 function buildPlaceholderSummary(): string[] {
   return ['Coming soon']
 }
@@ -250,14 +276,25 @@ export function buildReviewSummaries(
   context: ReviewSummaryContext,
   stepStatuses: Record<ReviewableStepId, StepStatus>,
 ): Record<ReviewableStepId, string[]> {
+  const wizardContext = createWizardStepContext(context.character)
+
   return {
     basics: buildBasicsSummary(context),
     species: buildSpeciesSummary(context, stepStatuses.species),
-    class: buildClassSummary(context, stepStatuses.class),
+    'character-details': buildCharacterDetailsSummary(context),
     'ability-scores': buildAbilityScoresSummary(context),
+    class: buildClassSummary(context, stepStatuses.class),
     background: buildBackgroundSummary(context, stepStatuses.background),
     equipment: buildPlaceholderSummary(),
+    feats: buildPlaceholderSummary(),
+    spells: buildPlaceholderSummary(),
   }
+}
+
+export function getVisibleReviewableStepIds(
+  context: ReviewSummaryContext,
+): ReviewableStepId[] {
+  return getReviewableStepIds(createWizardStepContext(context.character))
 }
 
 export function getReviewStepLabel(stepId: ReviewableStepId): string {

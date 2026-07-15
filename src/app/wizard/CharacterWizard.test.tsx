@@ -5,8 +5,14 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { CharacterWizard } from './CharacterWizard'
+import {
+  createDefaultWizardStepContext,
+  getVisibleWizardSteps,
+} from './navigation'
 import { WIZARD_STEPS } from './steps'
 import type { StepStatus, WizardStepId } from './types'
+
+const VISIBLE_STEPS = getVisibleWizardSteps(createDefaultWizardStepContext())
 
 function createStepStatuses(
   overrides: Partial<Record<WizardStepId, StepStatus>> = {},
@@ -33,10 +39,12 @@ function WizardHarness({
   stepStatuses?: Record<WizardStepId, StepStatus>
 }) {
   const [activeStepId, setActiveStepId] = useState(initialStepId)
+  const stepContext = createDefaultWizardStepContext()
 
   return (
     <CharacterWizard
       activeStepId={activeStepId}
+      stepContext={stepContext}
       stepStatuses={stepStatuses}
       onStepChange={setActiveStepId}
     />
@@ -48,12 +56,15 @@ function getStepButton(label: string) {
 }
 
 describe('CharacterWizard', () => {
-  it('renders all seven wizard steps in navigation', () => {
+  it('renders visible wizard steps in navigation', () => {
     render(<WizardHarness />)
 
-    for (const step of WIZARD_STEPS) {
+    for (const step of VISIBLE_STEPS) {
       expect(getStepButton(step.label)).toBeInTheDocument()
     }
+
+    expect(screen.queryByRole('button', { name: /^Feats,/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Spells,/i })).not.toBeInTheDocument()
   })
 
   it('highlights the active step and sets aria-current="step"', () => {
@@ -86,10 +97,7 @@ describe('CharacterWizard', () => {
     render(<WizardHarness initialStepId="class" />)
 
     await user.click(screen.getByRole('button', { name: /^next$/i }))
-    expect(getStepButton('Ability Scores')).toHaveAttribute(
-      'aria-current',
-      'step',
-    )
+    expect(getStepButton('Background')).toHaveAttribute('aria-current', 'step')
 
     await user.click(screen.getByRole('button', { name: /^back$/i }))
     expect(getStepButton('Class')).toHaveAttribute('aria-current', 'step')
@@ -166,7 +174,7 @@ describe('CharacterWizard', () => {
     const speciesIndicator = within(getStepButton('Species')).getByText('2', {
       selector: '[aria-hidden="true"]',
     })
-    const classIndicator = within(getStepButton('Class')).getByText('3', {
+    const classIndicator = within(getStepButton('Class')).getByText('5', {
       selector: '[aria-hidden="true"]',
     })
 
@@ -175,14 +183,17 @@ describe('CharacterWizard', () => {
     expect(classIndicator).toHaveAttribute('data-status', 'not-started')
   })
 
-  it('renders seven numbered step markers in the navigation list', () => {
+  it('renders numbered step markers for visible steps only', () => {
     render(<WizardHarness />)
 
     const indicators = document.querySelectorAll(
       '.wizard-nav__indicator[data-step-number]',
     )
-    expect(indicators).toHaveLength(7)
+    expect(indicators).toHaveLength(VISIBLE_STEPS.length)
     expect(indicators[0]).toHaveAttribute('data-step-number', '1')
-    expect(indicators[6]).toHaveAttribute('data-step-number', '7')
+    expect(indicators[indicators.length - 1]).toHaveAttribute(
+      'data-step-number',
+      String(VISIBLE_STEPS.length),
+    )
   })
 })

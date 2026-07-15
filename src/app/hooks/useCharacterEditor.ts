@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createDefaultCharacter, DEFAULT_CHARACTER_ID } from '../../domain/character/defaults'
+import { migrateLegacyCharacterDetails } from '../../domain/character/migrateCharacterDetails'
 import type { CharacterRepository } from '../../domain/ports/characterRepository'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
@@ -16,7 +17,9 @@ import {
   formatIncompleteRequiredStepsMessage,
   getFinishPolicyResult,
 } from '../characterFinishPolicy'
-import { buildReviewSummaries } from '../reviewSummary'
+import type { CharacterDetails } from '../../domain/types'
+import { buildReviewSummaries, buildCharacterDetailsReviewSections, getReviewableStepIds } from '../reviewSummary'
+import { createWizardStepContext } from '../wizard/stepVisibility'
 import { useReviewClassDisplay } from '../useReviewClassDisplay'
 import { useReviewBackgroundDisplay } from '../useReviewBackgroundDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
@@ -55,6 +58,7 @@ export function useCharacterEditor({
     DEFAULT_WIZARD_UI_STATE.activeStepId,
   )
   const [basicsTouched, setBasicsTouched] = useState(false)
+  const [detailsTouched, setDetailsTouched] = useState(false)
 
   const prefersReducedMotion = usePrefersReducedMotion()
 
@@ -109,11 +113,16 @@ export function useCharacterEditor({
     async function loadCharacter() {
       const stored = await repository.load(DEFAULT_CHARACTER_ID)
       if (isActive && stored !== null) {
-        setCharacter(stored)
+        const hydratedCharacter: Character = {
+          ...createDefaultCharacter(),
+          ...stored,
+          details: migrateLegacyCharacterDetails(stored.details),
+        }
+        setCharacter(hydratedCharacter)
         species.resetSpeciesDraft()
         classEditor.resetClassDraft()
         background.resetBackgroundDraft()
-        hydrateFromCharacter(stored)
+        hydrateFromCharacter(hydratedCharacter)
       }
       if (isActive) {
         setIsLoading(false)
@@ -152,6 +161,7 @@ export function useCharacterEditor({
   const stepStatuses = getAllStepStatuses({
     character,
     basicsTouched,
+    detailsTouched,
     abilityScoresTouched: abilityScores.abilityScoresTouched,
     speciesDraft: species.speciesDraft,
     speciesDraftValidation: species.speciesDraftValidation,
@@ -188,6 +198,9 @@ export function useCharacterEditor({
     background.backgroundDraft,
   )
 
+  const wizardStepContext = createWizardStepContext(character)
+  const reviewableStepIds = getReviewableStepIds(wizardStepContext)
+
   const finishPolicy = getFinishPolicyResult(stepStatuses)
   const reviewSummaries = buildReviewSummaries(
     {
@@ -205,12 +218,27 @@ export function useCharacterEditor({
     {
       basics: stepStatuses.basics,
       species: stepStatuses.species,
-      class: stepStatuses.class,
+      'character-details': stepStatuses['character-details'],
       'ability-scores': stepStatuses['ability-scores'],
+      class: stepStatuses.class,
       background: stepStatuses.background,
       equipment: stepStatuses.equipment,
+      feats: stepStatuses.feats,
+      spells: stepStatuses.spells,
     },
   )
+  const characterDetailsReviewSections = buildCharacterDetailsReviewSections({
+    character,
+    speciesDraft: species.speciesDraft,
+    speciesDisplay: speciesReviewDisplay,
+    classDraft: classEditor.classDraft,
+    classDisplay: classReviewDisplay,
+    backgroundDraft: background.backgroundDraft,
+    backgroundDisplay: backgroundReviewDisplay,
+    standardArrayValidation: abilityScores.standardArrayValidation,
+    pointBuyValidation: abilityScores.pointBuyValidation,
+    rolledValidation: abilityScores.rolledValidation,
+  })
   const finishBlockedMessage = formatIncompleteRequiredStepsMessage(
     finishPolicy.canFinish ? [] : finishPolicy.incompleteRequiredSteps,
   )
@@ -285,6 +313,20 @@ export function useCharacterEditor({
     [clearSaveMessage],
   )
 
+  const updateDetails = useCallback(
+    (updates: Partial<CharacterDetails>) => {
+      setCharacter((current) => ({
+        ...current,
+        details: {
+          ...current.details,
+          ...updates,
+        },
+      }))
+      clearSaveMessage()
+    },
+    [clearSaveMessage],
+  )
+
   return {
     isLoading,
     prefersReducedMotion,
@@ -292,8 +334,11 @@ export function useCharacterEditor({
     character,
     activeStepId,
     setActiveStepId,
+    wizardStepContext,
+    reviewableStepIds,
     stepStatuses,
     reviewSummaries,
+    characterDetailsReviewSections,
     finishPolicy,
     finishBlockedMessage,
     finishMessage,
@@ -301,6 +346,8 @@ export function useCharacterEditor({
     saveMessage,
     saveBlockedMessage,
     setBasicsTouched,
+    setDetailsTouched,
+    updateDetails,
     abilityScores,
     species,
     classEditor,

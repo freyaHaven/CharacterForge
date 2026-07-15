@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { createDefaultCharacter } from '../../domain/character/defaults'
+import { createDefaultCharacterDetails } from '../../domain/character/details'
 import type { Character } from '../../domain/types'
 import { parseStoredCharacter } from './parseStoredCharacter'
 import { serializeCharacter } from './serializeCharacter'
@@ -6,7 +8,7 @@ import { serializeCharacter } from './serializeCharacter'
 function createTestCharacter(
   overrides: Partial<Character> = {},
 ): Character {
-  return {
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2014',
@@ -19,11 +21,20 @@ function createTestCharacter(
       wisdom: 10,
       charisma: 8,
     },
-    species: null,
-    class: null,
-    background: null,
     ...overrides,
-  }
+  })
+}
+
+function withMigratedDefaults(
+  character: Omit<Character, 'details'> & Partial<Pick<Character, 'details'>>,
+): Character {
+  return {
+    ...character,
+    species: character.species ?? null,
+    class: character.class ?? null,
+    background: character.background ?? null,
+    details: character.details ?? createDefaultCharacterDetails(),
+  } as Character
 }
 
 describe('parseStoredCharacter', () => {
@@ -56,7 +67,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: { ...legacy, species: null, class: null, background: null },
+      character: withMigratedDefaults(legacy),
     })
   })
 
@@ -82,7 +93,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: { ...v1Character, species: null, class: null, background: null },
+      character: withMigratedDefaults(v1Character),
     })
   })
 
@@ -126,7 +137,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: {
+      character: withMigratedDefaults({
         ...v4Character,
         background: {
           backgroundId: 'srd-2024:soldier',
@@ -139,7 +150,7 @@ describe('parseStoredCharacter', () => {
             'gaming-set': 'dice-set',
           },
         },
-      },
+      }),
     })
   })
 
@@ -179,7 +190,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: {
+      character: withMigratedDefaults({
         ...v5Character,
         background: {
           backgroundId: 'srd-2024:soldier',
@@ -191,6 +202,95 @@ describe('parseStoredCharacter', () => {
           choices: {
             'gaming-set': 'dice-set',
           },
+        },
+      }),
+    })
+  })
+
+  it('migrates a schema v6 save by adding character details', () => {
+    const v6Character = {
+      id: 'char-1',
+      name: 'Aldric',
+      editionId: 'srd-2024' as const,
+      creationMethod: 'manual' as const,
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      species: null,
+      class: null,
+      background: null,
+    }
+    const raw = JSON.stringify({
+      schemaVersion: 6,
+      character: v6Character,
+    })
+
+    expect(parseStoredCharacter(raw)).toEqual({
+      ok: true,
+      character: withMigratedDefaults(v6Character),
+    })
+  })
+
+  it('migrates a schema v7 save to v8 character details', () => {
+    const v7Character = {
+      id: 'char-1',
+      name: 'Aldric',
+      editionId: 'srd-2024' as const,
+      creationMethod: 'manual' as const,
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      species: null,
+      class: null,
+      background: null,
+      details: {
+        age: '30',
+        gender: 'Female',
+        pronouns: 'She/Her',
+        alignment: 'true-neutral' as const,
+        height: '165 cm',
+        weight: '60 kg',
+        eyes: 'Blue',
+        hair: 'Blonde',
+        skin: 'Fair',
+        appearance: '',
+        notes: 'Explorer',
+      },
+    }
+    const raw = JSON.stringify({
+      schemaVersion: 7,
+      character: v7Character,
+    })
+
+    expect(parseStoredCharacter(raw)).toEqual({
+      ok: true,
+      character: {
+        ...v7Character,
+        details: {
+          age: '30',
+          height: '165 cm',
+          weight: '60 kg',
+          gender: 'female',
+          pronouns: 'she-her',
+          eyeColour: 'Blue',
+          hairColour: 'Blonde',
+          skinTone: 'Fair',
+          alignment: 'true-neutral',
+          personalityTraits: '',
+          ideals: '',
+          bonds: '',
+          flaws: '',
+          backstoryNotes: 'Explorer',
         },
       },
     })
@@ -254,7 +354,7 @@ describe('parseStoredCharacter', () => {
 
     expect(result).toEqual({
       ok: true,
-      character: { ...legacy, species: null, class: null, background: null },
+      character: withMigratedDefaults(legacy),
     })
   })
 
@@ -278,7 +378,7 @@ describe('parseStoredCharacter', () => {
 
     expect(result).toEqual({
       ok: true,
-      character: { ...legacy, species: null, class: null, background: null },
+      character: withMigratedDefaults(legacy),
     })
   })
 })

@@ -7,7 +7,10 @@ import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
 import { BackgroundStep } from './wizard/steps/BackgroundStep'
 import { BasicsStep } from './wizard/steps/BasicsStep'
 import { ClassStep } from './wizard/steps/ClassStep'
+import { CharacterDetailsStep } from './wizard/steps/CharacterDetailsStep'
 import { EquipmentStep } from './wizard/steps/EquipmentStep'
+import { FeatsStep } from './wizard/steps/FeatsStep'
+import { SpellsStep } from './wizard/steps/SpellsStep'
 import { ReviewStep } from './wizard/steps/ReviewStep'
 import { SpeciesStep } from './wizard/steps/SpeciesStep'
 import { CharacterWizard } from './wizard/CharacterWizard'
@@ -49,6 +52,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
 
       <CharacterWizard
         activeStepId={editor.activeStepId}
+        stepContext={editor.wizardStepContext}
         stepStatuses={editor.stepStatuses}
         onStepChange={editor.setActiveStepId}
         stepContent={{
@@ -73,14 +77,13 @@ export default function App({ randomSource = Math.random }: AppProps) {
               onCommittedSelectionChange={species.commitSpeciesSelection}
             />
           ),
-          class: (
-            <ClassStep
-              editionId={character.editionId}
-              committedSelection={character.class}
-              draft={classEditor.classDraft}
-              catalog={editor.classCatalog}
-              onDraftChange={classEditor.setClassDraft}
-              onCommittedSelectionChange={classEditor.commitClassSelection}
+          'character-details': (
+            <CharacterDetailsStep
+              speciesSelection={character.species}
+              details={character.details}
+              catalog={editor.speciesCatalog}
+              onDetailsChange={editor.updateDetails}
+              onDetailsTouched={() => editor.setDetailsTouched(true)}
             />
           ),
           'ability-scores': (
@@ -104,6 +107,16 @@ export default function App({ randomSource = Math.random }: AppProps) {
               randomSource={editor.randomSource}
             />
           ),
+          class: (
+            <ClassStep
+              editionId={character.editionId}
+              committedSelection={character.class}
+              draft={classEditor.classDraft}
+              catalog={editor.classCatalog}
+              onDraftChange={classEditor.setClassDraft}
+              onCommittedSelectionChange={classEditor.commitClassSelection}
+            />
+          ),
           background: (
             <BackgroundStep
               editionId={character.editionId}
@@ -115,17 +128,24 @@ export default function App({ randomSource = Math.random }: AppProps) {
             />
           ),
           equipment: <EquipmentStep />,
+          feats: <FeatsStep />,
+          spells: <SpellsStep />,
           review: (
             <ReviewStep
+              reviewableStepIds={editor.reviewableStepIds}
               stepStatuses={{
                 basics: editor.stepStatuses.basics,
                 species: editor.stepStatuses.species,
-                class: editor.stepStatuses.class,
+                'character-details': editor.stepStatuses['character-details'],
                 'ability-scores': editor.stepStatuses['ability-scores'],
+                class: editor.stepStatuses.class,
                 background: editor.stepStatuses.background,
                 equipment: editor.stepStatuses.equipment,
+                feats: editor.stepStatuses.feats,
+                spells: editor.stepStatuses.spells,
               }}
               summaries={editor.reviewSummaries}
+              characterDetailsReview={editor.characterDetailsReviewSections}
               finishPolicy={editor.finishPolicy}
               finishBlockedMessage={editor.finishBlockedMessage}
               finishMessage={editor.finishMessage}

@@ -3,16 +3,19 @@ import { DEFAULT_WIZARD_UI_STATE, WIZARD_STEPS } from './steps'
 import type { WizardStepId } from './types'
 
 describe('WIZARD_STEPS', () => {
-  it('defines all seven steps in the intended order', () => {
+  it('defines all wizard steps in the intended order', () => {
     const ids = WIZARD_STEPS.map((step) => step.id)
 
     expect(ids).toEqual([
       'basics',
       'species',
-      'class',
+      'character-details',
       'ability-scores',
+      'class',
       'background',
       'equipment',
+      'feats',
+      'spells',
       'review',
     ])
   })
@@ -35,13 +38,16 @@ describe('WIZARD_STEPS', () => {
     expect(requiredById['ability-scores']).toBe(true)
   })
 
-  it('marks Background, Equipment, and Review as not required', () => {
+  it('marks optional steps as not required', () => {
     const requiredById = Object.fromEntries(
       WIZARD_STEPS.map((step) => [step.id, step.required]),
     ) as Record<WizardStepId, boolean>
 
+    expect(requiredById['character-details']).toBe(false)
     expect(requiredById.background).toBe(false)
     expect(requiredById.equipment).toBe(false)
+    expect(requiredById.feats).toBe(false)
+    expect(requiredById.spells).toBe(false)
     expect(requiredById.review).toBe(false)
   })
 

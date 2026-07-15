@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { createDefaultCharacter } from './defaults'
 import { isCharacter } from './isCharacter'
 import type { Character } from '../types'
 
 function createValidCharacter(): Character {
-  return {
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2014',
@@ -16,10 +17,7 @@ function createValidCharacter(): Character {
       wisdom: 10,
       charisma: 8,
     },
-    species: null,
-    class: null,
-    background: null,
-  }
+  })
 }
 
 describe('isCharacter', () => {

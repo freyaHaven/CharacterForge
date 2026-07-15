@@ -1,8 +1,31 @@
+import type { CharacterDetails } from './character/details'
 import type { EditionId } from './edition'
 import type { ClassSelection } from './class/types'
 import type { BackgroundSelection } from './background/types'
 import type { SpeciesSelection } from './species/types'
 
+export type { AlignmentId } from './character/alignment'
+export {
+  ALIGNMENT_IDS,
+  ALIGNMENT_LABELS,
+  getAlignmentLabel,
+  isAlignmentId,
+} from './character/alignment'
+export type { GenderId } from './character/gender'
+export { GENDER_IDS, GENDER_LABELS, getGenderLabel, isGenderId } from './character/gender'
+export type { PronounId } from './character/pronouns'
+export {
+  PRONOUN_IDS,
+  PRONOUN_LABELS,
+  getPronounLabel,
+  isPronounId,
+} from './character/pronouns'
+export type { CharacterDetails } from './character/details'
+export {
+  createDefaultCharacterDetails,
+  hasCharacterDetailsContent,
+  isCharacterDetails,
+} from './character/details'
 export type { CharacterLifecycle } from './character/lifecycle'
 export type { EditionId } from './edition'
 export { DEFAULT_EDITION_ID } from './edition'
@@ -92,4 +115,5 @@ export type Character = {
   species: SpeciesSelection | null
   class: ClassSelection | null
   background: BackgroundSelection | null
+  details: CharacterDetails
 }

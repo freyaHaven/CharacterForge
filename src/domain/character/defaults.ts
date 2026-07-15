@@ -1,3 +1,4 @@
+import { createDefaultCharacterDetails } from './details'
 import { DEFAULT_EDITION_ID } from '../edition'
 import type { AbilityScores, Character } from '../types'
 
@@ -24,6 +25,7 @@ export function createDefaultCharacter(
     species: null,
     class: null,
     background: null,
+    details: createDefaultCharacterDetails(),
     ...overrides,
   }
 }

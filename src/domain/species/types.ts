@@ -51,6 +51,11 @@ export type SpeciesChoice = {
   required: boolean
 }
 
+export type SpeciesGuidance = {
+  age?: string
+  height?: string
+}
+
 export type SpeciesDefinition = {
   id: string
   editionId: EditionId
@@ -62,6 +67,7 @@ export type SpeciesDefinition = {
   traits: SpeciesTrait[]
   effects: SpeciesEffect[]
   choices: SpeciesChoice[]
+  guidance?: SpeciesGuidance
 }
 
 export type SpeciesSelection = {

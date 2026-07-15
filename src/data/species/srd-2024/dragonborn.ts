@@ -74,4 +74,8 @@ export const dragonbornSrd2024: SpeciesDefinition = {
       options: createDraconicAncestryOptions(),
     },
   ],
+  guidance: {
+    age: 'Dragonborn reach adulthood by age 15 and live around 80 years.',
+    height: 'Typical height: 170–195 cm',
+  },
 }

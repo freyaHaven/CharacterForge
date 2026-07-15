@@ -1,4 +1,5 @@
 import type { Character } from '../../domain/types'
+import { hasCharacterDetailsContent } from '../../domain/character/details'
 import type { ClassSelectionDraft } from '../../features/class/classSelectionDraft'
 import { isClassDraftIncomplete } from '../../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../../features/background/backgroundSelectionDraft'
@@ -25,6 +26,8 @@ export type StepValidationContext = {
 
   /** User has edited or focused the name field on the Basics step. */
   basicsTouched: boolean
+  /** User has edited any Character Details field. */
+  detailsTouched: boolean
   /** User has changed the creation method or ability score inputs. */
   abilityScoresTouched: boolean
 
@@ -150,6 +153,20 @@ export function getBackgroundStepStatus(
   return { completion: 'in-progress', hasValidationErrors }
 }
 
+export function getCharacterDetailsStepStatus(
+  context: StepValidationContext,
+): StepStatus {
+  if (hasCharacterDetailsContent(context.character.details)) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  if (context.detailsTouched) {
+    return { completion: 'in-progress', hasValidationErrors: false }
+  }
+
+  return { completion: 'not-started', hasValidationErrors: false }
+}
+
 export function getPlaceholderStepStatus(): StepStatus {
   return { completion: 'not-started', hasValidationErrors: false }
 }
@@ -199,10 +216,13 @@ export function getNonReviewStepStatuses(
   return {
     basics: getBasicsStepStatus(context),
     species: getSpeciesStepStatus(context),
-    class: getClassStepStatus(context),
+    'character-details': getCharacterDetailsStepStatus(context),
     'ability-scores': getAbilityScoresStepStatus(context),
+    class: getClassStepStatus(context),
     background: getBackgroundStepStatus(context),
     equipment: getPlaceholderStepStatus(),
+    feats: getPlaceholderStepStatus(),
+    spells: getPlaceholderStepStatus(),
   }
 }
 

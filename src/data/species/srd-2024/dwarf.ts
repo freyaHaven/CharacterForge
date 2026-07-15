@@ -39,4 +39,8 @@ export const dwarfSrd2024: SpeciesDefinition = {
     { kind: 'hit-point-maximum-per-level', amount: 1 },
   ],
   choices: [],
+  guidance: {
+    age: 'Dwarves mature at the same rate as humans, but are considered young until they reach the age of 50.',
+    height: 'Typical height: 120–150 cm',
+  },
 }

@@ -3,6 +3,7 @@ import type {
   CharacterCreationMethod,
   EditionId,
 } from '../types'
+import { isCharacterDetails } from './details'
 import { isBackgroundSelection } from '../background/isBackgroundSelection'
 import { isClassSelection } from '../class/isClassSelection'
 import { isSpeciesSelection } from '../species/isSpeciesSelection'
@@ -73,6 +74,7 @@ export function isCharacter(value: unknown): value is Character {
     isAbilityScores(candidate.abilityScores) &&
     isSpecies(candidate.species) &&
     isClass(candidate.class) &&
-    isBackground(candidate.background)
+    isBackground(candidate.background) &&
+    isCharacterDetails(candidate.details)
   )
 }

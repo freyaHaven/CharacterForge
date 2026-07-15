@@ -3,14 +3,20 @@ import { WIZARD_STEPS } from './steps'
 import type { StepStatus, WizardStepId } from './types'
 import {
   canNavigateToStep,
+  createDefaultWizardStepContext,
   getAdjacentStep,
   getStepIndex,
+  getVisibleWizardSteps,
   goToNextStep,
   goToPreviousStep,
   isKnownWizardStepId,
 } from './navigation'
 
 const STEP_IDS = WIZARD_STEPS.map((step) => step.id)
+const DEFAULT_CONTEXT = createDefaultWizardStepContext()
+const VISIBLE_STEP_IDS = getVisibleWizardSteps(DEFAULT_CONTEXT).map(
+  (step) => step.id,
+)
 
 describe('isKnownWizardStepId', () => {
   it('recognises every configured step ID', () => {
@@ -34,93 +40,108 @@ describe('getStepIndex', () => {
 })
 
 describe('getAdjacentStep', () => {
-  it('returns the next step for every step except the last', () => {
-    for (let index = 0; index < STEP_IDS.length - 1; index += 1) {
-      const currentStepId = STEP_IDS[index]
-      const expectedNextStepId = STEP_IDS[index + 1]
+  it('returns the next visible step for every step except the last', () => {
+    for (let index = 0; index < VISIBLE_STEP_IDS.length - 1; index += 1) {
+      const currentStepId = VISIBLE_STEP_IDS[index]
+      const expectedNextStepId = VISIBLE_STEP_IDS[index + 1]
 
-      expect(getAdjacentStep(currentStepId, 'next')).toBe(expectedNextStepId)
+      expect(getAdjacentStep(currentStepId, 'next', DEFAULT_CONTEXT)).toBe(
+        expectedNextStepId,
+      )
     }
   })
 
-  it('returns the previous step for every step except the first', () => {
-    for (let index = 1; index < STEP_IDS.length; index += 1) {
-      const currentStepId = STEP_IDS[index]
-      const expectedPreviousStepId = STEP_IDS[index - 1]
+  it('returns the previous visible step for every step except the first', () => {
+    for (let index = 1; index < VISIBLE_STEP_IDS.length; index += 1) {
+      const currentStepId = VISIBLE_STEP_IDS[index]
+      const expectedPreviousStepId = VISIBLE_STEP_IDS[index - 1]
 
-      expect(getAdjacentStep(currentStepId, 'previous')).toBe(
+      expect(getAdjacentStep(currentStepId, 'previous', DEFAULT_CONTEXT)).toBe(
         expectedPreviousStepId,
       )
     }
   })
 
   it('returns null when there is no next step', () => {
-    expect(getAdjacentStep('review', 'next')).toBeNull()
+    expect(getAdjacentStep('review', 'next', DEFAULT_CONTEXT)).toBeNull()
   })
 
   it('returns null when there is no previous step', () => {
-    expect(getAdjacentStep('basics', 'previous')).toBeNull()
+    expect(getAdjacentStep('basics', 'previous', DEFAULT_CONTEXT)).toBeNull()
+  })
+
+  it('skips hidden conditional steps', () => {
+    expect(getAdjacentStep('equipment', 'next', DEFAULT_CONTEXT)).toBe('review')
   })
 })
 
 describe('goToNextStep', () => {
-  it('walks forward through every step in order', () => {
+  it('walks forward through every visible step in order', () => {
     let currentStepId: WizardStepId | null = 'basics'
 
-    for (let index = 1; index < STEP_IDS.length; index += 1) {
-      currentStepId = goToNextStep(currentStepId!)
-      expect(currentStepId).toBe(STEP_IDS[index])
+    for (let index = 1; index < VISIBLE_STEP_IDS.length; index += 1) {
+      currentStepId = goToNextStep(currentStepId!, DEFAULT_CONTEXT)
+      expect(currentStepId).toBe(VISIBLE_STEP_IDS[index])
     }
 
-    expect(goToNextStep(currentStepId!)).toBeNull()
+    expect(goToNextStep(currentStepId!, DEFAULT_CONTEXT)).toBeNull()
   })
 
   it('returns null from the last step', () => {
-    expect(goToNextStep('review')).toBeNull()
+    expect(goToNextStep('review', DEFAULT_CONTEXT)).toBeNull()
   })
 
   it('returns null for unknown step IDs', () => {
-    expect(goToNextStep('not-a-step')).toBeNull()
+    expect(goToNextStep('not-a-step', DEFAULT_CONTEXT)).toBeNull()
   })
 })
 
 describe('goToPreviousStep', () => {
-  it('walks backward through every step in order', () => {
+  it('walks backward through every visible step in order', () => {
     let currentStepId: WizardStepId | null = 'review'
 
-    for (let index = STEP_IDS.length - 2; index >= 0; index -= 1) {
-      currentStepId = goToPreviousStep(currentStepId!)
-      expect(currentStepId).toBe(STEP_IDS[index])
+    for (let index = VISIBLE_STEP_IDS.length - 2; index >= 0; index -= 1) {
+      currentStepId = goToPreviousStep(currentStepId!, DEFAULT_CONTEXT)
+      expect(currentStepId).toBe(VISIBLE_STEP_IDS[index])
     }
 
-    expect(goToPreviousStep(currentStepId!)).toBeNull()
+    expect(goToPreviousStep(currentStepId!, DEFAULT_CONTEXT)).toBeNull()
   })
 
   it('returns null from the first step', () => {
-    expect(goToPreviousStep('basics')).toBeNull()
+    expect(goToPreviousStep('basics', DEFAULT_CONTEXT)).toBeNull()
   })
 
   it('returns null for unknown step IDs', () => {
-    expect(goToPreviousStep('not-a-step')).toBeNull()
+    expect(goToPreviousStep('not-a-step', DEFAULT_CONTEXT)).toBeNull()
   })
 })
 
 describe('canNavigateToStep', () => {
-  it('allows jumping directly to any configured step', () => {
-    for (const stepId of STEP_IDS) {
-      expect(canNavigateToStep(stepId)).toBe(true)
+  it('allows jumping directly to visible steps', () => {
+    for (const stepId of VISIBLE_STEP_IDS) {
+      expect(canNavigateToStep(stepId, DEFAULT_CONTEXT)).toBe(true)
     }
   })
 
+  it('rejects hidden conditional steps', () => {
+    expect(canNavigateToStep('feats', DEFAULT_CONTEXT)).toBe(false)
+    expect(canNavigateToStep('spells', DEFAULT_CONTEXT)).toBe(false)
+  })
+
   it('rejects unknown step IDs', () => {
-    expect(canNavigateToStep('invalid-step')).toBe(false)
-    expect(canNavigateToStep('')).toBe(false)
+    expect(canNavigateToStep('invalid-step', DEFAULT_CONTEXT)).toBe(false)
+    expect(canNavigateToStep('', DEFAULT_CONTEXT)).toBe(false)
   })
 
   it('does not depend on completion status', () => {
     const statusesWithErrors: Record<WizardStepId, StepStatus> = {
       basics: { completion: 'in-progress', hasValidationErrors: true },
       species: { completion: 'not-started', hasValidationErrors: false },
+      'character-details': {
+        completion: 'not-started',
+        hasValidationErrors: false,
+      },
       class: { completion: 'not-started', hasValidationErrors: false },
       'ability-scores': {
         completion: 'in-progress',
@@ -128,11 +149,13 @@ describe('canNavigateToStep', () => {
       },
       background: { completion: 'not-started', hasValidationErrors: false },
       equipment: { completion: 'not-started', hasValidationErrors: false },
+      feats: { completion: 'not-started', hasValidationErrors: false },
+      spells: { completion: 'not-started', hasValidationErrors: false },
       review: { completion: 'not-started', hasValidationErrors: false },
     }
 
-    for (const stepId of STEP_IDS) {
-      expect(canNavigateToStep(stepId)).toBe(true)
+    for (const stepId of VISIBLE_STEP_IDS) {
+      expect(canNavigateToStep(stepId, DEFAULT_CONTEXT)).toBe(true)
       expect(statusesWithErrors[stepId].hasValidationErrors).toBeDefined()
     }
   })

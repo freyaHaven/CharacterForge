@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
-import { goToNextStep, goToPreviousStep } from './navigation'
+import {
+  goToNextStep,
+  goToPreviousStep,
+  type WizardStepContext,
+} from './navigation'
 import type { StepStatus, WizardStepId } from './types'
 import { WizardNav } from './WizardNav'
 import { WizardStepPanel } from './WizardStepPanel'
@@ -7,6 +11,7 @@ import './wizard.css'
 
 export type CharacterWizardProps = {
   activeStepId: WizardStepId
+  stepContext: WizardStepContext
   stepStatuses: Record<WizardStepId, StepStatus>
   onStepChange: (stepId: WizardStepId) => void
   stepContent?: Partial<Record<WizardStepId, ReactNode>>
@@ -14,17 +19,19 @@ export type CharacterWizardProps = {
 
 export function CharacterWizard({
   activeStepId,
+  stepContext,
   stepStatuses,
   onStepChange,
   stepContent,
 }: CharacterWizardProps) {
-  const previousStepId = goToPreviousStep(activeStepId)
-  const nextStepId = goToNextStep(activeStepId)
+  const previousStepId = goToPreviousStep(activeStepId, stepContext)
+  const nextStepId = goToNextStep(activeStepId, stepContext)
 
   return (
     <div className="character-wizard">
       <WizardNav
         activeStepId={activeStepId}
+        stepContext={stepContext}
         stepStatuses={stepStatuses}
         onStepChange={onStepChange}
       />

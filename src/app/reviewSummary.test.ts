@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildReviewSummaries } from './reviewSummary'
 import type { ReviewSummaryContext } from './reviewSummary'
+import { createDefaultCharacterDetails } from '../domain/character/details'
 import { createDefaultCharacter } from '../domain/character/defaults'
 import { MINIMUM_POINT_BUY_ASSIGNMENT } from '../rules/point-buy'
 import type { StepStatus, WizardStepId } from './wizard/types'
@@ -41,10 +42,13 @@ function createStatuses(
   return {
     basics: defaultStatus,
     species: defaultStatus,
+    'character-details': defaultStatus,
     class: defaultStatus,
     'ability-scores': defaultStatus,
     background: defaultStatus,
     equipment: defaultStatus,
+    feats: defaultStatus,
+    spells: defaultStatus,
     ...overrides,
   }
 }
@@ -174,5 +178,34 @@ describe('buildReviewSummaries', () => {
     expect(summaries.class).toEqual(['Not selected'])
     expect(summaries.background).toEqual(['Not selected'])
     expect(summaries.equipment).toEqual(['Coming soon'])
+    expect(summaries['character-details']).toEqual([])
+  })
+
+  it('summarises populated character details', () => {
+    const summaries = buildReviewSummaries(
+      createContext({
+        character: createDefaultCharacter({
+          details: {
+            ...createDefaultCharacterDetails(),
+            age: '42',
+            alignment: 'neutral-good',
+            eyeColour: 'Green',
+            flaws: 'Impulsive',
+            backstoryNotes: 'Raised in the mountains.',
+          },
+        }),
+      }),
+      createStatuses({
+        'character-details': { completion: 'complete', hasValidationErrors: false },
+      }),
+    )
+
+    expect(summaries['character-details']).toEqual([
+      'Age: 42',
+      'Eye Colour: Green',
+      'Alignment: Neutral Good',
+      'Flaws: Impulsive',
+      'Backstory & Notes: Raised in the mountains.',
+    ])
   })
 })
