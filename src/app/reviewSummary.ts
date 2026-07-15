@@ -2,6 +2,7 @@ import { getAbilityModifier } from '../domain/abilities'
 import type { AbilityScores, Character, ResolvedDeferredCharacterRequirement } from '../domain/types'
 import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../features/background/backgroundSelectionDraft'
+import type { FeatSelectionDraft } from '../features/feat/featSelectionDraft'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
 import { formatCharacterDetailsReviewLines, formatCharacterDetailsReviewSections, hasCharacterDetailsReviewContent, type CharacterDetailsReviewSections } from '../features/character-details/formatCharacterDetailsReview'
 import { CREATION_METHOD_OPTIONS } from '../features/creation-method/creationMethodOptions'
@@ -48,6 +49,10 @@ export type BackgroundReviewDisplay = {
   choiceLines: { prompt: string; summary: string }[]
 }
 
+export type FeatReviewDisplay = {
+  featName: string | null
+}
+
 export type ReviewSummaryContext = {
   character: Character
   speciesDraft: SpeciesSelectionDraft | null
@@ -56,6 +61,8 @@ export type ReviewSummaryContext = {
   classDisplay: ClassReviewDisplay
   backgroundDraft: BackgroundSelectionDraft | null
   backgroundDisplay: BackgroundReviewDisplay
+  featDraft: FeatSelectionDraft | null
+  featDisplay: FeatReviewDisplay
   unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[]
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
@@ -232,6 +239,33 @@ function buildBackgroundSummary(
   return ['Not selected']
 }
 
+function buildFeatSummary(
+  context: ReviewSummaryContext,
+  status: StepStatus,
+): string[] {
+  if (status.completion === 'not-started') {
+    return ['Not selected']
+  }
+
+  const featName = context.featDisplay.featName
+
+  if (status.completion === 'complete') {
+    return [`Feat: ${featName ?? 'Selected feat'}`]
+  }
+
+  if (status.hasValidationErrors) {
+    return featName === null
+      ? ['Choice incomplete']
+      : [`Feat: ${featName}`, 'Choice incomplete']
+  }
+
+  if (featName !== null) {
+    return [`Feat: ${featName}`, 'Confirm your selection']
+  }
+
+  return ['Not selected']
+}
+
 function buildAbilityScoresSummary(context: ReviewSummaryContext): string[] {
   const { character } = context
   const lines = [
@@ -292,7 +326,7 @@ export function buildReviewSummaries(
     class: buildClassSummary(context, stepStatuses.class),
     background: buildBackgroundSummary(context, stepStatuses.background),
     equipment: buildPlaceholderSummary(),
-    feats: buildPlaceholderSummary(),
+    feats: buildFeatSummary(context, stepStatuses.feats),
     spells: buildPlaceholderSummary(),
   }
 }

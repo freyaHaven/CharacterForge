@@ -12,7 +12,7 @@ import {
 describe('wizard step visibility', () => {
   const context = createWizardStepContext(createDefaultCharacter())
 
-  it('hides feats and spells until choices exist', () => {
+  it('shows feats for manual optional selection while spells stay hidden', () => {
     expect(hasFeatChoices(context)).toBe(false)
     expect(hasSpellSelections(context)).toBe(false)
 
@@ -26,20 +26,21 @@ describe('wizard step visibility', () => {
       'class',
       'background',
       'equipment',
+      'feats',
       'review',
     ])
   })
 
-  it('marks conditional steps in the full step list', () => {
+  it('keeps feats always visible and spells conditional', () => {
     const featsStep = WIZARD_STEPS.find((step) => step.id === 'feats')
     const spellsStep = WIZARD_STEPS.find((step) => step.id === 'spells')
 
-    expect(featsStep?.visibility).toEqual({ kind: 'conditional', when: 'feats' })
+    expect(featsStep?.visibility).toBeUndefined()
     expect(spellsStep?.visibility).toEqual({
       kind: 'conditional',
       when: 'spells',
     })
-    expect(isWizardStepVisible(featsStep!, context)).toBe(false)
+    expect(isWizardStepVisible(featsStep!, context)).toBe(true)
     expect(isWizardStepVisible(spellsStep!, context)).toBe(false)
   })
 })

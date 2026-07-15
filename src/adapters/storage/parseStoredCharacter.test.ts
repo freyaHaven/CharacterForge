@@ -41,6 +41,7 @@ function withMigratedDefaults(
     abilityScores: Character['abilityScores']
     species?: Character['species']
     background?: Character['background']
+    feat?: Character['feat']
     details?: Character['details']
     targetLevel?: number
     classes?: Character['classes']
@@ -52,6 +53,7 @@ function withMigratedDefaults(
     class: _legacyClass,
     species,
     background,
+    feat,
     details,
     targetLevel,
     classes,
@@ -67,6 +69,7 @@ function withMigratedDefaults(
     startingClassInstanceId:
       startingClassInstanceId ?? emptyClassState.startingClassInstanceId,
     background: background ?? null,
+    feat: feat ?? null,
     details: details ?? createDefaultCharacterDetails(),
   }
 }

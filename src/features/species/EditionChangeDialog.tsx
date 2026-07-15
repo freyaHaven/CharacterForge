@@ -3,6 +3,7 @@ type EditionChangeDialogProps = {
   clearsSpecies: boolean
   clearsClass: boolean
   clearsBackground: boolean
+  clearsFeat: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -11,6 +12,7 @@ function buildEditionChangeMessage(
   clearsSpecies: boolean,
   clearsClass: boolean,
   clearsBackground: boolean,
+  clearsFeat: boolean,
 ): string {
   const clearedParts: string[] = []
 
@@ -24,6 +26,10 @@ function buildEditionChangeMessage(
 
   if (clearsBackground) {
     clearedParts.push('background')
+  }
+
+  if (clearsFeat) {
+    clearedParts.push('feat')
   }
 
   if (clearedParts.length === 0) {
@@ -43,6 +49,7 @@ export function EditionChangeDialog({
   clearsSpecies,
   clearsClass,
   clearsBackground,
+  clearsFeat,
   onConfirm,
   onCancel,
 }: EditionChangeDialogProps) {
@@ -65,6 +72,7 @@ export function EditionChangeDialog({
             clearsSpecies,
             clearsClass,
             clearsBackground,
+            clearsFeat,
           )}
         </p>
         <div className="dialog__actions">

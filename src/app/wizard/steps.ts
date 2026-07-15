@@ -16,7 +16,6 @@ export const WIZARD_STEPS: readonly WizardStepDefinition[] = [
     id: 'feats',
     label: 'Feats',
     required: false,
-    visibility: { kind: 'conditional', when: 'feats' },
   },
   {
     id: 'spells',

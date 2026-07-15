@@ -2,6 +2,7 @@ import type { CharacterDetails } from './character/details'
 import type { EditionId } from './edition'
 import type { BackgroundSelection } from './background/types'
 import type { CharacterClassSelection, CharacterLevel } from './class/types'
+import type { FeatSelection } from './feat/types'
 import type { SpeciesSelection } from './species/types'
 
 export type { AlignmentId } from './character/alignment'
@@ -84,6 +85,15 @@ export type {
   BackgroundToolProficiency,
 } from './background/types'
 export type {
+  FeatBenefit,
+  FeatCategory,
+  FeatChoice,
+  FeatChoiceOption,
+  FeatDefinition,
+  FeatPrerequisite,
+  FeatSelection,
+} from './feat/types'
+export type {
   ConditionId,
   CreatureSize,
   DamageTypeId,
@@ -122,5 +132,6 @@ export type Character = {
   classes: CharacterClassSelection[]
   startingClassInstanceId: string | null
   background: BackgroundSelection | null
+  feat: FeatSelection | null
   details: CharacterDetails
 }

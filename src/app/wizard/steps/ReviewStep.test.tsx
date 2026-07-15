@@ -34,7 +34,7 @@ const defaultSummaries = {
   'ability-scores': ['Method: Manual', 'STR 10 (+0)'],
   background: ['Not selected'],
   equipment: ['Coming soon'],
-  feats: ['Coming soon'],
+  feats: ['Not selected'],
   spells: ['Coming soon'],
 }
 

@@ -24,6 +24,10 @@ function createContext(
       backgroundName: null,
       choiceLines: [],
     },
+    featDraft: null,
+    featDisplay: {
+      featName: null,
+    },
     unresolvedDeferredRequirements: [],
     standardArrayValidation: null,
     pointBuyValidation: null,
@@ -202,6 +206,7 @@ describe('buildReviewSummaries', () => {
 
     expect(summaries.class).toEqual(['Not selected'])
     expect(summaries.background).toEqual(['Not selected'])
+    expect(summaries.feats).toEqual(['Not selected'])
     expect(summaries.equipment).toEqual(['Coming soon'])
     expect(summaries['character-details']).toEqual([])
   })

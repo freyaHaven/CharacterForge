@@ -7,6 +7,7 @@ import {
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
 import { createBundledBackgroundCatalog } from '../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../adapters/bundledClassCatalog'
+import { createBundledFeatCatalog } from '../adapters/bundledFeatCatalog'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
 import { CharacterContextSummary } from '../features/character/CharacterContextSummary'
@@ -35,6 +36,7 @@ const repository = createLocalStorageCharacterRepository()
 const speciesCatalog = createBundledSpeciesCatalog()
 const classCatalog = createBundledClassCatalog()
 const backgroundCatalog = createBundledBackgroundCatalog()
+const featCatalog = createBundledFeatCatalog()
 
 type AppView = 'landing' | 'editor'
 
@@ -54,6 +56,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     speciesCatalog,
     classCatalog,
     backgroundCatalog,
+    featCatalog,
     randomSource,
     restoreFromStorage: shouldRestoreFromStorage,
   })
@@ -98,8 +101,15 @@ export default function App({ randomSource = Math.random }: AppProps) {
     return <p className="status">Loading character...</p>
   }
 
-  const { character, abilityScores, species, classEditor, background, editionChange } =
-    editor
+  const {
+    character,
+    abilityScores,
+    species,
+    classEditor,
+    background,
+    feat,
+    editionChange,
+  } = editor
 
   return (
     <main className="app">
@@ -240,7 +250,16 @@ export default function App({ randomSource = Math.random }: AppProps) {
                 />
               ),
               equipment: <EquipmentStep />,
-              feats: <FeatsStep />,
+              feats: (
+                <FeatsStep
+                  editionId={character.editionId}
+                  committedSelection={character.feat}
+                  draft={feat.featDraft}
+                  catalog={editor.featCatalog}
+                  onDraftChange={feat.setFeatDraft}
+                  onCommittedSelectionChange={feat.commitFeatSelection}
+                />
+              ),
               spells: <SpellsStep />,
               review: (
                 <ReviewStep
@@ -296,6 +315,9 @@ export default function App({ randomSource = Math.random }: AppProps) {
             clearsClass={editionChange.pendingEditionChange?.clearsClass ?? false}
             clearsBackground={
               editionChange.pendingEditionChange?.clearsBackground ?? false
+            }
+            clearsFeat={
+              editionChange.pendingEditionChange?.clearsFeat ?? false
             }
             onConfirm={editionChange.confirmEditionChange}
             onCancel={editionChange.cancelEditionChange}

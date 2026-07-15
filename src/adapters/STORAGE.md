@@ -1,12 +1,12 @@
 # Storage format
 
-## Current format (schema version 9)
+## Current format (schema version 10)
 
 Characters are persisted inside a versioned envelope:
 
 ```json
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "character": { }
 }
 ```
@@ -18,7 +18,8 @@ The inner character includes:
 - `classes: CharacterClassSelection[]` — zero or more class instances
 - `startingClassInstanceId: null | string` — which instance grants starting
   proficiencies and equipment
-- `background: null | { backgroundId, choices }`
+- `background: null | { backgroundId, abilityScoreIncrease, choices }`
+- `feat: null | { featId, choices }` — one optional committed feat selection
 - `details: CharacterDetails` — roleplay-facing identity and personality fields
 
 Each `CharacterClassSelection` has:
@@ -42,8 +43,9 @@ the inner character with `isCharacter()`, and returns the domain model.
 | 6 | Strips background equipment choices moved to the Equipment step |
 | 7 | Adds `details` |
 | 8 | Restructures `details` for the roleplay-focused layout |
+| 9 | Replaces legacy `class` with `targetLevel`, `classes[]`, and `startingClassInstanceId` |
 
-On load, schema 0–8 saves migrate forward to schema 9. Migration path:
+On load, schema 0–9 saves migrate forward to schema 10. Migration path:
 
 - `species: null` (v1→v2)
 - legacy `class: null` (v2→v3)
@@ -52,6 +54,7 @@ On load, schema 0–8 saves migrate forward to schema 9. Migration path:
 - `details` (v6→v8)
 - replace legacy `class` with `targetLevel`, `classes[]`, and
   `startingClassInstanceId` (v8→v9)
+- `feat: null` (v9→v10)
 
 ## Migration rules
 
@@ -69,7 +72,7 @@ Explicit import/export uses the same versioned envelope as local storage:
 
 ```json
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "character": { }
 }
 ```

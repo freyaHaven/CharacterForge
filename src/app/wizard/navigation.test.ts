@@ -71,7 +71,8 @@ describe('getAdjacentStep', () => {
   })
 
   it('skips hidden conditional steps', () => {
-    expect(getAdjacentStep('equipment', 'next', DEFAULT_CONTEXT)).toBe('review')
+    expect(getAdjacentStep('equipment', 'next', DEFAULT_CONTEXT)).toBe('feats')
+    expect(getAdjacentStep('feats', 'next', DEFAULT_CONTEXT)).toBe('review')
   })
 })
 
@@ -125,7 +126,7 @@ describe('canNavigateToStep', () => {
   })
 
   it('rejects hidden conditional steps', () => {
-    expect(canNavigateToStep('feats', DEFAULT_CONTEXT)).toBe(false)
+    expect(canNavigateToStep('feats', DEFAULT_CONTEXT)).toBe(true)
     expect(canNavigateToStep('spells', DEFAULT_CONTEXT)).toBe(false)
   })
 

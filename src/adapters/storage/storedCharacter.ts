@@ -9,7 +9,7 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 9
+export const CURRENT_SCHEMA_VERSION = 10
 
 type CharacterIdentity = {
   id: string
@@ -78,12 +78,27 @@ export type StoredCharacterV8 = {
 }
 
 /** Schema v9: multiclass fields replace legacy `class`. */
+export type StoredCharacterV9Character = CharacterIdentity & {
+  species: SpeciesSelection | null
+  targetLevel: Character['targetLevel']
+  classes: Character['classes']
+  startingClassInstanceId: string | null
+  background: BackgroundSelection | null
+  details: CharacterDetails
+}
+
 export type StoredCharacterV9 = {
   schemaVersion: 9
+  character: StoredCharacterV9Character
+}
+
+/** Schema v10: optional committed feat selection. */
+export type StoredCharacterV10 = {
+  schemaVersion: 10
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV9
+export type StoredCharacter = StoredCharacterV10
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -104,7 +119,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV6
   | StoredCharacterV7
   | StoredCharacterV8
-  | StoredCharacterV9 {
+  | StoredCharacterV9
+  | StoredCharacterV10 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

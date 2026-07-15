@@ -78,6 +78,25 @@ describe('isCharacter', () => {
     expect(isCharacter({ ...createValidCharacter(), species: null })).toBe(true)
   })
 
+  it('returns true when feat is null', () => {
+    expect(isCharacter({ ...createValidCharacter(), feat: null })).toBe(true)
+  })
+
+  it('returns true for a valid feat selection', () => {
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        feat: { featId: 'srd-2024:alert', choices: {} },
+      }),
+    ).toBe(true)
+  })
+
+  it('returns false when feat is missing', () => {
+    const { feat: _feat, ...withoutFeat } = createValidCharacter()
+
+    expect(isCharacter(withoutFeat)).toBe(false)
+  })
+
   it('returns true for a valid species selection', () => {
     expect(
       isCharacter({

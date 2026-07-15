@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { canSaveCharacter, formatSaveBlockedMessage } from './characterSavePolicy'
 
+const completeDraftFlags = {
+  speciesDraftIncomplete: false,
+  classDraftIncomplete: false,
+  backgroundDraftIncomplete: false,
+  featDraftIncomplete: false,
+} as const
+
 describe('canSaveCharacter', () => {
   it('blocks saving for an invalid point-buy draft', () => {
     expect(
@@ -13,9 +20,7 @@ describe('canSaveCharacter', () => {
           remaining: -27,
         },
         rolledValidation: null,
-        speciesDraftIncomplete: false,
-        classDraftIncomplete: false,
-        backgroundDraftIncomplete: false,
+        ...completeDraftFlags,
       }),
     ).toBe(false)
   })
@@ -30,9 +35,7 @@ describe('canSaveCharacter', () => {
           remaining: 27,
         },
         rolledValidation: null,
-        speciesDraftIncomplete: false,
-        classDraftIncomplete: false,
-        backgroundDraftIncomplete: false,
+        ...completeDraftFlags,
       }),
     ).toBe(true)
   })
@@ -46,9 +49,7 @@ describe('canSaveCharacter', () => {
           valid: false,
           issues: [{ code: 'unassigned-ability', ability: 'strength' }],
         },
-        speciesDraftIncomplete: false,
-        classDraftIncomplete: false,
-        backgroundDraftIncomplete: false,
+        ...completeDraftFlags,
       }),
     ).toBe(false)
   })
@@ -59,9 +60,7 @@ describe('canSaveCharacter', () => {
         standardArrayValidation: null,
         pointBuyValidation: null,
         rolledValidation: { valid: true },
-        speciesDraftIncomplete: false,
-        classDraftIncomplete: false,
-        backgroundDraftIncomplete: false,
+        ...completeDraftFlags,
       }),
     ).toBe(true)
   })
@@ -72,9 +71,8 @@ describe('canSaveCharacter', () => {
         standardArrayValidation: null,
         pointBuyValidation: null,
         rolledValidation: null,
+        ...completeDraftFlags,
         speciesDraftIncomplete: true,
-        classDraftIncomplete: false,
-        backgroundDraftIncomplete: false,
       }),
     ).toBe(false)
   })
@@ -85,9 +83,8 @@ describe('canSaveCharacter', () => {
         standardArrayValidation: null,
         pointBuyValidation: null,
         rolledValidation: null,
-        speciesDraftIncomplete: false,
+        ...completeDraftFlags,
         classDraftIncomplete: true,
-        backgroundDraftIncomplete: false,
       }),
     ).toBe(false)
   })
@@ -98,9 +95,20 @@ describe('canSaveCharacter', () => {
         standardArrayValidation: null,
         pointBuyValidation: null,
         rolledValidation: null,
-        speciesDraftIncomplete: false,
-        classDraftIncomplete: false,
+        ...completeDraftFlags,
         backgroundDraftIncomplete: true,
+      }),
+    ).toBe(false)
+  })
+
+  it('blocks saving while a feat draft is incomplete', () => {
+    expect(
+      canSaveCharacter('manual', {
+        standardArrayValidation: null,
+        pointBuyValidation: null,
+        rolledValidation: null,
+        ...completeDraftFlags,
+        featDraftIncomplete: true,
       }),
     ).toBe(false)
   })
@@ -108,32 +116,38 @@ describe('canSaveCharacter', () => {
 
 describe('formatSaveBlockedMessage', () => {
   it('returns species-specific guidance when a draft is incomplete', () => {
-    expect(formatSaveBlockedMessage('manual', true, false, false)).toBe(
+    expect(formatSaveBlockedMessage('manual', true, false, false, false)).toBe(
       'Complete the species selection before saving.',
     )
   })
 
   it('returns class-specific guidance when a class draft is incomplete', () => {
-    expect(formatSaveBlockedMessage('manual', false, true, false)).toBe(
+    expect(formatSaveBlockedMessage('manual', false, true, false, false)).toBe(
       'Complete the class selection before saving.',
     )
   })
 
   it('returns background-specific guidance when a background draft is incomplete', () => {
-    expect(formatSaveBlockedMessage('manual', false, false, true)).toBe(
+    expect(formatSaveBlockedMessage('manual', false, false, true, false)).toBe(
       'Complete the background selection before saving.',
     )
   })
 
+  it('returns feat-specific guidance when a feat draft is incomplete', () => {
+    expect(formatSaveBlockedMessage('manual', false, false, false, true)).toBe(
+      'Complete the feat selection before saving.',
+    )
+  })
+
   it('returns creation-method-specific guidance for ability score drafts', () => {
-    expect(formatSaveBlockedMessage('point-buy', false, false, false)).toBe(
+    expect(formatSaveBlockedMessage('point-buy', false, false, false, false)).toBe(
       'Fix the point-buy assignment before saving.',
     )
-    expect(formatSaveBlockedMessage('rolled', false, false, false)).toBe(
+    expect(formatSaveBlockedMessage('rolled', false, false, false, false)).toBe(
       'Complete the rolled assignment before saving.',
     )
-    expect(formatSaveBlockedMessage('standard-array', false, false, false)).toBe(
-      'Complete the standard array assignment before saving.',
-    )
+    expect(
+      formatSaveBlockedMessage('standard-array', false, false, false, false),
+    ).toBe('Complete the standard array assignment before saving.')
   })
 })

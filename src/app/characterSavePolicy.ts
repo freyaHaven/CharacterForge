@@ -1,10 +1,14 @@
 import type { CharacterCreationMethod } from '../domain/types'
+import type { PointBuyValidationResult } from '../rules/point-buy'
+import type { StandardArrayDraftValidationResult } from '../features/ability-scores/standardArrayDraft'
+import type { RolledAssignmentValidationResult } from '../rules/rolled'
 
 export function formatSaveBlockedMessage(
   creationMethod: CharacterCreationMethod,
   speciesDraftIncomplete: boolean,
   classDraftIncomplete: boolean,
   backgroundDraftIncomplete: boolean,
+  featDraftIncomplete: boolean,
 ): string {
   if (speciesDraftIncomplete) {
     return 'Complete the species selection before saving.'
@@ -18,6 +22,10 @@ export function formatSaveBlockedMessage(
     return 'Complete the background selection before saving.'
   }
 
+  if (featDraftIncomplete) {
+    return 'Complete the feat selection before saving.'
+  }
+
   if (creationMethod === 'point-buy') {
     return 'Fix the point-buy assignment before saving.'
   }
@@ -28,9 +36,6 @@ export function formatSaveBlockedMessage(
 
   return 'Complete the standard array assignment before saving.'
 }
-import type { PointBuyValidationResult } from '../rules/point-buy'
-import type { StandardArrayDraftValidationResult } from '../features/ability-scores/standardArrayDraft'
-import type { RolledAssignmentValidationResult } from '../rules/rolled'
 
 type SaveValidationState = {
   standardArrayValidation: StandardArrayDraftValidationResult | null
@@ -39,6 +44,7 @@ type SaveValidationState = {
   speciesDraftIncomplete: boolean
   classDraftIncomplete: boolean
   backgroundDraftIncomplete: boolean
+  featDraftIncomplete: boolean
 }
 
 export function canSaveCharacter(
@@ -48,7 +54,8 @@ export function canSaveCharacter(
   if (
     validation.speciesDraftIncomplete ||
     validation.classDraftIncomplete ||
-    validation.backgroundDraftIncomplete
+    validation.backgroundDraftIncomplete ||
+    validation.featDraftIncomplete
   ) {
     return false
   }

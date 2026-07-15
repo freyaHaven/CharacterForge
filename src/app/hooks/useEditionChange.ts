@@ -1,6 +1,7 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { Character, EditionId } from '../../domain/types'
 import { needsEditionChangeBackgroundConfirmation } from '../../rules/background/backgroundRules'
@@ -9,6 +10,7 @@ import {
   getCommittedClassSelection,
 } from '../../domain/character/characterClassSelection'
 import { needsEditionChangeClassConfirmation } from '../../rules/class/classRules'
+import { needsEditionChangeFeatConfirmation } from '../../rules/feat/featRules'
 import { needsEditionChangeSpeciesConfirmation } from '../../rules/species/speciesRules'
 
 export type PendingEditionChange = {
@@ -16,6 +18,7 @@ export type PendingEditionChange = {
   clearsSpecies: boolean
   clearsClass: boolean
   clearsBackground: boolean
+  clearsFeat: boolean
 }
 
 type UseEditionChangeOptions = {
@@ -24,9 +27,11 @@ type UseEditionChangeOptions = {
   speciesCatalog: SpeciesCatalog
   classCatalog: ClassCatalog
   backgroundCatalog: BackgroundCatalog
+  featCatalog: FeatCatalog
   resetSpeciesDraft: () => void
   resetClassDraft: () => void
   resetBackgroundDraft: () => void
+  resetFeatDraft: () => void
   onDraftChange?: () => void
 }
 
@@ -36,9 +41,11 @@ export function useEditionChange({
   speciesCatalog,
   classCatalog,
   backgroundCatalog,
+  featCatalog,
   resetSpeciesDraft,
   resetClassDraft,
   resetBackgroundDraft,
+  resetFeatDraft,
   onDraftChange,
 }: UseEditionChangeOptions) {
   const [pendingEditionChange, setPendingEditionChange] =
@@ -54,30 +61,37 @@ export function useEditionChange({
         return
       }
 
-      const [clearsSpecies, clearsClass, clearsBackground] = await Promise.all([
-        needsEditionChangeSpeciesConfirmation(
-          character.species,
-          nextEditionId,
-          (speciesId) => speciesCatalog.getSpecies(speciesId),
-        ),
-        needsEditionChangeClassConfirmation(
-          getCommittedClassSelection(character),
-          nextEditionId,
-          (classId) => classCatalog.getClass(classId),
-        ),
-        needsEditionChangeBackgroundConfirmation(
-          character.background,
-          nextEditionId,
-          (backgroundId) => backgroundCatalog.getBackground(backgroundId),
-        ),
-      ])
+      const [clearsSpecies, clearsClass, clearsBackground, clearsFeat] =
+        await Promise.all([
+          needsEditionChangeSpeciesConfirmation(
+            character.species,
+            nextEditionId,
+            (speciesId) => speciesCatalog.getSpecies(speciesId),
+          ),
+          needsEditionChangeClassConfirmation(
+            getCommittedClassSelection(character),
+            nextEditionId,
+            (classId) => classCatalog.getClass(classId),
+          ),
+          needsEditionChangeBackgroundConfirmation(
+            character.background,
+            nextEditionId,
+            (backgroundId) => backgroundCatalog.getBackground(backgroundId),
+          ),
+          needsEditionChangeFeatConfirmation(
+            character.feat,
+            nextEditionId,
+            (featId) => featCatalog.getFeat(featId),
+          ),
+        ])
 
-      if (clearsSpecies || clearsClass || clearsBackground) {
+      if (clearsSpecies || clearsClass || clearsBackground || clearsFeat) {
         setPendingEditionChange({
           nextEditionId,
           clearsSpecies,
           clearsClass,
           clearsBackground,
+          clearsFeat,
         })
         return
       }
@@ -86,6 +100,7 @@ export function useEditionChange({
       resetSpeciesDraft()
       resetClassDraft()
       resetBackgroundDraft()
+      resetFeatDraft()
       notifyDraftChange()
     },
     [
@@ -93,9 +108,11 @@ export function useEditionChange({
       character,
       character.editionId,
       classCatalog,
+      featCatalog,
       notifyDraftChange,
       resetBackgroundDraft,
       resetClassDraft,
+      resetFeatDraft,
       resetSpeciesDraft,
       setCharacter,
       speciesCatalog,
@@ -115,10 +132,12 @@ export function useEditionChange({
       background: pendingEditionChange.clearsBackground
         ? null
         : current.background,
+      feat: pendingEditionChange.clearsFeat ? null : current.feat,
     }))
     resetSpeciesDraft()
     resetClassDraft()
     resetBackgroundDraft()
+    resetFeatDraft()
     setPendingEditionChange(null)
     notifyDraftChange()
   }, [
@@ -126,6 +145,7 @@ export function useEditionChange({
     pendingEditionChange,
     resetBackgroundDraft,
     resetClassDraft,
+    resetFeatDraft,
     resetSpeciesDraft,
     setCharacter,
   ])

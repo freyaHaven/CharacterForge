@@ -5,12 +5,15 @@ import type { ClassSelectionDraft } from '../../features/class/classSelectionDra
 import { isClassDraftIncomplete } from '../../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../../features/background/backgroundSelectionDraft'
 import { isBackgroundDraftIncomplete } from '../../features/background/backgroundSelectionDraft'
+import type { FeatSelectionDraft } from '../../features/feat/featSelectionDraft'
+import { isFeatDraftIncomplete } from '../../features/feat/featSelectionDraft'
 import type { SpeciesSelectionDraft } from '../../features/species/speciesSelectionDraft'
 import { isSpeciesDraftIncomplete } from '../../features/species/speciesSelectionDraft'
 import type { PointBuyValidationResult } from '../../rules/point-buy'
 import type { RolledAssignmentValidationResult } from '../../rules/rolled'
 import type { ClassValidationResult } from '../../rules/class/classRules'
 import type { BackgroundValidationResult } from '../../rules/background/backgroundRules'
+import type { FeatValidationResult } from '../../rules/feat/featRules'
 import type { SpeciesValidationResult } from '../../rules/species/speciesRules'
 import type { StandardArrayDraftValidationResult } from '../../features/ability-scores/standardArrayDraft'
 import { canSaveCharacter } from '../characterSavePolicy'
@@ -50,6 +53,12 @@ export type StepValidationContext = {
   /** Whether the committed background selection is valid for the current edition. */
   committedBackgroundValid: boolean
 
+  featDraft: FeatSelectionDraft | null
+  /** Validation of the active feat draft; null when no draft exists. */
+  featDraftValidation: FeatValidationResult | null
+  /** Whether the committed feat selection is valid for the current edition. */
+  committedFeatValid: boolean
+
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
@@ -65,6 +74,7 @@ function isAbilityScoresMethodValid(context: StepValidationContext): boolean {
     speciesDraftIncomplete: false,
     classDraftIncomplete: false,
     backgroundDraftIncomplete: false,
+    featDraftIncomplete: false,
   })
 }
 
@@ -154,6 +164,29 @@ export function getBackgroundStepStatus(
   return { completion: 'in-progress', hasValidationErrors }
 }
 
+export function getFeatStepStatus(context: StepValidationContext): StepStatus {
+  const { character, featDraft } = context
+  const committed = character.feat
+
+  if (
+    committed !== null &&
+    context.committedFeatValid &&
+    !isFeatDraftIncomplete(featDraft, committed)
+  ) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  if (featDraft === null && committed === null) {
+    return { completion: 'not-started', hasValidationErrors: false }
+  }
+
+  const hasValidationErrors =
+    (featDraft !== null && context.featDraftValidation?.ok === false) ||
+    (committed !== null && !context.committedFeatValid)
+
+  return { completion: 'in-progress', hasValidationErrors }
+}
+
 export function getCharacterDetailsStepStatus(
   context: StepValidationContext,
 ): StepStatus {
@@ -222,7 +255,7 @@ export function getNonReviewStepStatuses(
     class: getClassStepStatus(context),
     background: getBackgroundStepStatus(context),
     equipment: getPlaceholderStepStatus(),
-    feats: getPlaceholderStepStatus(),
+    feats: getFeatStepStatus(context),
     spells: getPlaceholderStepStatus(),
   }
 }

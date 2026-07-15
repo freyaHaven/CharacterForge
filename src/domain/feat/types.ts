@@ -1,0 +1,59 @@
+import type { ContentSource } from '../content/types'
+import type { EditionId } from '../edition'
+
+export type FeatCategory =
+  | 'origin'
+  | 'general'
+  | 'fighting-style'
+  | 'epic-boon'
+
+export type FeatChoiceOption = {
+  id: string
+  label: string
+  description?: string
+}
+
+export type FeatChoice = {
+  id: string
+  prompt: string
+  type: 'single-select'
+  required: boolean
+  options: FeatChoiceOption[]
+}
+
+export type FeatPrerequisite =
+  | { kind: 'none' }
+  | {
+      kind: 'text'
+      /** Short label shown on cards and in the details panel. */
+      summary: string
+    }
+
+export type FeatBenefit = {
+  id: string
+  name: string
+  description: string
+}
+
+export type FeatDefinition = {
+  id: string
+  editionId: EditionId
+  name: string
+  /** Short catalogue-card blurb. */
+  summary: string
+  /** Full rules text for the details panel. */
+  description: string
+  source: ContentSource
+  category: FeatCategory
+  prerequisite: FeatPrerequisite
+  benefits: FeatBenefit[]
+  repeatable: boolean
+  choices: FeatChoice[]
+  /** Reserved for deferred Magic Initiate spell selection. */
+  magicInitiateClass?: 'cleric' | 'wizard' | 'druid'
+}
+
+export type FeatSelection = {
+  featId: string
+  choices: Record<string, string>
+}

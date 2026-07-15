@@ -26,6 +26,7 @@ export function createDefaultCharacter(
     species: null,
     ...EMPTY_CLASS_STATE,
     background: null,
+    feat: null,
     details: createDefaultCharacterDetails(),
     ...overrides,
   }

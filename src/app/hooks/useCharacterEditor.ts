@@ -8,9 +8,11 @@ import type { Character, CharacterDetails } from '../../domain/types'
 import { getActiveCharacterId, setActiveCharacterId } from '../session/editorSession'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
 import { createBundledBackgroundCatalog } from '../../adapters/bundledBackgroundCatalog'
+import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
 import { buildCharacterForSave } from '../buildCharacterForSave'
 import {
   canSaveCharacter,
@@ -29,6 +31,7 @@ import { createWizardStepContext } from '../wizard/stepVisibility'
 import { useDeferredCharacterRequirements } from '../useDeferredCharacterRequirements'
 import { useReviewClassDisplay } from '../useReviewClassDisplay'
 import { useReviewBackgroundDisplay } from '../useReviewBackgroundDisplay'
+import { useReviewFeatDisplay } from '../useReviewFeatDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
 import { useReviewSpellcasting } from '../useReviewSpellcasting'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
@@ -38,6 +41,7 @@ import { useAbilityScoresEditor } from './useAbilityScoresEditor'
 import { useBackgroundEditor } from './useBackgroundEditor'
 import { useClassEditor } from './useClassEditor'
 import { useEditionChange } from './useEditionChange'
+import { useFeatEditor } from './useFeatEditor'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { useSpeciesEditor } from './useSpeciesEditor'
 
@@ -46,6 +50,7 @@ export type UseCharacterEditorOptions = {
   speciesCatalog: SpeciesCatalog
   classCatalog?: ClassCatalog
   backgroundCatalog?: BackgroundCatalog
+  featCatalog?: FeatCatalog
   randomSource?: () => number
   restoreFromStorage?: boolean
 }
@@ -55,6 +60,7 @@ export function useCharacterEditor({
   speciesCatalog,
   classCatalog = createBundledClassCatalog(),
   backgroundCatalog = createBundledBackgroundCatalog(),
+  featCatalog = createBundledFeatCatalog(),
   randomSource = Math.random,
   restoreFromStorage = true,
 }: UseCharacterEditorOptions) {
@@ -103,15 +109,24 @@ export function useCharacterEditor({
     onDraftChange: clearSaveMessage,
   })
 
+  const feat = useFeatEditor({
+    character,
+    setCharacter,
+    featCatalog,
+    onDraftChange: clearSaveMessage,
+  })
+
   const editionChange = useEditionChange({
     character,
     setCharacter,
     speciesCatalog,
     classCatalog,
     backgroundCatalog,
+    featCatalog,
     resetSpeciesDraft: species.resetSpeciesDraft,
     resetClassDraft: classEditor.resetClassDraft,
     resetBackgroundDraft: background.resetBackgroundDraft,
+    resetFeatDraft: feat.resetFeatDraft,
     onDraftChange: clearSaveMessage,
   })
 
@@ -137,6 +152,7 @@ export function useCharacterEditor({
         species.resetSpeciesDraft()
         classEditor.hydrateForCharacter(hydratedCharacter)
         background.resetBackgroundDraft()
+        feat.resetFeatDraft()
         hydrateFromCharacter(hydratedCharacter)
       }
       if (isActive) {
@@ -152,6 +168,7 @@ export function useCharacterEditor({
   }, [
     classEditor.hydrateForCharacter,
     background.resetBackgroundDraft,
+    feat.resetFeatDraft,
     hydrateFromCharacter,
     repository,
     restoreFromStorage,
@@ -165,6 +182,7 @@ export function useCharacterEditor({
     speciesDraftIncomplete: species.speciesDraftIncomplete,
     classDraftIncomplete: classEditor.classDraftIncomplete,
     backgroundDraftIncomplete: background.backgroundDraftIncomplete,
+    featDraftIncomplete: feat.featDraftIncomplete,
   })
 
   const saveBlockedMessage = formatSaveBlockedMessage(
@@ -172,6 +190,7 @@ export function useCharacterEditor({
     species.speciesDraftIncomplete,
     classEditor.classDraftIncomplete,
     background.backgroundDraftIncomplete,
+    feat.featDraftIncomplete,
   )
 
   const stepStatuses = getAllStepStatuses({
@@ -188,6 +207,9 @@ export function useCharacterEditor({
     backgroundDraft: background.backgroundDraft,
     backgroundDraftValidation: background.backgroundDraftValidation,
     committedBackgroundValid: background.committedBackgroundValid,
+    featDraft: feat.featDraft,
+    featDraftValidation: feat.featDraftValidation,
+    committedFeatValid: feat.committedFeatValid,
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
@@ -212,6 +234,13 @@ export function useCharacterEditor({
     character.editionId,
     character.background,
     background.backgroundDraft,
+  )
+
+  const featReviewDisplay = useReviewFeatDisplay(
+    featCatalog,
+    character.editionId,
+    character.feat,
+    feat.featDraft,
   )
 
   const wizardStepContext = createWizardStepContext(character)
@@ -239,6 +268,8 @@ export function useCharacterEditor({
       classDisplay: classReviewDisplay,
       backgroundDraft: background.backgroundDraft,
       backgroundDisplay: backgroundReviewDisplay,
+      featDraft: feat.featDraft,
+      featDisplay: featReviewDisplay,
       unresolvedDeferredRequirements,
       standardArrayValidation: abilityScores.standardArrayValidation,
       pointBuyValidation: abilityScores.pointBuyValidation,
@@ -264,6 +295,8 @@ export function useCharacterEditor({
     classDisplay: classReviewDisplay,
     backgroundDraft: background.backgroundDraft,
     backgroundDisplay: backgroundReviewDisplay,
+    featDraft: feat.featDraft,
+    featDisplay: featReviewDisplay,
     unresolvedDeferredRequirements,
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
@@ -366,12 +399,14 @@ export function useCharacterEditor({
       species.resetSpeciesDraft()
       classEditor.resetClassDraft()
       background.resetBackgroundDraft()
+      feat.resetFeatDraft()
       hydrateFromCharacter(nextCharacter)
       setActiveCharacterId(nextCharacter.id)
     },
     [
       background.resetBackgroundDraft,
       classEditor.resetClassDraft,
+      feat.resetFeatDraft,
       hydrateFromCharacter,
       species.resetSpeciesDraft,
     ],
@@ -438,8 +473,10 @@ export function useCharacterEditor({
     species,
     classEditor,
     background,
+    feat,
     classCatalog,
     backgroundCatalog,
+    featCatalog,
     editionChange,
     speciesCatalog,
     handleSaveDraft,

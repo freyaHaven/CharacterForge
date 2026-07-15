@@ -63,9 +63,10 @@ describe('CharacterWizard', () => {
       expect(getStepButton(step.label)).toBeInTheDocument()
     }
 
-    expect(screen.queryByRole('button', { name: /^Feats,/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Feats,/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Spells,/i })).not.toBeInTheDocument()
   })
+
 
   it('highlights the active step and sets aria-current="step"', () => {
     render(<WizardHarness initialStepId="species" />)

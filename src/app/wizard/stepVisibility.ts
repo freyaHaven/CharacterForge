@@ -6,6 +6,11 @@ export type WizardStepContext = {
   character: Character
 }
 
+/**
+ * Reserved for future entitlement-driven visibility (background origin feat
+ * grants, class ASI feat slots). Manual optional selection currently keeps the
+ * Feats step always visible.
+ */
 export function hasFeatChoices(_context: WizardStepContext): boolean {
   return false
 }
@@ -23,6 +28,7 @@ export function isWizardStepVisible(
   }
 
   if (step.visibility.when === 'feats') {
+    // Entitlement gating lands later; keep the branch for the visibility API.
     return hasFeatChoices(context)
   }
 

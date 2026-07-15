@@ -6,6 +6,7 @@ import type {
 import { isCharacterDetails } from './details'
 import { isBackgroundSelection } from '../background/isBackgroundSelection'
 import { isCharacterClassSelection } from '../class/isCharacterClassSelection'
+import { isFeatSelection } from '../feat/isFeatSelection'
 import { isSpeciesSelection } from '../species/isSpeciesSelection'
 import {
   getAllocatedLevel,
@@ -59,6 +60,10 @@ function isBackground(value: unknown): boolean {
   return value === null || isBackgroundSelection(value)
 }
 
+function isFeat(value: unknown): boolean {
+  return value === null || isFeatSelection(value)
+}
+
 function isStartingClassReferenceValid(
   classes: Character['classes'],
   startingClassInstanceId: unknown,
@@ -110,6 +115,7 @@ export function isCharacter(value: unknown): value is Character {
     getAllocatedLevel(candidate.classes as Character['classes']) <=
       (candidate.targetLevel as number) &&
     isBackground(candidate.background) &&
+    isFeat(candidate.feat) &&
     isCharacterDetails(candidate.details)
   )
 }
