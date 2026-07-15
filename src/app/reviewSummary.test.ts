@@ -18,6 +18,11 @@ function createContext(
       level: null,
       choiceLines: [],
     },
+    backgroundDraft: null,
+    backgroundDisplay: {
+      backgroundName: null,
+      choiceLines: [],
+    },
     standardArrayValidation: null,
     pointBuyValidation: null,
     rolledValidation: null,
@@ -163,11 +168,11 @@ describe('buildReviewSummaries', () => {
     ])
   })
 
-  it('uses coming soon for optional placeholder steps', () => {
+  it('uses not selected for optional steps without a selection', () => {
     const summaries = buildReviewSummaries(createContext(), createStatuses())
 
     expect(summaries.class).toEqual(['Not selected'])
-    expect(summaries.background).toEqual(['Coming soon'])
+    expect(summaries.background).toEqual(['Not selected'])
     expect(summaries.equipment).toEqual(['Coming soon'])
   })
 })

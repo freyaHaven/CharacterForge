@@ -49,6 +49,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
         'skill-proficiencies': ['athletics', 'perception'],
       },
     },
+    background: null,
     ...overrides,
   }
 }
@@ -143,7 +144,7 @@ describe('Review wizard integration', () => {
     expect(
       screen.getByText('Choose a Fighting Style: Defense'),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('Coming soon')).toHaveLength(2)
+    expect(screen.getAllByText('Coming soon')).toHaveLength(1)
   })
 
   it('navigates to the selected step from an edit action', async () => {

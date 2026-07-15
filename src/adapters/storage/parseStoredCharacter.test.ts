@@ -21,6 +21,7 @@ function createTestCharacter(
     },
     species: null,
     class: null,
+    background: null,
     ...overrides,
   }
 }
@@ -55,7 +56,7 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: { ...legacy, species: null, class: null },
+      character: { ...legacy, species: null, class: null, background: null },
     })
   })
 
@@ -81,7 +82,65 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: { ...v1Character, species: null, class: null },
+      character: { ...v1Character, species: null, class: null, background: null },
+    })
+  })
+
+  it('migrates a schema v4 save by removing derived background bonuses', () => {
+    const v4Character = {
+      id: 'char-1',
+      name: 'Aldric',
+      editionId: 'srd-2024' as const,
+      creationMethod: 'manual' as const,
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      species: null,
+      class: null,
+      background: {
+        backgroundId: 'srd-2024:soldier',
+        abilityScoreIncrease: {
+          mode: 'two-and-one' as const,
+          plusTwo: 'strength' as const,
+          plusOne: 'constitution' as const,
+        },
+        abilityScoreBonuses: {
+          strength: 2,
+          constitution: 1,
+        },
+        choices: {
+          'gaming-set': 'dice-set',
+          'starting-equipment': 'equipment-package',
+        },
+      },
+    }
+    const raw = JSON.stringify({
+      schemaVersion: 4,
+      character: v4Character,
+    })
+
+    expect(parseStoredCharacter(raw)).toEqual({
+      ok: true,
+      character: {
+        ...v4Character,
+        background: {
+          backgroundId: 'srd-2024:soldier',
+          abilityScoreIncrease: {
+            mode: 'two-and-one',
+            plusTwo: 'strength',
+            plusOne: 'constitution',
+          },
+          choices: {
+            'gaming-set': 'dice-set',
+            'starting-equipment': 'equipment-package',
+          },
+        },
+      },
     })
   })
 
@@ -143,7 +202,7 @@ describe('parseStoredCharacter', () => {
 
     expect(result).toEqual({
       ok: true,
-      character: { ...legacy, species: null, class: null },
+      character: { ...legacy, species: null, class: null, background: null },
     })
   })
 
@@ -167,7 +226,7 @@ describe('parseStoredCharacter', () => {
 
     expect(result).toEqual({
       ok: true,
-      character: { ...legacy, species: null, class: null },
+      character: { ...legacy, species: null, class: null, background: null },
     })
   })
 })

@@ -23,6 +23,7 @@ export function createDefaultCharacter(
     abilityScores: DEFAULT_ABILITY_SCORES,
     species: null,
     class: null,
+    background: null,
     ...overrides,
   }
 }

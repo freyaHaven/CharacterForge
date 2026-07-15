@@ -1,6 +1,7 @@
 import { getAbilityModifier } from '../domain/abilities'
 import type { AbilityScores, Character } from '../domain/types'
 import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
+import type { BackgroundSelectionDraft } from '../features/background/backgroundSelectionDraft'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
 import { CREATION_METHOD_OPTIONS } from '../features/creation-method/creationMethodOptions'
 import { EDITION_OPTIONS } from '../features/edition-picker/editionOptions'
@@ -28,12 +29,19 @@ export type ClassReviewDisplay = {
   choiceLines: { prompt: string; summary: string }[]
 }
 
+export type BackgroundReviewDisplay = {
+  backgroundName: string | null
+  choiceLines: { prompt: string; summary: string }[]
+}
+
 export type ReviewSummaryContext = {
   character: Character
   speciesDraft: SpeciesSelectionDraft | null
   speciesDisplay: SpeciesReviewDisplay
   classDraft: ClassSelectionDraft | null
   classDisplay: ClassReviewDisplay
+  backgroundDraft: BackgroundSelectionDraft | null
+  backgroundDisplay: BackgroundReviewDisplay
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
@@ -169,6 +177,39 @@ function buildClassSummary(
   return ['Not selected']
 }
 
+function buildBackgroundSummary(
+  context: ReviewSummaryContext,
+  status: StepStatus,
+): string[] {
+  if (status.completion === 'not-started') {
+    return ['Not selected']
+  }
+
+  const backgroundName = context.backgroundDisplay.backgroundName
+
+  if (status.completion === 'complete') {
+    const lines = [`Background: ${backgroundName ?? 'Selected background'}`]
+    for (const choiceLine of context.backgroundDisplay.choiceLines) {
+      lines.push(`${choiceLine.prompt}: ${choiceLine.summary}`)
+    }
+    return lines
+  }
+
+  if (status.hasValidationErrors) {
+    const lines =
+      backgroundName === null
+        ? ['Choice incomplete']
+        : [`Background: ${backgroundName}`, 'Choice incomplete']
+    return lines
+  }
+
+  if (backgroundName !== null) {
+    return [`Background: ${backgroundName}`, 'Confirm your selection']
+  }
+
+  return ['Not selected']
+}
+
 function buildAbilityScoresSummary(context: ReviewSummaryContext): string[] {
   const { character } = context
   const lines = [
@@ -214,7 +255,7 @@ export function buildReviewSummaries(
     species: buildSpeciesSummary(context, stepStatuses.species),
     class: buildClassSummary(context, stepStatuses.class),
     'ability-scores': buildAbilityScoresSummary(context),
-    background: buildPlaceholderSummary(),
+    background: buildBackgroundSummary(context, stepStatuses.background),
     equipment: buildPlaceholderSummary(),
   }
 }

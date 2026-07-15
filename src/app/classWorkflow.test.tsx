@@ -48,6 +48,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
         'skill-proficiencies': ['athletics', 'perception'],
       },
     },
+    background: null,
     ...overrides,
   }
 }

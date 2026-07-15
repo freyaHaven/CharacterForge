@@ -1,4 +1,5 @@
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
+import { createBundledBackgroundCatalog } from '../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../adapters/bundledClassCatalog'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
@@ -17,6 +18,8 @@ const repository = createLocalStorageCharacterRepository()
 const speciesCatalog = createBundledSpeciesCatalog()
 const classCatalog = createBundledClassCatalog()
 
+const backgroundCatalog = createBundledBackgroundCatalog()
+
 type AppProps = {
   randomSource?: () => number
 }
@@ -26,6 +29,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     repository,
     speciesCatalog,
     classCatalog,
+    backgroundCatalog,
     randomSource,
   })
 
@@ -33,7 +37,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
     return <p className="status">Loading character...</p>
   }
 
-  const { character, abilityScores, species, classEditor, editionChange } =
+  const { character, abilityScores, species, classEditor, background, editionChange } =
     editor
 
   return (
@@ -100,7 +104,16 @@ export default function App({ randomSource = Math.random }: AppProps) {
               randomSource={editor.randomSource}
             />
           ),
-          background: <BackgroundStep />,
+          background: (
+            <BackgroundStep
+              editionId={character.editionId}
+              committedSelection={character.background}
+              draft={background.backgroundDraft}
+              catalog={editor.backgroundCatalog}
+              onDraftChange={background.setBackgroundDraft}
+              onCommittedSelectionChange={background.commitBackgroundSelection}
+            />
+          ),
           equipment: <EquipmentStep />,
           review: (
             <ReviewStep
@@ -129,6 +142,9 @@ export default function App({ randomSource = Math.random }: AppProps) {
           editionChange.pendingEditionChange?.clearsSpecies ?? false
         }
         clearsClass={editionChange.pendingEditionChange?.clearsClass ?? false}
+        clearsBackground={
+          editionChange.pendingEditionChange?.clearsBackground ?? false
+        }
         onConfirm={editionChange.confirmEditionChange}
         onCancel={editionChange.cancelEditionChange}
       />

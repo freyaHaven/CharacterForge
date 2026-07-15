@@ -39,6 +39,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     },
     species: null,
     class: null,
+    background: null,
     ...overrides,
   }
 }

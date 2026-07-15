@@ -64,9 +64,10 @@ describe('Placeholder wizard steps', () => {
     expect(
       screen.getByRole('heading', { name: 'Background', level: 2 }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/life before adventuring/i),
-    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText(/loading backgrounds/i)).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: 'Soldier' })).toBeInTheDocument()
 
     await goToWizardStep(user, screen, 'Equipment')
     expect(

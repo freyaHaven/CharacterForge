@@ -36,6 +36,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
     class: null,
+    background: null,
     ...overrides,
   }
 }
@@ -255,7 +256,7 @@ describe('Species workflow in App', () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/belongs to the previous edition/i),
+      screen.getByText(/belong to the previous edition/i),
     ).toBeInTheDocument()
     expect(getEditionSelect()).toHaveValue('srd-2024')
   })

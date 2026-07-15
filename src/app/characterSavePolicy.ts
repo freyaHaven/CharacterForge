@@ -4,6 +4,7 @@ export function formatSaveBlockedMessage(
   creationMethod: CharacterCreationMethod,
   speciesDraftIncomplete: boolean,
   classDraftIncomplete: boolean,
+  backgroundDraftIncomplete: boolean,
 ): string {
   if (speciesDraftIncomplete) {
     return 'Complete the species selection before saving.'
@@ -11,6 +12,10 @@ export function formatSaveBlockedMessage(
 
   if (classDraftIncomplete) {
     return 'Complete the class selection before saving.'
+  }
+
+  if (backgroundDraftIncomplete) {
+    return 'Complete the background selection before saving.'
   }
 
   if (creationMethod === 'point-buy') {
@@ -33,13 +38,18 @@ type SaveValidationState = {
   rolledValidation: RolledAssignmentValidationResult | null
   speciesDraftIncomplete: boolean
   classDraftIncomplete: boolean
+  backgroundDraftIncomplete: boolean
 }
 
 export function canSaveCharacter(
   creationMethod: CharacterCreationMethod,
   validation: SaveValidationState,
 ): boolean {
-  if (validation.speciesDraftIncomplete || validation.classDraftIncomplete) {
+  if (
+    validation.speciesDraftIncomplete ||
+    validation.classDraftIncomplete ||
+    validation.backgroundDraftIncomplete
+  ) {
     return false
   }
 

@@ -2,6 +2,7 @@ type EditionChangeDialogProps = {
   open: boolean
   clearsSpecies: boolean
   clearsClass: boolean
+  clearsBackground: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -9,26 +10,39 @@ type EditionChangeDialogProps = {
 function buildEditionChangeMessage(
   clearsSpecies: boolean,
   clearsClass: boolean,
+  clearsBackground: boolean,
 ): string {
-  if (clearsSpecies && clearsClass) {
-    return 'Changing edition will clear your species and class selections because those definitions belong to the previous edition. Continue?'
-  }
+  const clearedParts: string[] = []
 
   if (clearsSpecies) {
-    return 'Changing edition will clear your species selection because the selected species definition belongs to the previous edition. Continue?'
+    clearedParts.push('species')
   }
 
   if (clearsClass) {
-    return 'Changing edition will clear your class selection because the selected class definition belongs to the previous edition. Continue?'
+    clearedParts.push('class')
   }
 
-  return 'Changing edition will update the rules used for this character. Continue?'
+  if (clearsBackground) {
+    clearedParts.push('background')
+  }
+
+  if (clearedParts.length === 0) {
+    return 'Changing edition will update the rules used for this character. Continue?'
+  }
+
+  const selectionList =
+    clearedParts.length === 1
+      ? `${clearedParts[0]} selection`
+      : `${clearedParts.slice(0, -1).join(', ')} and ${clearedParts.at(-1)} selections`
+
+  return `Changing edition will clear your ${selectionList} because those definitions belong to the previous edition. Continue?`
 }
 
 export function EditionChangeDialog({
   open,
   clearsSpecies,
   clearsClass,
+  clearsBackground,
   onConfirm,
   onCancel,
 }: EditionChangeDialogProps) {
@@ -47,7 +61,11 @@ export function EditionChangeDialog({
       >
         <h2 id="edition-change-dialog-title">Change rules edition?</h2>
         <p id="edition-change-dialog-description">
-          {buildEditionChangeMessage(clearsSpecies, clearsClass)}
+          {buildEditionChangeMessage(
+            clearsSpecies,
+            clearsClass,
+            clearsBackground,
+          )}
         </p>
         <div className="dialog__actions">
           <button type="button" onClick={onConfirm}>

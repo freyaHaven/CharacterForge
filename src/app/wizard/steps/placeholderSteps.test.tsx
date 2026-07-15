@@ -2,6 +2,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { createBundledBackgroundCatalog } from '../../../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../../../adapters/bundledClassCatalog'
 import { BackgroundStep } from './BackgroundStep'
 import { ClassStep } from './ClassStep'
@@ -34,24 +35,28 @@ describe('ClassStep', () => {
 })
 
 describe('BackgroundStep', () => {
-  it('renders the heading, explanation, and coming soon notice', () => {
-    render(<BackgroundStep />)
+  it('renders the background picker catalogue', async () => {
+    render(
+      <BackgroundStep
+        editionId="srd-2024"
+        committedSelection={null}
+        draft={null}
+        catalog={createBundledBackgroundCatalog()}
+        onDraftChange={() => {}}
+        onCommittedSelectionChange={() => {}}
+      />,
+    )
 
     expect(
       screen.getByRole('heading', { name: 'Background', level: 2 }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/life before adventuring/i),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Coming soon')).toBeInTheDocument()
-  })
 
-  it('does not render interactive selection controls', () => {
-    render(<BackgroundStep />)
+    await waitFor(() => {
+      expect(screen.queryByText(/loading backgrounds/i)).not.toBeInTheDocument()
+    })
 
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Soldier' })).toBeInTheDocument()
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
   })
 })
 

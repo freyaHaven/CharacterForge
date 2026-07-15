@@ -19,7 +19,7 @@ const defaultSummaries = {
   species: ['Species: Dragonborn', 'Choice incomplete'],
   class: ['Coming soon'],
   'ability-scores': ['Method: Manual', 'STR 10 (+0)'],
-  background: ['Coming soon'],
+  background: ['Not selected'],
   equipment: ['Coming soon'],
 }
 

@@ -1,5 +1,6 @@
 import type { EditionId } from './edition'
 import type { ClassSelection } from './class/types'
+import type { BackgroundSelection } from './background/types'
 import type { SpeciesSelection } from './species/types'
 
 export type { CharacterLifecycle } from './character/lifecycle'
@@ -42,6 +43,19 @@ export {
   SKILL_LABELS,
 } from './skills/types'
 export type {
+  AbilityScoreIncreaseMode,
+  AbilityScoreIncreaseSelection,
+  BackgroundAbilityScoreBonuses,
+  BackgroundChoice,
+  BackgroundChoiceOption,
+  BackgroundDefinition,
+  BackgroundEquipmentDefinition,
+  BackgroundEquipmentPackage,
+  BackgroundOriginFeat,
+  BackgroundSelection,
+  BackgroundToolProficiency,
+} from './background/types'
+export type {
   ConditionId,
   CreatureSize,
   DamageTypeId,
@@ -77,4 +91,5 @@ export type Character = {
   abilityScores: AbilityScores
   species: SpeciesSelection | null
   class: ClassSelection | null
+  background: BackgroundSelection | null
 }

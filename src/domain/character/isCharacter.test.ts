@@ -18,6 +18,7 @@ function createValidCharacter(): Character {
     },
     species: null,
     class: null,
+    background: null,
   }
 }
 

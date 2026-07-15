@@ -1,11 +1,14 @@
 import type { Character } from '../../domain/types'
 import type { ClassSelectionDraft } from '../../features/class/classSelectionDraft'
 import { isClassDraftIncomplete } from '../../features/class/classSelectionDraft'
+import type { BackgroundSelectionDraft } from '../../features/background/backgroundSelectionDraft'
+import { isBackgroundDraftIncomplete } from '../../features/background/backgroundSelectionDraft'
 import type { SpeciesSelectionDraft } from '../../features/species/speciesSelectionDraft'
 import { isSpeciesDraftIncomplete } from '../../features/species/speciesSelectionDraft'
 import type { PointBuyValidationResult } from '../../rules/point-buy'
 import type { RolledAssignmentValidationResult } from '../../rules/rolled'
 import type { ClassValidationResult } from '../../rules/class/classRules'
+import type { BackgroundValidationResult } from '../../rules/background/backgroundRules'
 import type { SpeciesValidationResult } from '../../rules/species/speciesRules'
 import type { StandardArrayDraftValidationResult } from '../../features/ability-scores/standardArrayDraft'
 import { canSaveCharacter } from '../characterSavePolicy'
@@ -37,6 +40,12 @@ export type StepValidationContext = {
   /** Whether the committed class selection is valid for the current edition. */
   committedClassValid: boolean
 
+  backgroundDraft: BackgroundSelectionDraft | null
+  /** Validation of the active background draft; null when no draft exists. */
+  backgroundDraftValidation: BackgroundValidationResult | null
+  /** Whether the committed background selection is valid for the current edition. */
+  committedBackgroundValid: boolean
+
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
@@ -51,6 +60,7 @@ function isAbilityScoresMethodValid(context: StepValidationContext): boolean {
     rolledValidation: context.rolledValidation,
     speciesDraftIncomplete: false,
     classDraftIncomplete: false,
+    backgroundDraftIncomplete: false,
   })
 }
 
@@ -114,6 +124,32 @@ export function getClassStepStatus(context: StepValidationContext): StepStatus {
   return { completion: 'in-progress', hasValidationErrors }
 }
 
+export function getBackgroundStepStatus(
+  context: StepValidationContext,
+): StepStatus {
+  const { character, backgroundDraft } = context
+  const committed = character.background
+
+  if (
+    committed !== null &&
+    context.committedBackgroundValid &&
+    !isBackgroundDraftIncomplete(backgroundDraft, committed)
+  ) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  if (backgroundDraft === null && committed === null) {
+    return { completion: 'not-started', hasValidationErrors: false }
+  }
+
+  const hasValidationErrors =
+    (backgroundDraft !== null &&
+      context.backgroundDraftValidation?.ok === false) ||
+    (committed !== null && !context.committedBackgroundValid)
+
+  return { completion: 'in-progress', hasValidationErrors }
+}
+
 export function getPlaceholderStepStatus(): StepStatus {
   return { completion: 'not-started', hasValidationErrors: false }
 }
@@ -165,7 +201,7 @@ export function getNonReviewStepStatuses(
     species: getSpeciesStepStatus(context),
     class: getClassStepStatus(context),
     'ability-scores': getAbilityScoresStepStatus(context),
-    background: getPlaceholderStepStatus(),
+    background: getBackgroundStepStatus(context),
     equipment: getPlaceholderStepStatus(),
   }
 }
