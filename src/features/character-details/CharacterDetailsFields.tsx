@@ -4,7 +4,7 @@ import type { CharacterDetails } from '../../domain/character/details'
 import type { GenderId } from '../../domain/character/gender'
 import { GENDER_IDS, GENDER_LABELS } from '../../domain/character/gender'
 import type { PronounId } from '../../domain/character/pronouns'
-import { PRONOUN_IDS, PRONOUN_LABELS } from '../../domain/character/pronouns'
+import { PRONOUN_LABELS } from '../../domain/character/pronouns'
 import type { SpeciesGuidance } from '../../domain/species/types'
 import { SingleSelectCardGrid } from '../choices/SingleSelectCardGrid'
 import {
@@ -32,10 +32,11 @@ const GENDER_OPTIONS = GENDER_IDS.map((id) => ({
   label: GENDER_LABELS[id],
 }))
 
-const PRONOUN_OPTIONS = PRONOUN_IDS.map((id) => ({
-  id,
-  label: PRONOUN_LABELS[id],
-}))
+const PRONOUN_OPTIONS = [
+  { id: 'she-her', label: PRONOUN_LABELS['she-her'] },
+  { id: 'he-him', label: PRONOUN_LABELS['he-him'] },
+  { id: 'they-them', label: PRONOUN_LABELS['they-them'] },
+] as const
 
 type CharacterDetailsFieldsProps = {
   details: CharacterDetails
@@ -46,58 +47,41 @@ type CharacterDetailsFieldsProps = {
   onTouched?: () => void
 }
 
-type IdentityDetailFieldProps = {
-  label: string
-  inputId: string
-  guidanceId?: string
-  value: string
-  guidance?: string
-  additionalDescribedBy?: string
-  onFocus: () => void
-  onChange: (value: string) => void
-}
-
 function markTouched(onTouched?: () => void) {
   onTouched?.()
 }
 
-function IdentityDetailField({
+type PhysicalInputFieldProps = {
+  label: string
+  inputId: string
+  value: string
+  describedBy?: string
+  onFocus: () => void
+  onChange: (value: string) => void
+}
+
+function PhysicalInputField({
   label,
   inputId,
-  guidanceId,
   value,
-  guidance,
-  additionalDescribedBy,
+  describedBy,
   onFocus,
   onChange,
-}: IdentityDetailFieldProps) {
-  const showGuidance = hasSpeciesGuidanceText(guidance)
-  const describedBy = combineDescribedBy(
-    additionalDescribedBy,
-    showGuidance && guidanceId !== undefined ? guidanceId : undefined,
-  )
-
+}: PhysicalInputFieldProps) {
   return (
-    <div className="character-details-fields__identity-field">
-      <label className="field" htmlFor={inputId}>
-        <span>{label}</span>
-        <input
-          id={inputId}
-          type="text"
-          value={value}
-          aria-describedby={describedBy}
-          onFocus={onFocus}
-          onChange={(event) => {
-            onChange(event.target.value)
-          }}
-        />
-      </label>
-      {showGuidance && guidanceId !== undefined ? (
-        <span id={guidanceId} className="character-details-fields__help">
-          {guidance}
-        </span>
-      ) : null}
-    </div>
+    <label className="field character-details-fields__physical-input">
+      <span>{label}</span>
+      <input
+        id={inputId}
+        type="text"
+        value={value}
+        aria-describedby={describedBy}
+        onFocus={onFocus}
+        onChange={(event) => {
+          onChange(event.target.value)
+        }}
+      />
+    </label>
   )
 }
 
@@ -109,6 +93,17 @@ export function CharacterDetailsFields({
   onChange,
   onTouched,
 }: CharacterDetailsFieldsProps) {
+  const showAgeGuidance = hasSpeciesGuidanceText(speciesGuidance?.age)
+  const showHeightGuidance = hasSpeciesGuidanceText(speciesGuidance?.height)
+  const ageDescribedByIds = combineDescribedBy(
+    ageDescribedBy,
+    showAgeGuidance ? CHARACTER_DETAILS_AGE_GUIDANCE_ID : undefined,
+  )
+  const heightDescribedByIds = combineDescribedBy(
+    heightDescribedBy,
+    showHeightGuidance ? CHARACTER_DETAILS_HEIGHT_GUIDANCE_ID : undefined,
+  )
+
   function updateTextField<K extends keyof CharacterDetails>(
     field: K,
     value: CharacterDetails[K],
@@ -135,36 +130,46 @@ export function CharacterDetailsFields({
           <h3 id="character-details-identity-heading">Identity</h3>
 
           <div
-            className="character-details-fields__physical"
+            className="character-details-fields__physical-grid"
             aria-label="Physical details"
           >
-            <IdentityDetailField
-              label="Age"
-              inputId={CHARACTER_DETAILS_AGE_INPUT_ID}
-              guidanceId={CHARACTER_DETAILS_AGE_GUIDANCE_ID}
-              value={details.age}
-              guidance={speciesGuidance?.age}
-              additionalDescribedBy={ageDescribedBy}
-              onFocus={() => markTouched(onTouched)}
-              onChange={(value) => {
-                updateTextField('age', value)
-              }}
-            />
+            <div className="character-details-fields__physical-cell character-details-fields__physical-cell--age">
+              <PhysicalInputField
+                label="Age"
+                inputId={CHARACTER_DETAILS_AGE_INPUT_ID}
+                value={details.age}
+                describedBy={ageDescribedByIds}
+                onFocus={() => markTouched(onTouched)}
+                onChange={(value) => {
+                  updateTextField('age', value)
+                }}
+              />
+            </div>
 
-            <div className="character-details-fields__physical-split">
-              <IdentityDetailField
+            {showAgeGuidance ? (
+              <span
+                id={CHARACTER_DETAILS_AGE_GUIDANCE_ID}
+                className="character-details-fields__help character-details-fields__physical-cell character-details-fields__physical-cell--age-guidance"
+              >
+                {speciesGuidance?.age}
+              </span>
+            ) : null}
+
+            <div className="character-details-fields__physical-cell character-details-fields__physical-cell--height">
+              <PhysicalInputField
                 label="Height"
                 inputId={CHARACTER_DETAILS_HEIGHT_INPUT_ID}
-                guidanceId={CHARACTER_DETAILS_HEIGHT_GUIDANCE_ID}
                 value={details.height}
-                guidance={speciesGuidance?.height}
-                additionalDescribedBy={heightDescribedBy}
+                describedBy={heightDescribedByIds}
                 onFocus={() => markTouched(onTouched)}
                 onChange={(value) => {
                   updateTextField('height', value)
                 }}
               />
-              <IdentityDetailField
+            </div>
+
+            <div className="character-details-fields__physical-cell character-details-fields__physical-cell--weight">
+              <PhysicalInputField
                 label="Weight"
                 inputId="character-details-weight"
                 value={details.weight}
@@ -174,35 +179,48 @@ export function CharacterDetailsFields({
                 }}
               />
             </div>
+
+            {showHeightGuidance ? (
+              <span
+                id={CHARACTER_DETAILS_HEIGHT_GUIDANCE_ID}
+                className="character-details-fields__help character-details-fields__physical-cell character-details-fields__physical-cell--height-guidance"
+              >
+                {speciesGuidance?.height}
+              </span>
+            ) : null}
           </div>
 
-          <fieldset className="character-details-fields__choice-fieldset">
-            <legend id={CHARACTER_DETAILS_GENDER_LEGEND_ID}>Gender</legend>
-            <SingleSelectCardGrid
-              id="character-details-gender"
-              name="character-details-gender"
-              options={GENDER_OPTIONS}
-              selectedOptionId={details.gender}
-              ariaLabelledBy={CHARACTER_DETAILS_GENDER_LEGEND_ID}
-              onSelect={(optionId) => {
-                updateSingleSelectField('gender', optionId as GenderId)
-              }}
-            />
-          </fieldset>
+          <div className="character-details-fields__identity-choices">
+            <fieldset className="character-details-fields__choice-fieldset">
+              <legend id={CHARACTER_DETAILS_GENDER_LEGEND_ID}>Gender</legend>
+              <SingleSelectCardGrid
+                id="character-details-gender"
+                name="character-details-gender"
+                options={GENDER_OPTIONS}
+                selectedOptionId={details.gender}
+                layout="two-plus-one"
+                ariaLabelledBy={CHARACTER_DETAILS_GENDER_LEGEND_ID}
+                onSelect={(optionId) => {
+                  updateSingleSelectField('gender', optionId as GenderId)
+                }}
+              />
+            </fieldset>
 
-          <fieldset className="character-details-fields__choice-fieldset">
-            <legend id={CHARACTER_DETAILS_PRONOUNS_LEGEND_ID}>Pronouns</legend>
-            <SingleSelectCardGrid
-              id="character-details-pronouns"
-              name="character-details-pronouns"
-              options={PRONOUN_OPTIONS}
-              selectedOptionId={details.pronouns}
-              ariaLabelledBy={CHARACTER_DETAILS_PRONOUNS_LEGEND_ID}
-              onSelect={(optionId) => {
-                updateSingleSelectField('pronouns', optionId as PronounId)
-              }}
-            />
-          </fieldset>
+            <fieldset className="character-details-fields__choice-fieldset">
+              <legend id={CHARACTER_DETAILS_PRONOUNS_LEGEND_ID}>Pronouns</legend>
+              <SingleSelectCardGrid
+                id="character-details-pronouns"
+                name="character-details-pronouns"
+                options={PRONOUN_OPTIONS}
+                selectedOptionId={details.pronouns}
+                layout="two-plus-one"
+                ariaLabelledBy={CHARACTER_DETAILS_PRONOUNS_LEGEND_ID}
+                onSelect={(optionId) => {
+                  updateSingleSelectField('pronouns', optionId as PronounId)
+                }}
+              />
+            </fieldset>
+          </div>
 
           <div className="character-details-fields__colour-fields">
             <label className="field">

@@ -50,7 +50,7 @@ describe('CharacterDetailsFields layout', () => {
     ).toBeInTheDocument()
   })
 
-  it('uses a full-width age field, a height-weight split row, and stacked colour fields', () => {
+  it('uses a table-like physical details grid and stacked colour fields', () => {
     render(
       <CharacterDetailsFields
         details={createDefaultCharacterDetails()}
@@ -59,18 +59,16 @@ describe('CharacterDetailsFields layout', () => {
       />,
     )
 
-    const identityColumn = document.querySelector(
-      '.character-details-fields__column--identity',
-    )
-    expect(identityColumn).not.toBeNull()
-    expect(document.querySelector('.character-details-fields__physical')).not.toBeNull()
-    expect(document.querySelector('.character-details-fields__physical-split')).not.toBeNull()
-    expect(document.querySelectorAll('.character-details-fields__identity-field')).toHaveLength(3)
+    expect(document.querySelector('.character-details-fields__physical-grid')).not.toBeNull()
+    expect(document.querySelector('.character-details-fields__physical-split')).toBeNull()
+    expect(document.querySelector('.character-details-fields__physical-cell--age')).not.toBeNull()
+    expect(document.querySelector('.character-details-fields__physical-cell--height')).not.toBeNull()
+    expect(document.querySelector('.character-details-fields__physical-cell--weight')).not.toBeNull()
     expect(document.querySelector('.character-details-fields__colour-fields')).not.toBeNull()
     expect(document.querySelector('.character-details-fields__colour-grid')).toBeNull()
   })
 
-  it('places height guidance beneath the height field only', () => {
+  it('places age guidance beside age and height guidance beneath height in the physical grid', () => {
     render(
       <CharacterDetailsFields
         details={createDefaultCharacterDetails()}
@@ -79,15 +77,37 @@ describe('CharacterDetailsFields layout', () => {
       />,
     )
 
-    const heightField = screen.getByRole('textbox', { name: 'Height' }).closest(
-      '.character-details-fields__identity-field',
-    )
-    const weightField = screen.getByRole('textbox', { name: 'Weight' }).closest(
-      '.character-details-fields__identity-field',
+    const grid = document.querySelector('.character-details-fields__physical-grid')
+    expect(grid?.querySelector('.character-details-fields__physical-cell--age-guidance')).not.toBeNull()
+    expect(grid?.querySelector('.character-details-fields__physical-cell--height-guidance')).not.toBeNull()
+    expect(grid?.querySelector('.character-details-fields__physical-cell--weight .character-details-fields__help')).toBeNull()
+  })
+
+  it('places Gender and Pronouns fieldsets side by side with the two-plus-one layout', () => {
+    render(
+      <CharacterDetailsFields
+        details={createDefaultCharacterDetails()}
+        speciesGuidance={null}
+        onChange={() => {}}
+      />,
     )
 
-    expect(heightField?.querySelector(`#${CHARACTER_DETAILS_HEIGHT_GUIDANCE_ID}`)).not.toBeNull()
-    expect(weightField?.querySelector('.character-details-fields__help')).toBeNull()
+    const choices = document.querySelector('.character-details-fields__identity-choices')
+    expect(choices).not.toBeNull()
+    expect(choices?.querySelectorAll('.character-details-fields__choice-fieldset')).toHaveLength(2)
+
+    const grids = choices?.querySelectorAll('.card-select-choice__grid--layout-two-plus-one')
+    expect(grids).toHaveLength(2)
+
+    expect(screen.getByRole('radio', { name: 'She/Her' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'He/Him' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'They/Them' })).toBeInTheDocument()
+
+    const genderGrid = choices
+      ?.querySelector('[name="character-details-gender"]')
+      ?.closest('.card-select-choice__grid')
+    const genderItems = genderGrid?.querySelectorAll('.card-select-choice__item')
+    expect(genderItems?.[2]).toHaveClass('card-select-choice__item--span-full')
   })
 })
 
