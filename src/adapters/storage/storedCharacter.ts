@@ -1,48 +1,89 @@
 import type { Character } from '../../domain/types'
+import type { ClassSelection } from '../../domain/class/types'
+import type {
+  AbilityScores,
+  CharacterCreationMethod,
+  EditionId,
+} from '../../domain/types'
+import type { SpeciesSelection } from '../../domain/species/types'
+import type { BackgroundSelection } from '../../domain/background/types'
+import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 8
+export const CURRENT_SCHEMA_VERSION = 9
+
+type CharacterIdentity = {
+  id: string
+  name: string
+  editionId: EditionId
+  creationMethod: CharacterCreationMethod
+  abilityScores: AbilityScores
+}
 
 export type StoredCharacterV1 = {
   schemaVersion: 1
-  character: Omit<Character, 'species' | 'class' | 'background'>
+  character: CharacterIdentity
 }
 
 export type StoredCharacterV2 = {
   schemaVersion: 2
-  character: Omit<Character, 'class' | 'background'>
+  character: CharacterIdentity & {
+    species: SpeciesSelection | null
+  }
+}
+
+/** Schema v3: legacy single `class` selection. */
+export type StoredCharacterV3Character = CharacterIdentity & {
+  species: SpeciesSelection | null
+  class: ClassSelection | null
 }
 
 export type StoredCharacterV3 = {
   schemaVersion: 3
-  character: Omit<Character, 'background'>
+  character: StoredCharacterV3Character
+}
+
+/** Schema v4–v6: background added; still uses legacy `class`. */
+export type StoredCharacterV4Character = StoredCharacterV3Character & {
+  background: BackgroundSelection | null
 }
 
 export type StoredCharacterV4 = {
   schemaVersion: 4
-  character: Character
+  character: StoredCharacterV4Character
 }
 
 export type StoredCharacterV5 = {
   schemaVersion: 5
-  character: Character
+  character: StoredCharacterV4Character
 }
 
 export type StoredCharacterV6 = {
   schemaVersion: 6
-  character: Character
+  character: StoredCharacterV4Character
+}
+
+/** Schema v7–v8: details added; still uses legacy `class`. */
+export type StoredCharacterV7Character = StoredCharacterV4Character & {
+  details: CharacterDetails
 }
 
 export type StoredCharacterV7 = {
   schemaVersion: 7
-  character: Character
+  character: StoredCharacterV7Character
 }
 
 export type StoredCharacterV8 = {
   schemaVersion: 8
+  character: StoredCharacterV7Character
+}
+
+/** Schema v9: multiclass fields replace legacy `class`. */
+export type StoredCharacterV9 = {
+  schemaVersion: 9
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV8
+export type StoredCharacter = StoredCharacterV9
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -62,7 +103,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV5
   | StoredCharacterV6
   | StoredCharacterV7
-  | StoredCharacterV8 {
+  | StoredCharacterV8
+  | StoredCharacterV9 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

@@ -7,6 +7,7 @@ import {
 
 const FIGHTING_STYLE_CHOICE = {
   id: 'fighting-style',
+  level: 1,
   prompt: 'Choose a Fighting Style',
   type: 'single-select',
   required: true,
@@ -15,6 +16,7 @@ const FIGHTING_STYLE_CHOICE = {
 
 const SKILL_CHOICE = {
   id: 'skill-proficiencies',
+  level: 1,
   prompt: 'Choose two skill proficiencies',
   type: 'multi-select',
   required: true,

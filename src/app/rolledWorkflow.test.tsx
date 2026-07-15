@@ -10,6 +10,10 @@ import {
   getCreationMethodSelect,
 } from '../test/abilityScoreTestUtils'
 import { goToAbilityScoresStep } from '../test/wizardTestUtils'
+import {
+  clearEditorSession,
+  openCharacterEditor,
+} from '../test/characterEditorTestUtils'
 import { ROLLED_UNASSIGNED_LABEL } from '../features/ability-scores/RolledAbilityInputs'
 import { createSeededRandomSource } from '../rules/rolled'
 
@@ -29,10 +33,8 @@ async function renderLoadedApp(randomSource = createSeededRandomSource(5)) {
   const user = userEvent.setup()
   const utils = render(<App randomSource={randomSource} />)
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
-
+  await openCharacterEditor(user)
+  saveMock.mockClear()
   await goToAbilityScoresStep(user, screen)
 
   return { user, ...utils }
@@ -72,6 +74,7 @@ async function assignDefaultRolledPool(user: ReturnType<typeof userEvent.setup>)
 
 describe('Rolled workflow in App', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
     loadMock.mockResolvedValue(null)

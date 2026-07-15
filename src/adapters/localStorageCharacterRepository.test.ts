@@ -4,6 +4,12 @@ import { createDefaultCharacter } from '../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../domain/character/details'
 import type { Character } from '../domain/types'
 
+const emptyClassState = {
+  targetLevel: 1,
+  classes: [],
+  startingClassInstanceId: null,
+} as const
+
 function createTestCharacter(): Character {
   return createDefaultCharacter({
     id: 'char-1',
@@ -22,15 +28,42 @@ function createTestCharacter(): Character {
 }
 
 function withMigratedDefaults(
-  character: Omit<Character, 'details'> & Partial<Pick<Character, 'details'>>,
+  character: {
+    id: string
+    name: string
+    editionId: Character['editionId']
+    creationMethod: Character['creationMethod']
+    abilityScores: Character['abilityScores']
+    species?: Character['species']
+    background?: Character['background']
+    details?: Character['details']
+    targetLevel?: number
+    classes?: Character['classes']
+    startingClassInstanceId?: string | null
+    class?: unknown
+  },
 ): Character {
+  const {
+    class: _legacyClass,
+    species,
+    background,
+    details,
+    targetLevel,
+    classes,
+    startingClassInstanceId,
+    ...rest
+  } = character
+
   return {
-    ...character,
-    species: character.species ?? null,
-    class: character.class ?? null,
-    background: character.background ?? null,
-    details: character.details ?? createDefaultCharacterDetails(),
-  } as Character
+    ...rest,
+    species: species ?? null,
+    targetLevel: targetLevel ?? emptyClassState.targetLevel,
+    classes: classes ?? [...emptyClassState.classes],
+    startingClassInstanceId:
+      startingClassInstanceId ?? emptyClassState.startingClassInstanceId,
+    background: background ?? null,
+    details: details ?? createDefaultCharacterDetails(),
+  }
 }
 
 function createLocalStorageMock(): Storage {
@@ -90,7 +123,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 8,
+      schemaVersion: 9,
       character,
     })
   })
@@ -205,6 +238,48 @@ describe('createLocalStorageCharacterRepository', () => {
     const loaded = await repository.load('char-1')
 
     expect(loaded?.creationMethod).toBe('standard-array')
+  })
+
+  it('migrates a schema v3 save with legacy class on load', async () => {
+    localStorage.setItem(
+      'characterforge:character:char-1',
+      JSON.stringify({
+        schemaVersion: 3,
+        character: {
+          id: 'char-1',
+          name: 'Aldric',
+          editionId: 'srd-2024',
+          creationMethod: 'manual',
+          abilityScores: createTestCharacter().abilityScores,
+          species: null,
+          class: {
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {
+              'fighting-style': 'defense',
+              'skill-proficiencies': ['athletics', 'perception'],
+            },
+          },
+        },
+      }),
+    )
+
+    const repository = createLocalStorageCharacterRepository()
+    const loaded = await repository.load('char-1')
+
+    expect(loaded?.targetLevel).toBe(1)
+    expect(loaded?.classes).toHaveLength(1)
+    expect(loaded?.classes[0]).toEqual(
+      expect.objectContaining({
+        classId: 'srd-2024:fighter',
+        level: 1,
+        choices: {
+          'fighting-style': 'defense',
+          'skill-proficiencies': ['athletics', 'perception'],
+        },
+      }),
+    )
+    expect(loaded?.startingClassInstanceId).toBe(loaded?.classes[0].instanceId)
   })
 
   it('returns null for an unsupported future schema version', async () => {

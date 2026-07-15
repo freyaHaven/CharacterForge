@@ -25,6 +25,13 @@ export function resolveClassEffects(
     })),
   ]
 
+  if (definition.spellcasting !== undefined) {
+    effects.push({
+      kind: 'spellcasting',
+      ability: definition.spellcasting.ability,
+    })
+  }
+
   for (const choice of getChoicesAvailableAtLevel(definition, selection.level)) {
     const value = selection.choices[choice.id]
 

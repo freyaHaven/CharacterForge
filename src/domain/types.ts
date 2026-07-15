@@ -1,7 +1,7 @@
 import type { CharacterDetails } from './character/details'
 import type { EditionId } from './edition'
-import type { ClassSelection } from './class/types'
 import type { BackgroundSelection } from './background/types'
+import type { CharacterClassSelection, CharacterLevel } from './class/types'
 import type { SpeciesSelection } from './species/types'
 
 export type { AlignmentId } from './character/alignment'
@@ -42,7 +42,12 @@ export type {
   ClassFeature,
   ClassLevelFeatures,
   ClassLevel,
+  CharacterClassSelection,
+  CharacterLevel,
   ClassSelection,
+  DeferredCharacterRequirement,
+  DeferredDestinationStep,
+  ResolvedDeferredCharacterRequirement,
   HitDie,
   ResolvedClassEffect,
   ToolProficiency,
@@ -113,7 +118,9 @@ export type Character = {
   creationMethod: CharacterCreationMethod
   abilityScores: AbilityScores
   species: SpeciesSelection | null
-  class: ClassSelection | null
+  targetLevel: CharacterLevel
+  classes: CharacterClassSelection[]
+  startingClassInstanceId: string | null
   background: BackgroundSelection | null
   details: CharacterDetails
 }

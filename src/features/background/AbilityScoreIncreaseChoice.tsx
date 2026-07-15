@@ -13,7 +13,6 @@ type AbilityScoreIncreaseChoiceProps = {
 }
 
 function createTwoAndOneSelection(
-  eligibleAbilities: AbilityId[],
   plusTwo: AbilityId,
   plusOne: AbilityId,
 ): AbilityScoreIncreaseSelection {
@@ -55,7 +54,7 @@ export function AbilityScoreIncreaseChoice({
             name="background-ability-mode"
             checked={mode === 'two-and-one'}
             onChange={() => {
-              onChange(createTwoAndOneSelection(eligibleAbilities, plusTwo, plusOne))
+              onChange(createTwoAndOneSelection(plusTwo, plusOne))
             }}
           />
           <label htmlFor="background-ability-mode-two-and-one">
@@ -94,11 +93,7 @@ export function AbilityScoreIncreaseChoice({
                     : plusOne
 
                 onChange(
-                  createTwoAndOneSelection(
-                    eligibleAbilities,
-                    nextPlusTwo,
-                    nextPlusOne,
-                  ),
+                  createTwoAndOneSelection(nextPlusTwo, nextPlusOne),
                 )
               }}
             >
@@ -117,7 +112,6 @@ export function AbilityScoreIncreaseChoice({
               onChange={(event) => {
                 onChange(
                   createTwoAndOneSelection(
-                    eligibleAbilities,
                     plusTwo,
                     event.target.value as AbilityId,
                   ),

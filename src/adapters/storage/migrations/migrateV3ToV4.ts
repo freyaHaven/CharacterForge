@@ -1,4 +1,3 @@
-import type { Character } from '../../domain/types'
 import type { StoredCharacterV3, StoredCharacterV4 } from '../storedCharacter'
 
 /**
@@ -7,13 +6,11 @@ import type { StoredCharacterV3, StoredCharacterV4 } from '../storedCharacter'
 export function migrateV3ToV4(envelope: unknown): StoredCharacterV4 {
   const v3 = envelope as StoredCharacterV3
 
-  const character: Character = {
-    ...v3.character,
-    background: null,
-  }
-
   return {
     schemaVersion: 4,
-    character,
+    character: {
+      ...v3.character,
+      background: null,
+    },
   }
 }

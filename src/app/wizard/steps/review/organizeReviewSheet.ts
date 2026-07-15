@@ -1,0 +1,208 @@
+import type {
+  ClassReviewDisplay,
+  ReviewableStepId,
+  SpeciesReviewDisplay,
+} from '../../../reviewSummary'
+import type { ResolvedDeferredCharacterRequirement } from '../../../../domain/types'
+import type { StepStatus } from '../../types'
+
+export type ReviewStatItem = {
+  label: string
+  value: string
+}
+
+export type ReviewFeatureItem = {
+  label: string
+  value: string
+}
+
+export type ReviewSectionVisibility = {
+  skills: boolean
+  equipment: boolean
+  features: boolean
+  spells: boolean
+  background: boolean
+}
+
+export type ReviewSheetContent = {
+  abilityScoreNotes: string[]
+  coreStats: ReviewStatItem[]
+  skillsAndSaves: ReviewFeatureItem[]
+  equipmentLines: string[]
+  features: ReviewFeatureItem[]
+  spellLines: string[]
+  backgroundLines: string[]
+  deferredRequirements: ResolvedDeferredCharacterRequirement[]
+  incompleteSteps: ReviewableStepId[]
+  sectionVisibility: ReviewSectionVisibility
+}
+
+const SKILL_PROMPT_PATTERN = /\bskill\b|\bsaving throw\b/i
+
+function parseLabeledLine(line: string): ReviewFeatureItem | null {
+  const separatorIndex = line.indexOf(': ')
+  if (separatorIndex === -1) {
+    return null
+  }
+
+  return {
+    label: line.slice(0, separatorIndex),
+    value: line.slice(separatorIndex + 2),
+  }
+}
+
+function isMetaClassLine(line: string): boolean {
+  return (
+    line.startsWith('Class: ') ||
+    line.startsWith('Level: ') ||
+    line === 'Class selection complete' ||
+    line === 'Not selected' ||
+    line === 'Choice incomplete' ||
+    line === 'Confirm your selection' ||
+    line.startsWith('Remaining character decisions:')
+  )
+}
+
+function isMetaSpeciesLine(line: string): boolean {
+  return (
+    line.startsWith('Species: ') ||
+    line === 'Not selected' ||
+    line === 'Choice incomplete' ||
+    line === 'Confirm your selection'
+  )
+}
+
+function isPlaceholderLine(line: string): boolean {
+  return line.toLowerCase() === 'coming soon'
+}
+
+function hasMeaningfulLines(lines: string[]): boolean {
+  return lines.some((line) => !isPlaceholderLine(line))
+}
+
+function buildAbilityScoreNotes(summaryLines: string[]): string[] {
+  return summaryLines.filter((line) => !/^(STR|DEX|CON|INT|WIS|CHA) \d+/.test(line))
+}
+
+function buildSkillsAndFeatures(
+  classDisplay: ClassReviewDisplay,
+  classSummaryLines: string[],
+): { skills: ReviewFeatureItem[]; features: ReviewFeatureItem[] } {
+  const skills: ReviewFeatureItem[] = []
+  const features: ReviewFeatureItem[] = []
+
+  const choiceLines =
+    classDisplay.choiceLines.length > 0
+      ? classDisplay.choiceLines
+      : classSummaryLines
+          .filter((line) => !isMetaClassLine(line) && !line.startsWith('- '))
+          .map((line) => parseLabeledLine(line))
+          .filter((item): item is ReviewFeatureItem => item !== null)
+          .map((item) => ({ prompt: item.label, summary: item.value }))
+
+  for (const choiceLine of choiceLines) {
+    const item = {
+      label: choiceLine.prompt,
+      value: choiceLine.summary,
+    }
+
+    if (SKILL_PROMPT_PATTERN.test(choiceLine.prompt)) {
+      skills.push(item)
+    } else {
+      features.push(item)
+    }
+  }
+
+  return { skills, features }
+}
+
+function buildBackgroundLines(
+  speciesDisplay: SpeciesReviewDisplay,
+  speciesSummaryLines: string[],
+  backgroundSummaryLines: string[],
+): string[] {
+  const lines: string[] = []
+
+  if (speciesDisplay.ancestryLabel !== null) {
+    lines.push(`Ancestry: ${speciesDisplay.ancestryLabel}`)
+  }
+
+  for (const line of speciesSummaryLines) {
+    if (isMetaSpeciesLine(line)) {
+      continue
+    }
+
+    if (line.startsWith('Ancestry: ')) {
+      continue
+    }
+
+    lines.push(line)
+  }
+
+  lines.push(
+    ...backgroundSummaryLines.filter(
+      (line) => !isPlaceholderLine(line) && line !== 'Not selected',
+    ),
+  )
+
+  return lines
+}
+
+export function organizeReviewSheet(input: {
+  summaries: Record<ReviewableStepId, string[]>
+  stepStatuses: Record<ReviewableStepId, StepStatus>
+  speciesDisplay: SpeciesReviewDisplay
+  classDisplay: ClassReviewDisplay
+  unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[]
+  hasSpellcastingCapability: boolean
+  spellLines: string[]
+}): ReviewSheetContent {
+  const { skills, features } = buildSkillsAndFeatures(
+    input.classDisplay,
+    input.summaries.class,
+  )
+
+  const equipmentLines = input.summaries.equipment.filter(
+    (line) => !isPlaceholderLine(line),
+  )
+  const backgroundLines = buildBackgroundLines(
+    input.speciesDisplay,
+    input.summaries.species,
+    input.summaries.background,
+  )
+  const spellLines = input.spellLines.filter((line) => !isPlaceholderLine(line))
+
+  const incompleteSteps = (Object.keys(input.stepStatuses) as ReviewableStepId[]).filter(
+    (stepId) =>
+      stepId !== 'basics' &&
+      (input.stepStatuses[stepId].completion !== 'complete' ||
+        input.stepStatuses[stepId].hasValidationErrors),
+  )
+
+  const sectionVisibility: ReviewSectionVisibility = {
+    skills: skills.length > 0,
+    equipment: equipmentLines.length > 0,
+    features: features.length > 0,
+    spells: input.hasSpellcastingCapability || spellLines.length > 0,
+    background: hasMeaningfulLines(backgroundLines),
+  }
+
+  return {
+    abilityScoreNotes: buildAbilityScoreNotes(input.summaries['ability-scores']),
+    coreStats: [
+      { label: 'Hit Points', value: '—' },
+      { label: 'Armor Class', value: '—' },
+      { label: 'Initiative', value: '—' },
+      { label: 'Speed', value: '—' },
+      { label: 'Proficiency', value: '—' },
+    ],
+    skillsAndSaves: skills,
+    equipmentLines,
+    features,
+    spellLines,
+    backgroundLines,
+    deferredRequirements: input.unresolvedDeferredRequirements,
+    incompleteSteps,
+    sectionVisibility,
+  }
+}

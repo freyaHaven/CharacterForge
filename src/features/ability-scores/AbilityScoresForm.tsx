@@ -1,9 +1,11 @@
-import { getAbilityModifier } from '../../domain/abilities'
 import { CREATION_METHOD_OPTIONS } from '../creation-method/creationMethodOptions'
 import type {
   AbilityScores,
   CharacterCreationMethod,
 } from '../../domain/types'
+import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
+import { AbilityScoreCard } from './AbilityScoreCard'
+import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
 import { formatPointBuyValidation } from './formatPointBuyValidation'
 import { formatRolledValidation } from './formatRolledValidation'
 import { PointBuyAbilityInputs } from './PointBuyAbilityInputs'
@@ -35,15 +37,6 @@ import {
   validateStandardArrayDraft,
 } from './standardArrayDraft'
 
-const ABILITY_LABELS: { key: keyof AbilityScores; label: string }[] = [
-  { key: 'strength', label: 'Strength' },
-  { key: 'dexterity', label: 'Dexterity' },
-  { key: 'constitution', label: 'Constitution' },
-  { key: 'intelligence', label: 'Intelligence' },
-  { key: 'wisdom', label: 'Wisdom' },
-  { key: 'charisma', label: 'Charisma' },
-]
-
 type AbilityScoresFormProps = {
   creationMethod: CharacterCreationMethod
   abilityScores: AbilityScores
@@ -71,10 +64,6 @@ type AbilityScoresFormProps = {
     rollId: string | null,
   ) => void
   randomSource?: () => number
-}
-
-function formatModifier(modifier: number): string {
-  return modifier >= 0 ? `+${modifier}` : `${modifier}`
 }
 
 export function AbilityScoresForm({
@@ -300,30 +289,31 @@ export function AbilityScoresForm({
           ) : null}
         </>
       ) : showManualInputs ? (
-        <div className="ability-grid">
-          {ABILITY_LABELS.map(({ key, label }) => {
-            const modifier = getAbilityModifier(abilityScores[key])
-
-            return (
-              <label key={key} className="ability-field">
-                <span>{label}</span>
-                <div className="ability-inputs">
-                  <input
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={abilityScores[key]}
-                    onChange={(event) => {
-                      const value = Number.parseInt(event.target.value, 10)
-                      onAbilityScoreChange(key, Number.isNaN(value) ? 10 : value)
-                    }}
-                  />
-                  <span className="modifier">{formatModifier(modifier)}</span>
-                </div>
-              </label>
-            )
-          })}
-        </div>
+        <AbilityScoreCardGrid>
+          {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => (
+            <AbilityScoreCard
+              key={key}
+              abilityKey={key}
+              abbreviation={abbreviation}
+              scoreLabel={label}
+              score={abilityScores[key]}
+              variant="interactive"
+              controls={
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  aria-label={`${label} score`}
+                  value={abilityScores[key]}
+                  onChange={(event) => {
+                    const value = Number.parseInt(event.target.value, 10)
+                    onAbilityScoreChange(key, Number.isNaN(value) ? 10 : value)
+                  }}
+                />
+              }
+            />
+          ))}
+        </AbilityScoreCardGrid>
       ) : null}
     </section>
   )

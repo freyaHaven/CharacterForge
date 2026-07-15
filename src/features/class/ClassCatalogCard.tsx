@@ -5,12 +5,14 @@ import { ClassIcon } from './ClassIcon'
 type ClassCatalogCardProps = {
   classDefinition: ClassDefinition
   isSelected: boolean
+  isPreview?: boolean
   onSelect: (classDefinition: ClassDefinition) => void
 }
 
 export function ClassCatalogCard({
   classDefinition,
   isSelected,
+  isPreview = false,
   onSelect,
 }: ClassCatalogCardProps) {
   const cardNameId = `class-card-${classDefinition.id}-name`
@@ -21,8 +23,8 @@ export function ClassCatalogCard({
         type="button"
         className={
           isSelected
-            ? 'class-picker__card class-picker__card--selected'
-            : 'class-picker__card'
+            ? 'class-picker__card class-picker__card--compact class-picker__card--selected'
+            : 'class-picker__card class-picker__card--compact'
         }
         aria-pressed={isSelected}
         aria-labelledby={cardNameId}
@@ -40,6 +42,9 @@ export function ClassCatalogCard({
         </span>
         <span id={cardNameId} className="class-picker__card-name">
           {classDefinition.name}
+          {isPreview ? (
+            <span className="class-picker__card-preview">Preview</span>
+          ) : null}
         </span>
       </button>
     </li>

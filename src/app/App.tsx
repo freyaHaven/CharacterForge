@@ -1,8 +1,22 @@
+import { useCallback, useState } from 'react'
+import {
+  formatCharacterFileError,
+  parseCharacterFile,
+  readCharacterFileText,
+} from '../adapters/characterFile'
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
 import { createBundledBackgroundCatalog } from '../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../adapters/bundledClassCatalog'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
+import { CharacterContextSummary } from '../features/character/CharacterContextSummary'
+import { LandingPage } from './LandingPage'
+import { useCharacterEditor } from './hooks/useCharacterEditor'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  isEditorSessionActive,
+} from './session/editorSession'
 import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
 import { BackgroundStep } from './wizard/steps/BackgroundStep'
 import { BasicsStep } from './wizard/steps/BasicsStep'
@@ -14,27 +28,71 @@ import { SpellsStep } from './wizard/steps/SpellsStep'
 import { ReviewStep } from './wizard/steps/ReviewStep'
 import { SpeciesStep } from './wizard/steps/SpeciesStep'
 import { CharacterWizard } from './wizard/CharacterWizard'
-import { useCharacterEditor } from './hooks/useCharacterEditor'
+import { WizardEditorActions } from './wizard/WizardEditorActions'
 import './app.css'
 
 const repository = createLocalStorageCharacterRepository()
 const speciesCatalog = createBundledSpeciesCatalog()
 const classCatalog = createBundledClassCatalog()
-
 const backgroundCatalog = createBundledBackgroundCatalog()
+
+type AppView = 'landing' | 'editor'
 
 type AppProps = {
   randomSource?: () => number
 }
 
 export default function App({ randomSource = Math.random }: AppProps) {
+  const [appView, setAppView] = useState<AppView>(() =>
+    isEditorSessionActive() ? 'editor' : 'landing',
+  )
+  const [importError, setImportError] = useState<string | null>(null)
+  const [shouldRestoreFromStorage] = useState(() => isEditorSessionActive())
+
   const editor = useCharacterEditor({
     repository,
     speciesCatalog,
     classCatalog,
     backgroundCatalog,
     randomSource,
+    restoreFromStorage: shouldRestoreFromStorage,
   })
+
+  const handleCreateNew = useCallback(async () => {
+    setImportError(null)
+    activateEditorSession()
+    await editor.startNewCharacter()
+    setAppView('editor')
+  }, [editor])
+
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      setImportError(null)
+
+      try {
+        const content = await readCharacterFileText(file)
+        const result = parseCharacterFile(content)
+
+        if (!result.ok) {
+          setImportError(formatCharacterFileError(result.reason))
+          return
+        }
+
+        activateEditorSession(result.character.id)
+        await editor.importCharacter(result.character)
+        setAppView('editor')
+      } catch {
+        setImportError('The selected file could not be read.')
+      }
+    },
+    [editor],
+  )
+
+  const handleGoHome = useCallback(() => {
+    setImportError(null)
+    clearEditorSession()
+    setAppView('landing')
+  }, [])
 
   if (editor.isLoading) {
     return <p className="status">Loading character...</p>
@@ -45,145 +103,205 @@ export default function App({ randomSource = Math.random }: AppProps) {
 
   return (
     <main className="app">
-      <header>
+      <header className="app-brand">
         <h1>CharacterForge</h1>
-        <p>A modern D&amp;D character creator.</p>
+        <p className="app-brand__tagline">A modern D&amp;D character creator.</p>
       </header>
 
-      <CharacterWizard
-        activeStepId={editor.activeStepId}
-        stepContext={editor.wizardStepContext}
-        stepStatuses={editor.stepStatuses}
-        onStepChange={editor.setActiveStepId}
-        stepContent={{
-          basics: (
-            <BasicsStep
-              name={character.name}
-              editionId={character.editionId}
-              onNameChange={editor.updateName}
-              onEditionChange={(editionId) => {
-                void editionChange.handleEditionChange(editionId)
-              }}
-              onBasicsTouched={() => editor.setBasicsTouched(true)}
-            />
-          ),
-          species: (
-            <SpeciesStep
-              editionId={character.editionId}
-              committedSelection={character.species}
-              draft={species.speciesDraft}
-              catalog={editor.speciesCatalog}
-              onDraftChange={species.setSpeciesDraft}
-              onCommittedSelectionChange={species.commitSpeciesSelection}
-            />
-          ),
-          'character-details': (
-            <CharacterDetailsStep
-              speciesSelection={character.species}
-              details={character.details}
-              catalog={editor.speciesCatalog}
-              onDetailsChange={editor.updateDetails}
-              onDetailsTouched={() => editor.setDetailsTouched(true)}
-            />
-          ),
-          'ability-scores': (
-            <AbilityScoresStep
-              creationMethod={character.creationMethod}
-              abilityScores={character.abilityScores}
-              standardArrayDraft={abilityScores.standardArrayDraft}
-              pointBuyDraft={abilityScores.pointBuyDraft}
-              rolledDraft={abilityScores.rolledDraft}
-              prefersReducedMotion={editor.prefersReducedMotion}
-              onCreationMethodChange={abilityScores.handleCreationMethodChange}
-              onAbilityScoreChange={abilityScores.updateAbilityScore}
-              onStandardArrayDraftChange={abilityScores.updateStandardArrayDraft}
-              onClearStandardArray={abilityScores.clearStandardArrayDraft}
-              onApplyDefaultStandardArray={abilityScores.applyDefaultStandardArray}
-              onStartPointBuy={abilityScores.startPointBuy}
-              onResetPointBuy={abilityScores.resetPointBuy}
-              onAdjustPointBuyScore={abilityScores.updatePointBuyDraft}
-              onRolledPoolReady={abilityScores.replaceRolledDraft}
-              onRolledAssignmentChange={abilityScores.updateRolledAssignment}
-              randomSource={editor.randomSource}
-            />
-          ),
-          class: (
-            <ClassStep
-              editionId={character.editionId}
-              committedSelection={character.class}
-              draft={classEditor.classDraft}
-              catalog={editor.classCatalog}
-              onDraftChange={classEditor.setClassDraft}
-              onCommittedSelectionChange={classEditor.commitClassSelection}
-            />
-          ),
-          background: (
-            <BackgroundStep
-              editionId={character.editionId}
-              committedSelection={character.background}
-              draft={background.backgroundDraft}
-              catalog={editor.backgroundCatalog}
-              onDraftChange={background.setBackgroundDraft}
-              onCommittedSelectionChange={background.commitBackgroundSelection}
-            />
-          ),
-          equipment: <EquipmentStep />,
-          feats: <FeatsStep />,
-          spells: <SpellsStep />,
-          review: (
-            <ReviewStep
-              reviewableStepIds={editor.reviewableStepIds}
-              stepStatuses={{
-                basics: editor.stepStatuses.basics,
-                species: editor.stepStatuses.species,
-                'character-details': editor.stepStatuses['character-details'],
-                'ability-scores': editor.stepStatuses['ability-scores'],
-                class: editor.stepStatuses.class,
-                background: editor.stepStatuses.background,
-                equipment: editor.stepStatuses.equipment,
-                feats: editor.stepStatuses.feats,
-                spells: editor.stepStatuses.spells,
-              }}
-              summaries={editor.reviewSummaries}
-              characterDetailsReview={editor.characterDetailsReviewSections}
-              finishPolicy={editor.finishPolicy}
-              finishBlockedMessage={editor.finishBlockedMessage}
-              finishMessage={editor.finishMessage}
-              onEditStep={editor.setActiveStepId}
-              onFinish={() => void editor.handleFinish()}
-            />
-          ),
-        }}
-      />
+      {appView === 'landing' ? (
+        <LandingPage
+          importError={importError}
+          onCreateNew={() => {
+            void handleCreateNew()
+          }}
+          onImportFile={(file) => {
+            void handleImportFile(file)
+          }}
+        />
+      ) : (
+        <>
+          <CharacterWizard
+            activeStepId={editor.activeStepId}
+            stepContext={editor.wizardStepContext}
+            stepStatuses={editor.stepStatuses}
+            onStepChange={editor.setActiveStepId}
+            onGoHome={handleGoHome}
+            characterContext={
+              <CharacterContextSummary
+                character={character}
+                activeStepId={editor.activeStepId}
+                speciesCatalog={editor.speciesCatalog}
+                classCatalog={editor.classCatalog}
+                speciesDraft={species.speciesDraft}
+                classDrafts={classEditor.classDrafts}
+              />
+            }
+            editorActions={
+              <WizardEditorActions
+                canSave={editor.canSaveCharacterState}
+                saveMessage={editor.saveMessage}
+                saveBlockedMessage={editor.saveBlockedMessage}
+                onSaveDraft={() => {
+                  void editor.handleSaveDraft()
+                }}
+                onExportCharacter={editor.handleExportCharacter}
+              />
+            }
+            stepContent={{
+              basics: (
+                <BasicsStep
+                  name={character.name}
+                  editionId={character.editionId}
+                  onNameChange={editor.updateName}
+                  onEditionChange={(editionId) => {
+                    void editionChange.handleEditionChange(editionId)
+                  }}
+                  onBasicsTouched={() => editor.setBasicsTouched(true)}
+                />
+              ),
+              species: (
+                <SpeciesStep
+                  editionId={character.editionId}
+                  committedSelection={character.species}
+                  draft={species.speciesDraft}
+                  catalog={editor.speciesCatalog}
+                  onDraftChange={species.setSpeciesDraft}
+                  onCommittedSelectionChange={species.commitSpeciesSelection}
+                />
+              ),
+              'character-details': (
+                <CharacterDetailsStep
+                  speciesSelection={character.species}
+                  details={character.details}
+                  catalog={editor.speciesCatalog}
+                  onDetailsChange={editor.updateDetails}
+                  onDetailsTouched={() => editor.setDetailsTouched(true)}
+                />
+              ),
+              'ability-scores': (
+                <AbilityScoresStep
+                  creationMethod={character.creationMethod}
+                  abilityScores={character.abilityScores}
+                  standardArrayDraft={abilityScores.standardArrayDraft}
+                  pointBuyDraft={abilityScores.pointBuyDraft}
+                  rolledDraft={abilityScores.rolledDraft}
+                  prefersReducedMotion={editor.prefersReducedMotion}
+                  onCreationMethodChange={abilityScores.handleCreationMethodChange}
+                  onAbilityScoreChange={abilityScores.updateAbilityScore}
+                  onStandardArrayDraftChange={abilityScores.updateStandardArrayDraft}
+                  onClearStandardArray={abilityScores.clearStandardArrayDraft}
+                  onApplyDefaultStandardArray={abilityScores.applyDefaultStandardArray}
+                  onStartPointBuy={abilityScores.startPointBuy}
+                  onResetPointBuy={abilityScores.resetPointBuy}
+                  onAdjustPointBuyScore={abilityScores.updatePointBuyDraft}
+                  onRolledPoolReady={abilityScores.replaceRolledDraft}
+                  onRolledAssignmentChange={abilityScores.updateRolledAssignment}
+                  randomSource={editor.randomSource}
+                />
+              ),
+              class: (
+                <ClassStep
+                  editionId={character.editionId}
+                  buildMode={classEditor.buildMode}
+                  targetLevel={classEditor.targetLevel}
+                  committedClasses={classEditor.committedClasses}
+                  classDrafts={classEditor.classDrafts}
+                  startingClassInstanceId={classEditor.startingClassInstanceId}
+                  activeInstanceId={classEditor.activeInstanceId}
+                  draft={classEditor.classDraft}
+                  catalog={editor.classCatalog}
+                  onBuildModeChange={classEditor.setBuildMode}
+                  onReturnToClassPathIntro={classEditor.returnToClassPathIntro}
+                  onSwitchToMulticlass={classEditor.switchToMulticlass}
+                  onSwitchToSingleClass={classEditor.switchToSingleClass}
+                  onSyncTargetLevel={classEditor.syncTargetLevel}
+                  onActiveInstanceChange={classEditor.setActiveInstanceId}
+                  onDraftChange={classEditor.setClassDraft}
+                  onCommitInstance={classEditor.commitClassInstance}
+                  onRemoveInstance={classEditor.removeClassInstance}
+                  onStartingClassChange={classEditor.setStartingClass}
+                  onSelectOrAddClass={(classDefinition) =>
+                    classEditor.selectOrAddClass(classDefinition.id)
+                  }
+                  onToggleMulticlassClass={classEditor.toggleMulticlassClass}
+                  onMulticlassInstanceLevelChange={
+                    classEditor.setMulticlassInstanceLevel
+                  }
+                />
+              ),
+              background: (
+                <BackgroundStep
+                  editionId={character.editionId}
+                  committedSelection={character.background}
+                  draft={background.backgroundDraft}
+                  catalog={editor.backgroundCatalog}
+                  onDraftChange={background.setBackgroundDraft}
+                  onCommittedSelectionChange={background.commitBackgroundSelection}
+                />
+              ),
+              equipment: <EquipmentStep />,
+              feats: <FeatsStep />,
+              spells: <SpellsStep />,
+              review: (
+                <ReviewStep
+                  characterName={character.name}
+                  abilityScores={character.abilityScores}
+                  speciesId={
+                    species.speciesDraft?.speciesId ??
+                    character.species?.speciesId ??
+                    null
+                  }
+                  classId={
+                    classEditor.classDraft?.classId ??
+                    classEditor.committedSelection?.classId ??
+                    null
+                  }
+                  speciesDisplay={editor.speciesReviewDisplay}
+                  classDisplay={editor.classReviewDisplay}
+                  hasSpellcastingCapability={
+                    editor.spellcastingReview.hasSpellcastingCapability
+                  }
+                  spellLines={editor.spellcastingReview.spellLines}
+                  unresolvedDeferredRequirements={
+                    editor.unresolvedDeferredRequirements
+                  }
+                  stepStatuses={{
+                    basics: editor.stepStatuses.basics,
+                    species: editor.stepStatuses.species,
+                    'character-details': editor.stepStatuses['character-details'],
+                    'ability-scores': editor.stepStatuses['ability-scores'],
+                    class: editor.stepStatuses.class,
+                    background: editor.stepStatuses.background,
+                    equipment: editor.stepStatuses.equipment,
+                    feats: editor.stepStatuses.feats,
+                    spells: editor.stepStatuses.spells,
+                  }}
+                  summaries={editor.reviewSummaries}
+                  characterDetailsReview={editor.characterDetailsReviewSections}
+                  finishPolicy={editor.finishPolicy}
+                  finishBlockedMessage={editor.finishBlockedMessage}
+                  finishMessage={editor.finishMessage}
+                  onEditStep={editor.setActiveStepId}
+                  onFinish={() => void editor.handleFinish()}
+                />
+              ),
+            }}
+          />
 
-      <EditionChangeDialog
-        open={editionChange.pendingEditionChange !== null}
-        clearsSpecies={
-          editionChange.pendingEditionChange?.clearsSpecies ?? false
-        }
-        clearsClass={editionChange.pendingEditionChange?.clearsClass ?? false}
-        clearsBackground={
-          editionChange.pendingEditionChange?.clearsBackground ?? false
-        }
-        onConfirm={editionChange.confirmEditionChange}
-        onCancel={editionChange.cancelEditionChange}
-      />
-
-      <div className="actions">
-        <button
-          type="button"
-          disabled={!editor.canSaveCharacterState}
-          onClick={() => void editor.handleSaveDraft()}
-        >
-          Save draft
-        </button>
-        {editor.saveMessage !== null ? (
-          <p className="status">{editor.saveMessage}</p>
-        ) : null}
-        {!editor.canSaveCharacterState ? (
-          <p className="status">{editor.saveBlockedMessage}</p>
-        ) : null}
-      </div>
+          <EditionChangeDialog
+            open={editionChange.pendingEditionChange !== null}
+            clearsSpecies={
+              editionChange.pendingEditionChange?.clearsSpecies ?? false
+            }
+            clearsClass={editionChange.pendingEditionChange?.clearsClass ?? false}
+            clearsBackground={
+              editionChange.pendingEditionChange?.clearsBackground ?? false
+            }
+            onConfirm={editionChange.confirmEditionChange}
+            onCancel={editionChange.cancelEditionChange}
+          />
+        </>
+      )}
     </main>
   )
 }

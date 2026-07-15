@@ -4,6 +4,13 @@ import { createDefaultCharacterDetails } from '../../domain/character/details'
 import type { Character } from '../../domain/types'
 import { parseStoredCharacter } from './parseStoredCharacter'
 import { serializeCharacter } from './serializeCharacter'
+import { CURRENT_SCHEMA_VERSION } from './storedCharacter'
+
+const emptyClassState = {
+  targetLevel: 1,
+  classes: [],
+  startingClassInstanceId: null,
+} as const
 
 function createTestCharacter(
   overrides: Partial<Character> = {},
@@ -26,15 +33,42 @@ function createTestCharacter(
 }
 
 function withMigratedDefaults(
-  character: Omit<Character, 'details'> & Partial<Pick<Character, 'details'>>,
+  character: {
+    id: string
+    name: string
+    editionId: Character['editionId']
+    creationMethod: Character['creationMethod']
+    abilityScores: Character['abilityScores']
+    species?: Character['species']
+    background?: Character['background']
+    details?: Character['details']
+    targetLevel?: number
+    classes?: Character['classes']
+    startingClassInstanceId?: string | null
+    class?: unknown
+  },
 ): Character {
+  const {
+    class: _legacyClass,
+    species,
+    background,
+    details,
+    targetLevel,
+    classes,
+    startingClassInstanceId,
+    ...rest
+  } = character
+
   return {
-    ...character,
-    species: character.species ?? null,
-    class: character.class ?? null,
-    background: character.background ?? null,
-    details: character.details ?? createDefaultCharacterDetails(),
-  } as Character
+    ...rest,
+    species: species ?? null,
+    targetLevel: targetLevel ?? emptyClassState.targetLevel,
+    classes: classes ?? [...emptyClassState.classes],
+    startingClassInstanceId:
+      startingClassInstanceId ?? emptyClassState.startingClassInstanceId,
+    background: background ?? null,
+    details: details ?? createDefaultCharacterDetails(),
+  }
 }
 
 describe('parseStoredCharacter', () => {
@@ -48,7 +82,7 @@ describe('parseStoredCharacter', () => {
     expect(parseStoredCharacter(raw)).toEqual({ ok: true, character })
   })
 
-  it('migrates an unversioned save and adds species null', () => {
+  it('migrates an unversioned save into current class state', () => {
     const legacy = {
       id: 'char-1',
       name: 'Aldric',
@@ -71,7 +105,7 @@ describe('parseStoredCharacter', () => {
     })
   })
 
-  it('migrates a schema v1 save to v2 with species null', () => {
+  it('migrates a schema v1 save with empty class state', () => {
     const v1Character = {
       id: 'char-1',
       name: 'Aldric',
@@ -236,7 +270,7 @@ describe('parseStoredCharacter', () => {
     })
   })
 
-  it('migrates a schema v7 save to v8 character details', () => {
+  it('migrates a schema v7 save to current character details', () => {
     const v7Character = {
       id: 'char-1',
       name: 'Aldric',
@@ -274,8 +308,14 @@ describe('parseStoredCharacter', () => {
 
     expect(parseStoredCharacter(raw)).toEqual({
       ok: true,
-      character: {
-        ...v7Character,
+      character: withMigratedDefaults({
+        id: v7Character.id,
+        name: v7Character.name,
+        editionId: v7Character.editionId,
+        creationMethod: v7Character.creationMethod,
+        abilityScores: v7Character.abilityScores,
+        species: null,
+        background: null,
         details: {
           age: '30',
           height: '165 cm',
@@ -292,8 +332,45 @@ describe('parseStoredCharacter', () => {
           flaws: '',
           backstoryNotes: 'Explorer',
         },
+      }),
+    })
+  })
+
+  it('migrates a schema v3 save with legacy class through the full pipeline', () => {
+    const raw = JSON.stringify({
+      schemaVersion: 3,
+      character: {
+        id: 'char-1',
+        name: 'Aldric',
+        editionId: 'srd-2014' as const,
+        creationMethod: 'manual' as const,
+        abilityScores: createTestCharacter().abilityScores,
+        species: null,
+        class: {
+          classId: 'srd-2024:fighter',
+          level: 2,
+          choices: { 'fighting-style': 'defense' },
+        },
       },
     })
+
+    const result = parseStoredCharacter(raw)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.character.targetLevel).toBe(2)
+      expect(result.character.classes).toHaveLength(1)
+      expect(result.character.classes[0]).toEqual(
+        expect.objectContaining({
+          classId: 'srd-2024:fighter',
+          level: 2,
+          choices: { 'fighting-style': 'defense' },
+        }),
+      )
+      expect(result.character.startingClassInstanceId).toBe(
+        result.character.classes[0].instanceId,
+      )
+    }
   })
 
   it('rejects an unsupported future schema version', () => {
@@ -324,7 +401,7 @@ describe('parseStoredCharacter', () => {
 
   it('rejects versioned saves with invalid character data', () => {
     const raw = JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       character: { ...createTestCharacter(), editionId: 'srd-2020' },
     })
 

@@ -34,16 +34,32 @@ export function formatAbilityList(abilities: AbilityId[]): string {
   return abilities.map(formatAbilityLabel).join(', ')
 }
 
+export function formatAbilityChipLabels(abilities: AbilityId[]): string[] {
+  return abilities.map(formatAbilityLabel)
+}
+
 export function formatArmorProficiencies(
   proficiencies: ClassDefinition['proficiencies']['armor'],
 ): string {
   return proficiencies.map((entry) => ARMOR_LABELS[entry]).join(', ')
 }
 
+export function formatArmorProficiencyChipLabels(
+  proficiencies: ClassDefinition['proficiencies']['armor'],
+): string[] {
+  return proficiencies.map((entry) => ARMOR_LABELS[entry])
+}
+
 export function formatWeaponProficiencies(
   proficiencies: ClassDefinition['proficiencies']['weapons'],
 ): string {
   return proficiencies.map((entry) => WEAPON_LABELS[entry]).join(', ')
+}
+
+export function formatWeaponProficiencyChipLabels(
+  proficiencies: ClassDefinition['proficiencies']['weapons'],
+): string[] {
+  return proficiencies.map((entry) => WEAPON_LABELS[entry])
 }
 
 export function formatHitDie(definition: ClassDefinition): string {

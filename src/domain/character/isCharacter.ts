@@ -5,8 +5,13 @@ import type {
 } from '../types'
 import { isCharacterDetails } from './details'
 import { isBackgroundSelection } from '../background/isBackgroundSelection'
-import { isClassSelection } from '../class/isClassSelection'
+import { isCharacterClassSelection } from '../class/isCharacterClassSelection'
 import { isSpeciesSelection } from '../species/isSpeciesSelection'
+import {
+  getAllocatedLevel,
+  hasUniqueClassIds,
+  isValidCharacterLevel,
+} from './classLevels'
 import type { AbilityScores } from '../types'
 
 const ABILITY_KEYS: (keyof AbilityScores)[] = [
@@ -54,8 +59,31 @@ function isBackground(value: unknown): boolean {
   return value === null || isBackgroundSelection(value)
 }
 
-function isClass(value: unknown): boolean {
-  return value === null || isClassSelection(value)
+function isStartingClassReferenceValid(
+  classes: Character['classes'],
+  startingClassInstanceId: unknown,
+): boolean {
+  if (classes.length === 0) {
+    return startingClassInstanceId === null
+  }
+
+  if (typeof startingClassInstanceId !== 'string') {
+    return false
+  }
+
+  return classes.some((entry) => entry.instanceId === startingClassInstanceId)
+}
+
+function isClasses(value: unknown): value is Character['classes'] {
+  if (!Array.isArray(value)) {
+    return false
+  }
+
+  if (!value.every(isCharacterClassSelection)) {
+    return false
+  }
+
+  return hasUniqueClassIds(value)
 }
 
 export function isCharacter(value: unknown): value is Character {
@@ -73,7 +101,14 @@ export function isCharacter(value: unknown): value is Character {
     isCharacterCreationMethod(candidate.creationMethod) &&
     isAbilityScores(candidate.abilityScores) &&
     isSpecies(candidate.species) &&
-    isClass(candidate.class) &&
+    isValidCharacterLevel(candidate.targetLevel) &&
+    isClasses(candidate.classes) &&
+    isStartingClassReferenceValid(
+      candidate.classes as Character['classes'],
+      candidate.startingClassInstanceId,
+    ) &&
+    getAllocatedLevel(candidate.classes as Character['classes']) <=
+      (candidate.targetLevel as number) &&
     isBackground(candidate.background) &&
     isCharacterDetails(candidate.details)
   )

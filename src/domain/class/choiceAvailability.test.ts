@@ -13,7 +13,7 @@ describe('choiceAvailability', () => {
 
     expect(
       getChoicesAvailableAtLevel(fighterSrd2024, 3).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies', 'martial-archetype'])
+    ).toEqual(['fighting-style', 'skill-proficiencies', 'fighter-subclass'])
   })
 
   it('prunes choices that are no longer available while preserving others', () => {
@@ -21,7 +21,7 @@ describe('choiceAvailability', () => {
       {
         'fighting-style': 'archery',
         'skill-proficiencies': ['athletics', 'perception'],
-        'martial-archetype': 'champion',
+        'fighter-subclass': 'champion',
       },
       getChoicesAvailableAtLevel(fighterSrd2024, 1),
     )

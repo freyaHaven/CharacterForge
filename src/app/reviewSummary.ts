@@ -1,5 +1,5 @@
 import { getAbilityModifier } from '../domain/abilities'
-import type { AbilityScores, Character } from '../domain/types'
+import type { AbilityScores, Character, ResolvedDeferredCharacterRequirement } from '../domain/types'
 import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../features/background/backgroundSelectionDraft'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
@@ -24,13 +24,13 @@ export function getReviewableStepIds(
   context: WizardStepContext,
 ): ReviewableStepId[] {
   return getVisibleWizardSteps(context)
-    .filter((step): step is { id: ReviewableStepId } => step.id !== 'review')
     .map((step) => step.id)
+    .filter((id): id is ReviewableStepId => id !== 'review')
 }
 
-export const REVIEWABLE_STEP_IDS: readonly ReviewableStepId[] = WIZARD_STEPS.filter(
-  (step): step is { id: ReviewableStepId } => step.id !== 'review',
-).map((step) => step.id)
+export const REVIEWABLE_STEP_IDS: readonly ReviewableStepId[] = WIZARD_STEPS.map(
+  (step) => step.id,
+).filter((id): id is ReviewableStepId => id !== 'review')
 
 export type SpeciesReviewDisplay = {
   speciesName: string | null
@@ -56,6 +56,7 @@ export type ReviewSummaryContext = {
   classDisplay: ClassReviewDisplay
   backgroundDraft: BackgroundSelectionDraft | null
   backgroundDisplay: BackgroundReviewDisplay
+  unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[]
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
@@ -160,6 +161,13 @@ function buildClassSummary(
     }
     for (const choiceLine of context.classDisplay.choiceLines) {
       lines.push(`${choiceLine.prompt}: ${choiceLine.summary}`)
+    }
+    lines.push('Class selection complete')
+    if (context.unresolvedDeferredRequirements.length > 0) {
+      lines.push('Remaining character decisions:')
+      for (const requirement of context.unresolvedDeferredRequirements) {
+        lines.push(`- ${requirement.description}`)
+      }
     }
     return lines
   }
@@ -276,8 +284,6 @@ export function buildReviewSummaries(
   context: ReviewSummaryContext,
   stepStatuses: Record<ReviewableStepId, StepStatus>,
 ): Record<ReviewableStepId, string[]> {
-  const wizardContext = createWizardStepContext(context.character)
-
   return {
     basics: buildBasicsSummary(context),
     species: buildSpeciesSummary(context, stepStatuses.species),

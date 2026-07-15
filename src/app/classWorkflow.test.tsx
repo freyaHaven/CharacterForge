@@ -1,17 +1,28 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
+import { createDefaultCharacter } from '../domain/character/defaults'
+import {
+  createTestFighterClassInstance,
+  withSingleClassInstance,
+} from '../domain/character/characterClassSelection'
 import {
   completeFighterSelection,
   goToClassStep,
   goToSpeciesStep,
   waitForClassLoaded,
 } from '../test/wizardTestUtils'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  waitForAppReady,
+} from '../test/characterEditorTestUtils'
+import { clearClassEditorWorkflow } from './session/classEditorWorkflowStorage'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -26,7 +37,9 @@ vi.mock('../adapters/localStorageCharacterRepository', () => ({
 }))
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
-  return {
+  const fighterInstance = createTestFighterClassInstance()
+
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2024',
@@ -40,20 +53,15 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
-    class: {
-      classId: 'srd-2024:fighter',
-      level: 1,
-      choices: {
-        'fighting-style': 'defense',
-        'skill-proficiencies': ['athletics', 'perception'],
-      },
-    },
+    ...withSingleClassInstance(fighterInstance),
     background: null,
     ...overrides,
-  }
+  })
 }
 
 async function renderLoadedApp(character = createStoredCharacter()) {
+  clearEditorSession()
+  activateEditorSession(character.id)
   loadMock.mockResolvedValue(character)
   const user = userEvent.setup()
   render(
@@ -62,9 +70,7 @@ async function renderLoadedApp(character = createStoredCharacter()) {
     </StrictMode>,
   )
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await waitForAppReady()
 
   return { user, character }
 }
@@ -74,14 +80,23 @@ function getEditionSelect() {
 }
 
 function expectSelectedClass(name: string) {
-  const selection = document.querySelector('.class-picker__selection')
+  const overviewColumn = screen
+    .getByRole('heading', { name: 'Class Overview', level: 3 })
+    .closest('.class-picker__overview-column')
 
-  expect(selection).not.toBeNull()
-  expect(selection).toHaveTextContent(new RegExp(`Selected:\\s*${name}`, 'i'))
+  expect(overviewColumn).not.toBeNull()
+  expect(
+    within(overviewColumn as HTMLElement).getByText(name, {
+      selector: '.class-picker__overview-class-name',
+    }),
+  ).toBeInTheDocument()
+  expect(screen.getByText('Class selection complete')).toBeInTheDocument()
 }
 
 describe('Class workflow in App', () => {
   beforeEach(() => {
+    clearEditorSession()
+    clearClassEditorWorkflow('char-1')
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)
@@ -103,19 +118,48 @@ describe('Class workflow in App', () => {
     expect(screen.getByRole('checkbox', { name: 'Perception' })).toBeChecked()
   })
 
+  it('shows compact character context in the sticky wizard header', async () => {
+    const { user } = await renderLoadedApp()
+    await goToClassStep(user, screen)
+    await waitForClassLoaded(screen)
+
+    const stickyHeader = document.querySelector(
+      '.character-wizard__sticky-header',
+    )
+    expect(stickyHeader).not.toBeNull()
+
+    await waitFor(() => {
+      expect(
+        within(stickyHeader as HTMLElement).getByText('Aldric · Dwarf'),
+      ).toBeInTheDocument()
+    })
+
+    expect(
+      within(stickyHeader as HTMLElement).getByText('Fighter 1'),
+    ).toBeInTheDocument()
+    expect(
+      within(stickyHeader as HTMLElement).getByText(
+        'Primary abilities: Strength, Dexterity',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('keeps an incomplete fighter draft-only and blocks saving', async () => {
     const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
-      class: null,
+      classes: [],
+      startingClassInstanceId: null,
+      targetLevel: 1,
     })
     await goToClassStep(user, screen)
     await waitForClassLoaded(screen)
 
+    await user.click(screen.getByRole('radio', { name: /single class/i }))
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
     expect(
-      document.querySelector('.class-picker__selection'),
-    ).toHaveTextContent(/Selecting:.*complete required choices to confirm/i)
+      document.querySelector('.class-picker__summary-status'),
+    ).toHaveTextContent(/Complete required choices to confirm/i)
     expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
     expect(saveMock).not.toHaveBeenCalled()
   })
@@ -123,7 +167,9 @@ describe('Class workflow in App', () => {
   it('saves the stable class selection after completing fighter choices', async () => {
     const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
-      class: null,
+      classes: [],
+      startingClassInstanceId: null,
+      targetLevel: 1,
     })
 
     await completeFighterSelection(user, screen, {
@@ -135,14 +181,78 @@ describe('Class workflow in App', () => {
 
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        class: {
-          classId: 'srd-2024:fighter',
-          level: 1,
-          choices: {
-            'fighting-style': 'great-weapon-fighting',
-            'skill-proficiencies': ['history', 'insight'],
-          },
-        },
+        targetLevel: 1,
+        classes: [
+          expect.objectContaining({
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {
+              'fighting-style': 'great-weapon-fighting',
+              'skill-proficiencies': ['history', 'insight'],
+            },
+          }),
+        ],
+        startingClassInstanceId: expect.any(String),
+      }),
+    )
+  })
+
+  it('saves a multiclass build with derived character level and starting class', async () => {
+    const { user } = await renderLoadedApp({
+      ...createStoredCharacter(),
+      classes: [],
+      startingClassInstanceId: null,
+      targetLevel: 1,
+    })
+
+    await goToClassStep(user, screen)
+    await waitForClassLoaded(screen)
+    await user.click(screen.getByRole('radio', { name: /multiclass/i }))
+    await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await user.click(screen.getByRole('button', { name: /Barbarian/i }))
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText('Character level: 2').length,
+      ).toBeGreaterThan(0)
+    })
+
+    await user.click(screen.getByRole('radio', { name: /^Fighter$/i }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /configure your classes/i }),
+      ).toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: /Defense/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('radio', { name: /Defense/i }))
+    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
+    })
+
+    await user.click(screen.getByRole('button', { name: /save draft/i }))
+
+    expect(saveMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetLevel: 2,
+        classes: expect.arrayContaining([
+          expect.objectContaining({
+            classId: 'srd-2024:fighter',
+            level: 1,
+          }),
+          expect.objectContaining({
+            classId: 'srd-2024:barbarian',
+            level: 1,
+          }),
+        ]),
+        startingClassInstanceId: expect.any(String),
       }),
     )
   })
@@ -186,9 +296,9 @@ describe('Class workflow in App', () => {
     expect(getEditionSelect()).toHaveValue('srd-2014')
     await goToClassStep(user, screen)
     await waitForClassLoaded(screen)
-    expect(document.querySelector('.class-picker__selection')).toBeNull()
+    expect(document.querySelector('.class-picker__summary-status')).toBeNull()
     expect(
-      screen.getByText(/no bundled classes are available for this rules edition/i),
+      screen.getByText(/how will your character gain their class levels/i),
     ).toBeInTheDocument()
   })
 })

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { Character } from '../../../domain/types'
 import { migrateV0ToV1 } from './migrateV0ToV1'
 
-function createLegacyCharacter(): Omit<Character, 'species'> {
+/** Pre-species / pre-class schema shape used only for v0 migration fixtures. */
+function createLegacyCharacter() {
   return {
     id: 'char-1',
     name: 'Aldric',
-    editionId: 'srd-2014',
-    creationMethod: 'point-buy',
+    editionId: 'srd-2014' as const,
+    creationMethod: 'point-buy' as const,
     abilityScores: {
       strength: 15,
       dexterity: 14,

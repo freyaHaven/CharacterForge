@@ -9,6 +9,10 @@ import {
   getCreationMethodSelect,
 } from '../test/abilityScoreTestUtils'
 import { goToAbilityScoresStep } from '../test/wizardTestUtils'
+import {
+  clearEditorSession,
+  openCharacterEditor,
+} from '../test/characterEditorTestUtils'
 import { MINIMUM_POINT_BUY_ASSIGNMENT } from '../rules/point-buy'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
@@ -27,10 +31,8 @@ async function renderLoadedApp() {
   const user = userEvent.setup()
   render(<App />)
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
-
+  await openCharacterEditor(user)
+  saveMock.mockClear()
   await goToAbilityScoresStep(user, screen)
 
   return { user }
@@ -48,6 +50,7 @@ async function makeInvalidPointBuyScores() {
 
 describe('Point Buy workflow in App', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
     loadMock.mockResolvedValue(null)

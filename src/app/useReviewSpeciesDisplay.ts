@@ -12,7 +12,7 @@ const EMPTY_DISPLAY: SpeciesReviewDisplay = {
 
 export function useReviewSpeciesDisplay(
   catalog: SpeciesCatalog,
-  editionId: EditionId,
+  _editionId: EditionId,
   committedSelection: SpeciesSelection | null,
   speciesDraft: SpeciesSelectionDraft | null,
 ): SpeciesReviewDisplay {

@@ -196,4 +196,128 @@ describe('CharacterWizard', () => {
       String(VISIBLE_STEPS.length),
     )
   })
+
+  it('keeps step navigation in the sticky header and Back/Next in the content footer', () => {
+    render(<WizardHarness initialStepId="class" />)
+
+    const stickyHeader = document.querySelector(
+      '.character-wizard__sticky-header',
+    )
+    const content = document.querySelector('.character-wizard__content')
+
+    expect(stickyHeader).not.toBeNull()
+    expect(content).not.toBeNull()
+
+    expect(
+      within(stickyHeader as HTMLElement).getByRole('navigation', {
+        name: /character creation steps/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stickyHeader as HTMLElement).getByRole('button', {
+        name: /^class,/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stickyHeader as HTMLElement).queryByRole('button', {
+        name: /^back$/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stickyHeader as HTMLElement).queryByRole('button', {
+        name: /^next$/i,
+      }),
+    ).not.toBeInTheDocument()
+
+    expect(
+      within(content as HTMLElement).getByRole('button', { name: /^back$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(content as HTMLElement).getByRole('button', { name: /^next$/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders Home before the wizard steps when provided', () => {
+    render(
+      <CharacterWizard
+        activeStepId="basics"
+        stepContext={createDefaultWizardStepContext()}
+        stepStatuses={createStepStatuses()}
+        onStepChange={() => {}}
+        onGoHome={() => {}}
+      />,
+    )
+
+    expect(
+      screen.getByRole('button', { name: /return to home/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders editor actions in the sticky header when provided', () => {
+    render(
+      <CharacterWizard
+        activeStepId="basics"
+        stepContext={createDefaultWizardStepContext()}
+        stepStatuses={createStepStatuses()}
+        onStepChange={() => {}}
+        editorActions={<button type="button">Save draft</button>}
+      />,
+    )
+
+    const stickyHeader = document.querySelector(
+      '.character-wizard__sticky-header',
+    )
+
+    expect(
+      within(stickyHeader as HTMLElement).getByRole('button', {
+        name: /save draft/i,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders step content outside the sticky header region', () => {
+    render(<WizardHarness initialStepId="class" />)
+
+    const stickyHeader = document.querySelector(
+      '.character-wizard__sticky-header',
+    )
+    const content = document.querySelector('.character-wizard__content')
+
+    expect(stickyHeader).not.toBeNull()
+    expect(content).not.toBeNull()
+    expect(stickyHeader?.contains(content as Node)).toBe(false)
+    expect(
+      within(content as HTMLElement).getByRole('heading', { name: 'Class' }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders character context inside the sticky header when provided', () => {
+    render(
+      <CharacterWizard
+        activeStepId="class"
+        stepContext={createDefaultWizardStepContext()}
+        stepStatuses={createStepStatuses()}
+        onStepChange={() => {}}
+        characterContext={
+          <aside
+            aria-label="Character context"
+            data-testid="character-context-summary"
+          >
+            Elara · Dwarf
+          </aside>
+        }
+      />,
+    )
+
+    const stickyHeader = document.querySelector(
+      '.character-wizard__sticky-header',
+    )
+
+    expect(stickyHeader).not.toBeNull()
+    expect(
+      within(stickyHeader as HTMLElement).getByTestId(
+        'character-context-summary',
+      ),
+    ).toHaveTextContent('Elara · Dwarf')
+  })
 })

@@ -22,6 +22,12 @@ const MESSAGE_BY_CODE: Record<
       : `Choose the required number of options for ${issue.choiceId ?? 'a class choice'}.`,
   'unknown-choice': (issue) =>
     `Remove the unknown choice ${issue.choiceId ?? 'entry'}.`,
+  'duplicate-instance-id': () => 'Each class instance must have a unique instance id.',
+  'duplicate-class-id': () => 'Each class may only be selected once.',
+  'allocation-exceeds-target': () =>
+    'Allocated class levels exceed the target character level.',
+  'invalid-starting-class-reference': () =>
+    'The starting class reference is invalid.',
 }
 
 export function formatClassValidationIssue(

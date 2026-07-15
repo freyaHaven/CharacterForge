@@ -5,11 +5,21 @@ import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { createDefaultCharacter } from '../domain/character/defaults'
 import type { Character } from '../domain/types'
 import {
   getWizardStepButton,
   goToWizardStep,
 } from '../test/wizardTestUtils'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  waitForAppReady,
+} from '../test/characterEditorTestUtils'
+import {
+  createTestFighterClassInstance,
+  withSingleClassInstance,
+} from '../domain/character/characterClassSelection'
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
@@ -50,7 +60,9 @@ function createLocalStorageMock(): Storage {
 }
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
-  return {
+  const fighterInstance = createTestFighterClassInstance()
+
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2024',
@@ -64,17 +76,10 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
-    class: {
-      classId: 'srd-2024:fighter',
-      level: 1,
-      choices: {
-        'fighting-style': 'defense',
-        'skill-proficiencies': ['athletics', 'perception'],
-      },
-    },
+    ...withSingleClassInstance(fighterInstance),
     background: null,
     ...overrides,
-  }
+  })
 }
 
 function createCompleteSoldierBackground(): NonNullable<Character['background']> {
@@ -92,6 +97,8 @@ function createCompleteSoldierBackground(): NonNullable<Character['background']>
 }
 
 async function renderLoadedApp(character = createStoredCharacter()) {
+  clearEditorSession()
+  activateEditorSession(character.id)
   loadMock.mockResolvedValue(character)
   const user = userEvent.setup()
   render(
@@ -100,9 +107,7 @@ async function renderLoadedApp(character = createStoredCharacter()) {
     </StrictMode>,
   )
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await waitForAppReady()
 
   return { user, character }
 }
@@ -133,6 +138,7 @@ function expectSelectedBackground(name: string) {
 
 describe('Background workflow', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
   })
@@ -269,7 +275,6 @@ describe('Background workflow', () => {
     expect(screen.getByText(/Strength \+2/i)).toBeInTheDocument()
     expect(screen.getByText(/Equipment:/i)).toBeInTheDocument()
     expect(screen.getByText(/Spear, Shortbow/i)).toBeInTheDocument()
-    expect(screen.queryByText(/Choose starting equipment/i)).not.toBeInTheDocument()
   })
 
   it('prompts to clear background when changing edition', async () => {

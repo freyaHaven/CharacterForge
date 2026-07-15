@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
+import { createDefaultCharacter } from '../domain/character/defaults'
 import {
   getAbilityFieldNumberInput,
   getCreationMethodSelect,
@@ -14,6 +15,12 @@ import {
   goToAbilityScoresStep,
   goToWizardStep,
 } from '../test/wizardTestUtils'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  openCharacterEditor,
+  waitForAppReady,
+} from '../test/characterEditorTestUtils'
 import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '../rules/standard-array/standardArray'
 import { MINIMUM_POINT_BUY_ASSIGNMENT } from '../rules/point-buy'
 
@@ -30,7 +37,7 @@ vi.mock('../adapters/localStorageCharacterRepository', () => ({
 }))
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
-  return {
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2024',
@@ -44,27 +51,38 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: null,
-    class: null,
     background: null,
     ...overrides,
-  }
+  })
 }
 
 async function renderApp(character: Character | null = null) {
-  loadMock.mockResolvedValue(character)
+  clearEditorSession()
+
+  if (character !== null) {
+    activateEditorSession(character.id)
+    loadMock.mockResolvedValue(character)
+  } else {
+    loadMock.mockResolvedValue(null)
+  }
+
   saveMock.mockResolvedValue(undefined)
   const user = userEvent.setup()
   render(<App />)
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await waitForAppReady()
+
+  if (character === null) {
+    await openCharacterEditor(user)
+    saveMock.mockClear()
+  }
 
   return { user }
 }
 
 describe('Ability Scores wizard integration', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
   })

@@ -1,4 +1,3 @@
-import type { Character } from '../../../domain/types'
 import { migrateLegacyCharacterDetails } from '../../../domain/character/migrateCharacterDetails'
 import type { StoredCharacterV7, StoredCharacterV8 } from '../storedCharacter'
 
@@ -9,13 +8,11 @@ import type { StoredCharacterV7, StoredCharacterV8 } from '../storedCharacter'
 export function migrateV7ToV8(envelope: unknown): StoredCharacterV8 {
   const v7 = envelope as StoredCharacterV7
 
-  const character: Character = {
-    ...v7.character,
-    details: migrateLegacyCharacterDetails(v7.character.details),
-  }
-
   return {
     schemaVersion: 8,
-    character,
+    character: {
+      ...v7.character,
+      details: migrateLegacyCharacterDetails(v7.character.details),
+    },
   }
 }

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { createDefaultCharacter } from './defaults'
 import { isCharacter } from './isCharacter'
 import type { Character } from '../types'
+import {
+  createTestFighterClassInstance,
+  withSingleClassInstance,
+} from './characterClassSelection'
 
 function createValidCharacter(): Character {
   return createDefaultCharacter({
@@ -98,29 +102,80 @@ describe('isCharacter', () => {
     ).toBe(false)
   })
 
-  it('returns false when class is missing', () => {
-    const { class: _class, ...withoutClass } = createValidCharacter()
+  it('returns false when class fields are missing', () => {
+    const { classes: _classes, ...withoutClasses } = createValidCharacter()
 
-    expect(isCharacter(withoutClass)).toBe(false)
+    expect(isCharacter(withoutClasses)).toBe(false)
   })
 
-  it('returns true when class is null', () => {
-    expect(isCharacter({ ...createValidCharacter(), class: null })).toBe(true)
-  })
-
-  it('returns true for a valid class selection', () => {
+  it('returns true for an empty class state', () => {
     expect(
       isCharacter({
         ...createValidCharacter(),
-        class: {
-          classId: 'srd-2024:fighter',
-          level: 1,
-          choices: {
-            'fighting-style': 'defense',
-            'skill-proficiencies': ['athletics', 'perception'],
-          },
-        },
+        targetLevel: 1,
+        classes: [],
+        startingClassInstanceId: null,
       }),
     ).toBe(true)
+  })
+
+  it('returns true for a valid class instance', () => {
+    const instance = createTestFighterClassInstance()
+
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        ...withSingleClassInstance(instance),
+      }),
+    ).toBe(true)
+  })
+
+  it('returns false when startingClassInstanceId does not match a class', () => {
+    const instance = createTestFighterClassInstance()
+
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        ...withSingleClassInstance(instance),
+        startingClassInstanceId: 'missing-instance',
+      }),
+    ).toBe(false)
+  })
+
+  it('returns false when allocated level exceeds target level', () => {
+    const instance = createTestFighterClassInstance({ level: 5 })
+
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        targetLevel: 3,
+        classes: [instance],
+        startingClassInstanceId: instance.instanceId,
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects duplicate class ids', () => {
+    expect(
+      isCharacter({
+        ...createValidCharacter(),
+        targetLevel: 2,
+        classes: [
+          {
+            instanceId: 'a',
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {},
+          },
+          {
+            instanceId: 'b',
+            classId: 'srd-2024:fighter',
+            level: 1,
+            choices: {},
+          },
+        ],
+        startingClassInstanceId: 'a',
+      }),
+    ).toBe(false)
   })
 })

@@ -9,6 +9,7 @@ Wizards of the Coast publications.
 - Fighter
 - Rogue
 - Artificer
+- Barbarian
 
 ## Additional source files (not yet wired)
 

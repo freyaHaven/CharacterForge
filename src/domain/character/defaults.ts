@@ -1,6 +1,7 @@
 import { createDefaultCharacterDetails } from './details'
 import { DEFAULT_EDITION_ID } from '../edition'
 import type { AbilityScores, Character } from '../types'
+import { EMPTY_CLASS_STATE } from './characterClassSelection'
 
 export const DEFAULT_CHARACTER_ID = 'char-1'
 
@@ -23,7 +24,7 @@ export function createDefaultCharacter(
     creationMethod: 'manual',
     abilityScores: DEFAULT_ABILITY_SCORES,
     species: null,
-    class: null,
+    ...EMPTY_CLASS_STATE,
     background: null,
     details: createDefaultCharacterDetails(),
     ...overrides,

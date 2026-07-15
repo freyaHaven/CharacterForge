@@ -19,14 +19,15 @@ describe('class feature progression', () => {
 
   it('returns cumulative features up to the selected level', () => {
     expect(getClassFeaturesUpToLevel(fighterSrd2024, 1)).toHaveLength(3)
-    expect(getClassFeaturesUpToLevel(fighterSrd2024, 3)).toHaveLength(4)
-    expect(getClassFeaturesUpToLevel(fighterSrd2024, 5)).toHaveLength(5)
+    expect(getClassFeaturesUpToLevel(fighterSrd2024, 20)).toHaveLength(32)
   })
 
   it('returns level-banded progression up to the selected level', () => {
     expect(getClassFeatureProgressionUpToLevel(fighterSrd2024, 5)).toEqual([
       expect.objectContaining({ level: 1 }),
+      expect.objectContaining({ level: 2 }),
       expect.objectContaining({ level: 3 }),
+      expect.objectContaining({ level: 4 }),
       expect.objectContaining({ level: 5 }),
     ])
   })

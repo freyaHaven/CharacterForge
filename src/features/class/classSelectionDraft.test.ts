@@ -3,7 +3,8 @@ import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
 import {
   createClassSelectionDraft,
   draftToClassSelection,
-  initializeClassSelectionDraft,
+  initializeClassInstanceDraft,
+  instanceDraftToLegacyDraft,
   isClassDraftIncomplete,
   tryCommitClassDraft,
   updateClassDraftChoice,
@@ -59,7 +60,16 @@ describe('classSelectionDraft', () => {
       ),
     )
 
-    expect(initializeClassSelectionDraft(selection)).toEqual({
+    expect(
+      instanceDraftToLegacyDraft(
+        initializeClassInstanceDraft({
+          instanceId: 'fighter-instance-1',
+          classId: selection.classId,
+          level: selection.level,
+          choices: selection.choices,
+        }),
+      ),
+    ).toEqual({
       classId: 'srd-2024:fighter',
       level: 1,
       choices: {
@@ -90,7 +100,7 @@ describe('classSelectionDraft', () => {
         choices: {
           'fighting-style': 'archery',
           'skill-proficiencies': ['athletics', 'perception'],
-          'martial-archetype': 'champion',
+          'fighter-subclass': 'champion',
         },
       },
       1,
@@ -115,7 +125,7 @@ describe('classSelectionDraft', () => {
         choices: {
           'fighting-style': 'archery',
           'skill-proficiencies': ['athletics', 'perception'],
-          'martial-archetype': 'champion',
+          'fighter-subclass': 'champion',
         },
       },
       1,

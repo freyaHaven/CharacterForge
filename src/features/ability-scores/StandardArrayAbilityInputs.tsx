@@ -1,19 +1,12 @@
-import { getAbilityModifier } from '../../domain/abilities'
 import { STANDARD_ARRAY } from '../../rules/standard-array/standardArray'
+import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
+import { AbilityScoreCard } from './AbilityScoreCard'
+import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
 import type { StandardArrayDraftScores } from './standardArrayDraft'
 
-const ABILITY_LABELS: { key: keyof StandardArrayDraftScores; label: string }[] =
-  [
-    { key: 'strength', label: 'Strength' },
-    { key: 'dexterity', label: 'Dexterity' },
-    { key: 'constitution', label: 'Constitution' },
-    { key: 'intelligence', label: 'Intelligence' },
-    { key: 'wisdom', label: 'Wisdom' },
-    { key: 'charisma', label: 'Charisma' },
-  ]
+export const STANDARD_ARRAY_UNASSIGNED_LABEL = '—'
 
 const UNASSIGNED_VALUE = ''
-export const STANDARD_ARRAY_UNASSIGNED_LABEL = '—'
 
 type StandardArrayAbilityInputsProps = {
   draft: StandardArrayDraftScores
@@ -23,22 +16,13 @@ type StandardArrayAbilityInputsProps = {
   ) => void
 }
 
-function formatModifier(score: number | null): string {
-  if (score === null) {
-    return '—'
-  }
-
-  const modifier = getAbilityModifier(score)
-  return modifier >= 0 ? `+${modifier}` : `${modifier}`
-}
-
 function getValuesUsedByOtherAbilities(
   draft: StandardArrayDraftScores,
   currentAbility: keyof StandardArrayDraftScores,
 ): Set<number> {
   const usedValues = new Set<number>()
 
-  for (const { key } of ABILITY_LABELS) {
+  for (const { key } of ABILITY_SCORE_ENTRIES) {
     if (key !== currentAbility && draft[key] !== null) {
       usedValues.add(draft[key])
     }
@@ -52,18 +36,24 @@ export function StandardArrayAbilityInputs({
   onDraftChange,
 }: StandardArrayAbilityInputsProps) {
   return (
-    <div className="ability-grid">
-      {ABILITY_LABELS.map(({ key, label }) => {
+    <AbilityScoreCardGrid>
+      {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => {
         const usedByOthers = getValuesUsedByOtherAbilities(draft, key)
         const selectedValue = draft[key]
         const selectValue =
           selectedValue === null ? UNASSIGNED_VALUE : String(selectedValue)
 
         return (
-          <label key={key} className="ability-field">
-            <span>{label}</span>
-            <div className="ability-inputs">
+          <AbilityScoreCard
+            key={key}
+            abilityKey={key}
+            abbreviation={abbreviation}
+            scoreLabel={label}
+            score={selectedValue}
+            variant="interactive"
+            controls={
               <select
+                aria-label={`${label} score`}
                 value={selectValue}
                 onChange={(event) => {
                   if (event.target.value === UNASSIGNED_VALUE) {
@@ -88,11 +78,10 @@ export function StandardArrayAbilityInputs({
                   </option>
                 ))}
               </select>
-              <span className="modifier">{formatModifier(selectedValue)}</span>
-            </div>
-          </label>
+            }
+          />
         )
       })}
-    </div>
+    </AbilityScoreCardGrid>
   )
 }

@@ -52,6 +52,12 @@ export async function completeFighterSelection(
   await goToClassStep(user, screen)
   await waitForClassLoaded(screen)
 
+  await user.click(
+    screen.getByRole('radio', {
+      name: /single class/i,
+    }),
+  )
+
   await user.click(screen.getByRole('button', { name: 'Fighter' }))
   await user.click(screen.getByRole('radio', { name: fightingStyle }))
   await user.click(screen.getByRole('checkbox', { name: skills[0] }))

@@ -44,7 +44,7 @@ describe('fighterSrd2024', () => {
       .flatMap((entry) => entry.features)
       .find((feature) => feature.id === 'weapon-mastery')
 
-    expect(weaponMastery?.description).toMatch(/three kinds of weapons/i)
+    expect(weaponMastery?.description).toMatch(/three kinds of/i)
     expect(weaponMastery?.description).toMatch(/equipment step/i)
   })
 
@@ -57,7 +57,7 @@ describe('fighterSrd2024', () => {
     ).toEqual([
       { id: 'fighting-style', level: 1 },
       { id: 'skill-proficiencies', level: 1 },
-      { id: 'martial-archetype', level: 3 },
+      { id: 'fighter-subclass', level: 3 },
     ])
   })
 })

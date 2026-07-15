@@ -1,9 +1,11 @@
-import { getAbilityModifier } from '../../domain/abilities'
 import type { AbilityScores } from '../../domain/types'
-import type { RolledResult } from './rolledDraft'
-import { formatRolledResultOptionLabel } from './formatRollResult'
-import { getRemainingRolledResults } from './rolledRemaining'
 import type { RolledAssignments } from '../../rules/rolled'
+import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
+import { AbilityScoreCard } from './AbilityScoreCard'
+import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
+import { formatRolledResultOptionLabel } from './formatRollResult'
+import type { RolledResult } from './rolledDraft'
+import { getRemainingRolledResults } from './rolledRemaining'
 
 function getRemainingRolledPoolResults(
   pool: readonly RolledResult[],
@@ -14,15 +16,6 @@ function getRemainingRolledPoolResults(
 
   return pool.filter((entry) => remainingIds.has(entry.id))
 }
-
-const ABILITY_LABELS: { key: keyof AbilityScores; label: string }[] = [
-  { key: 'strength', label: 'Strength' },
-  { key: 'dexterity', label: 'Dexterity' },
-  { key: 'constitution', label: 'Constitution' },
-  { key: 'intelligence', label: 'Intelligence' },
-  { key: 'wisdom', label: 'Wisdom' },
-  { key: 'charisma', label: 'Charisma' },
-]
 
 export const ROLLED_UNASSIGNED_LABEL = '—'
 const UNASSIGNED_VALUE = ''
@@ -36,22 +29,13 @@ type RolledAbilityInputsProps = {
   ) => void
 }
 
-function formatModifier(score: number | null): string {
-  if (score === null) {
-    return '—'
-  }
-
-  const modifier = getAbilityModifier(score)
-  return modifier >= 0 ? `+${modifier}` : `${modifier}`
-}
-
 function getRollIdsUsedByOtherAbilities(
   assignments: RolledAssignments,
   currentAbility: keyof AbilityScores,
 ): Set<string> {
   const usedIds = new Set<string>()
 
-  for (const { key } of ABILITY_LABELS) {
+  for (const { key } of ABILITY_SCORE_ENTRIES) {
     if (key === currentAbility) {
       continue
     }
@@ -85,8 +69,8 @@ export function RolledAbilityInputs({
   const remaining = getRemainingRolledPoolResults(pool, assignments)
 
   return (
-    <div className="ability-grid">
-      {ABILITY_LABELS.map(({ key, label }) => {
+    <AbilityScoreCardGrid>
+      {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => {
         const assignedRollId = assignments[key]
         const assignedEntry =
           assignedRollId === null
@@ -100,14 +84,23 @@ export function RolledAbilityInputs({
         ]
 
         return (
-          <label key={key} className="ability-field">
-            <span>{label}</span>
-            <div className="ability-inputs">
+          <AbilityScoreCard
+            key={key}
+            abilityKey={key}
+            abbreviation={abbreviation}
+            scoreLabel={label}
+            score={assignedScore}
+            variant="interactive"
+            controls={
               <select
+                aria-label={`${label} rolled result`}
                 value={assignedRollId ?? UNASSIGNED_VALUE}
                 onChange={(event) => {
                   const value = event.target.value
-                  onAssignmentChange(key, value === UNASSIGNED_VALUE ? null : value)
+                  onAssignmentChange(
+                    key,
+                    value === UNASSIGNED_VALUE ? null : value,
+                  )
                 }}
               >
                 <option value={UNASSIGNED_VALUE}>{ROLLED_UNASSIGNED_LABEL}</option>
@@ -123,11 +116,15 @@ export function RolledAbilityInputs({
                   </option>
                 ))}
               </select>
-              <span className="modifier">{formatModifier(assignedScore)}</span>
-            </div>
-          </label>
+            }
+            detail={
+              assignedEntry !== null
+                ? formatRolledResultOptionLabel(assignedEntry.result, 1)
+                : undefined
+            }
+          />
         )
       })}
-    </div>
+    </AbilityScoreCardGrid>
   )
 }

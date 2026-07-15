@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { Character } from '../../../domain/types'
 import { migrateV1ToV2 } from './migrateV1ToV2'
 
-function createV1Character(): Omit<Character, 'species'> {
+/** Pre-species schema shape used only for v1→v2 migration fixtures. */
+function createV1Character() {
   return {
     id: 'char-1',
     name: 'Aldric',
-    editionId: 'srd-2014',
-    creationMethod: 'point-buy',
+    editionId: 'srd-2014' as const,
+    creationMethod: 'point-buy' as const,
     abilityScores: {
       strength: 15,
       dexterity: 14,

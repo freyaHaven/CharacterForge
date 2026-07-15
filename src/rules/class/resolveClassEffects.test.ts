@@ -53,4 +53,19 @@ describe('resolveClassEffects', () => {
       skillId: 'intimidation',
     })
   })
+
+  it('includes spellcasting when the class definition grants it', () => {
+    const effects = resolveClassEffects(
+      {
+        ...fighterSrd2024,
+        spellcasting: { ability: 'intelligence' },
+      },
+      completeFighterSelection,
+    )
+
+    expect(effects).toContainEqual({
+      kind: 'spellcasting',
+      ability: 'intelligence',
+    })
+  })
 })

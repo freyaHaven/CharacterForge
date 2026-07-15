@@ -29,13 +29,11 @@ function stripBackgroundEquipmentChoice(
 export function migrateV5ToV6(envelope: unknown): StoredCharacterV6 {
   const v5 = envelope as StoredCharacterV5
 
-  const character: Character = {
-    ...v5.character,
-    background: stripBackgroundEquipmentChoice(v5.character.background),
-  }
-
   return {
     schemaVersion: 6,
-    character,
+    character: {
+      ...v5.character,
+      background: stripBackgroundEquipmentChoice(v5.character.background ?? null),
+    },
   }
 }

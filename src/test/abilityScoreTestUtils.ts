@@ -9,49 +9,46 @@ const ABILITY_LABELS = [
   'Charisma',
 ] as const
 
+const ABILITY_KEYS: Record<(typeof ABILITY_LABELS)[number], string> = {
+  Strength: 'strength',
+  Dexterity: 'dexterity',
+  Constitution: 'constitution',
+  Intelligence: 'intelligence',
+  Wisdom: 'wisdom',
+  Charisma: 'charisma',
+}
+
 export type AbilityLabel = (typeof ABILITY_LABELS)[number]
 
 export function getCreationMethodSelect(screen: Screen): HTMLElement {
   return screen.getByRole('combobox', { name: /ability score method/i })
 }
 
+function getAbilityCard(screen: Screen, ability: AbilityLabel): HTMLElement {
+  return screen.getByTestId(`ability-score-card-${ABILITY_KEYS[ability]}`)
+}
+
 export function getAbilityFieldSelect(
   screen: Screen,
   ability: AbilityLabel,
 ): HTMLElement {
-  const label = screen.getByText(ability, { selector: 'span' }).closest('label')
-
-  if (label === null) {
-    throw new Error(`Could not find ability field for ${ability}`)
-  }
-
-  return within(label).getByRole('combobox')
+  return within(getAbilityCard(screen, ability)).getByRole('combobox')
 }
 
 export function getAbilityFieldNumberInput(
   screen: Screen,
   ability: AbilityLabel,
 ): HTMLElement {
-  const label = screen.getByText(ability, { selector: 'span' }).closest('label')
-
-  if (label === null) {
-    throw new Error(`Could not find ability field for ${ability}`)
-  }
-
-  return within(label).getByRole('spinbutton')
+  return within(getAbilityCard(screen, ability)).getByRole('spinbutton')
 }
 
 export function getAbilityFieldModifier(
   screen: Screen,
   ability: AbilityLabel,
 ): HTMLElement {
-  const label = screen.getByText(ability, { selector: 'span' }).closest('label')
-
-  if (label === null) {
-    throw new Error(`Could not find ability field for ${ability}`)
-  }
-
-  return within(label).getByText('—', { selector: '.modifier' })
+  return within(getAbilityCard(screen, ability)).getByText('—', {
+    selector: '.ability-score-card__modifier',
+  })
 }
 
 export { ABILITY_LABELS }

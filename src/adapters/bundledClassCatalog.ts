@@ -1,17 +1,18 @@
 import type { ClassCatalog } from '../domain/ports/classCatalog'
 import type { EditionId } from '../domain/types'
 import type { ClassDefinition } from '../domain/class/types'
+import { barbarianSrd2024 } from '../data/classes/srd-2024/barbarian'
 import { fighterSrd2024 } from '../data/classes/srd-2024/fighter'
 
 const CLASSES_BY_ID = new Map<string, ClassDefinition>(
-  [fighterSrd2024].map((classDefinition) => [
+  [fighterSrd2024, barbarianSrd2024].map((classDefinition) => [
     classDefinition.id,
     classDefinition,
   ]),
 )
 
 const CLASSES_BY_EDITION = new Map<EditionId, ClassDefinition[]>([
-  ['srd-2024', [fighterSrd2024]],
+  ['srd-2024', [fighterSrd2024, barbarianSrd2024]],
   ['srd-2014', []],
 ])
 

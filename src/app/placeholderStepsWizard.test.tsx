@@ -5,6 +5,10 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { getWizardStepButton, goToWizardStep } from '../test/wizardTestUtils'
+import {
+  clearEditorSession,
+  openCharacterEditor,
+} from '../test/characterEditorTestUtils'
 
 const { loadMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -19,6 +23,7 @@ vi.mock('../adapters/localStorageCharacterRepository', () => ({
 
 describe('Placeholder wizard steps', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     loadMock.mockResolvedValue(null)
   })
@@ -27,9 +32,7 @@ describe('Placeholder wizard steps', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await waitFor(() => {
-      expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-    })
+    await openCharacterEditor(user)
 
     return { user }
   }
@@ -58,6 +61,7 @@ describe('Placeholder wizard steps', () => {
     await waitFor(() => {
       expect(screen.queryByText(/loading classes/i)).not.toBeInTheDocument()
     })
+    await user.click(screen.getByRole('radio', { name: /single class/i }))
     expect(screen.getByRole('button', { name: 'Fighter' })).toBeInTheDocument()
 
     await goToWizardStep(user, screen, 'Background')

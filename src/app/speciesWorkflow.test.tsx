@@ -6,7 +6,14 @@ import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
-import { goToSpeciesStep, goToWizardStep } from '../test/wizardTestUtils'
+import { createDefaultCharacter } from '../domain/character/defaults'
+import { goToSpeciesStep } from '../test/wizardTestUtils'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  openCharacterEditor,
+  waitForAppReady,
+} from '../test/characterEditorTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -21,7 +28,7 @@ vi.mock('../adapters/localStorageCharacterRepository', () => ({
 }))
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
-  return {
+  return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2024',
@@ -35,10 +42,9 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       charisma: 10,
     },
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
-    class: null,
     background: null,
     ...overrides,
-  }
+  })
 }
 
 async function waitForSpeciesLoaded() {
@@ -60,6 +66,8 @@ function expectSelectedSpecies(name: string) {
 }
 
 async function renderLoadedApp(character = createStoredCharacter()) {
+  clearEditorSession()
+  activateEditorSession(character.id)
   loadMock.mockResolvedValue(character)
   const user = userEvent.setup()
   render(
@@ -68,14 +76,13 @@ async function renderLoadedApp(character = createStoredCharacter()) {
     </StrictMode>,
   )
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await waitForAppReady()
 
   return { user, character }
 }
 
 async function renderFreshApp() {
+  clearEditorSession()
   loadMock.mockResolvedValue(null)
   const user = userEvent.setup()
   render(
@@ -84,9 +91,7 @@ async function renderFreshApp() {
     </StrictMode>,
   )
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await openCharacterEditor(user)
 
   return { user }
 }
@@ -101,6 +106,7 @@ function getAncestrySelect() {
 
 describe('Species workflow in App', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)

@@ -19,6 +19,15 @@ import {
   goToWizardStep,
 } from '../test/wizardTestUtils'
 import { getAbilityFieldNumberInput } from '../test/abilityScoreTestUtils'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  waitForAppReady,
+} from '../test/characterEditorTestUtils'
+import {
+  createTestFighterClassInstance,
+  withSingleClassInstance,
+} from '../domain/character/characterClassSelection'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -69,15 +78,15 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
 }
 
 async function renderLoadedApp(character = createStoredCharacter()) {
+  clearEditorSession()
+  activateEditorSession(character.id)
   loadMock.mockResolvedValue(character)
   saveMock.mockResolvedValue(undefined)
 
   const user = userEvent.setup()
   render(<App />)
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await waitForAppReady()
 
   return { user, character }
 }
@@ -90,6 +99,7 @@ async function goToCharacterDetailsStep(
 
 describe('Character Details workflow', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)
@@ -215,16 +225,10 @@ describe('Character Details workflow', () => {
   })
 
   it('does not block wizard completion when Character Details is empty', async () => {
+    const fighterInstance = createTestFighterClassInstance()
     const { user } = await renderLoadedApp(
       createStoredCharacter({
-        class: {
-          classId: 'srd-2024:fighter',
-          level: 1,
-          choices: {
-            'fighting-style': 'defense',
-            'skill-proficiencies': ['athletics', 'perception'],
-          },
-        },
+        ...withSingleClassInstance(fighterInstance),
       }),
     )
 
@@ -237,7 +241,16 @@ describe('Character Details workflow', () => {
     })
 
     await goToWizardStep(user, screen, 'Review')
-    expect(screen.getByRole('button', { name: /finish character/i })).toBeEnabled()
+
+    // Deferred class decisions may still block finish; Character Details must not.
+    expect(
+      screen.queryByText(
+        /complete these required steps before finishing:.*character details/i,
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/complete remaining character decisions before finishing/i),
+    ).toBeInTheDocument()
   })
 })
 

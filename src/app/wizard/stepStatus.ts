@@ -1,5 +1,6 @@
 import type { Character } from '../../domain/types'
 import { hasCharacterDetailsContent } from '../../domain/character/details'
+import { getCommittedClassSelection } from '../../domain/character/characterClassSelection'
 import type { ClassSelectionDraft } from '../../features/class/classSelectionDraft'
 import { isClassDraftIncomplete } from '../../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../../features/background/backgroundSelectionDraft'
@@ -106,7 +107,7 @@ export function getSpeciesStepStatus(context: StepValidationContext): StepStatus
 
 export function getClassStepStatus(context: StepValidationContext): StepStatus {
   const { character, classDraft } = context
-  const committed = character.class
+  const committed = getCommittedClassSelection(character)
 
   if (
     committed !== null &&

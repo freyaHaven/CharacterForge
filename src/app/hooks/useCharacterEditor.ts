@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createDefaultCharacter, DEFAULT_CHARACTER_ID } from '../../domain/character/defaults'
+import { downloadCharacterFile } from '../../adapters/characterFile'
+import { createDefaultCharacter } from '../../domain/character/defaults'
+import { createCharacterId } from '../../domain/character/createCharacterId'
 import { migrateLegacyCharacterDetails } from '../../domain/character/migrateCharacterDetails'
 import type { CharacterRepository } from '../../domain/ports/characterRepository'
+import type { Character, CharacterDetails } from '../../domain/types'
+import { getActiveCharacterId, setActiveCharacterId } from '../session/editorSession'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
-import type { Character } from '../../domain/types'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
 import { createBundledBackgroundCatalog } from '../../adapters/bundledBackgroundCatalog'
 import { buildCharacterForSave } from '../buildCharacterForSave'
@@ -14,15 +17,20 @@ import {
   formatSaveBlockedMessage,
 } from '../characterSavePolicy'
 import {
-  formatIncompleteRequiredStepsMessage,
+  formatFinishBlockedMessage,
   getFinishPolicyResult,
 } from '../characterFinishPolicy'
-import type { CharacterDetails } from '../../domain/types'
-import { buildReviewSummaries, buildCharacterDetailsReviewSections, getReviewableStepIds } from '../reviewSummary'
+import {
+  buildReviewSummaries,
+  buildCharacterDetailsReviewSections,
+  getReviewableStepIds,
+} from '../reviewSummary'
 import { createWizardStepContext } from '../wizard/stepVisibility'
+import { useDeferredCharacterRequirements } from '../useDeferredCharacterRequirements'
 import { useReviewClassDisplay } from '../useReviewClassDisplay'
 import { useReviewBackgroundDisplay } from '../useReviewBackgroundDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
+import { useReviewSpellcasting } from '../useReviewSpellcasting'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
 import { getAllStepStatuses } from '../wizard/stepStatus'
 import type { WizardStepId } from '../wizard/types'
@@ -39,6 +47,7 @@ export type UseCharacterEditorOptions = {
   classCatalog?: ClassCatalog
   backgroundCatalog?: BackgroundCatalog
   randomSource?: () => number
+  restoreFromStorage?: boolean
 }
 
 export function useCharacterEditor({
@@ -47,6 +56,7 @@ export function useCharacterEditor({
   classCatalog = createBundledClassCatalog(),
   backgroundCatalog = createBundledBackgroundCatalog(),
   randomSource = Math.random,
+  restoreFromStorage = true,
 }: UseCharacterEditorOptions) {
   const [character, setCharacter] = useState<Character>(() =>
     createDefaultCharacter(),
@@ -108,10 +118,15 @@ export function useCharacterEditor({
   const { hydrateFromCharacter } = abilityScores
 
   useEffect(() => {
+    if (!restoreFromStorage) {
+      setIsLoading(false)
+      return
+    }
+
     let isActive = true
 
     async function loadCharacter() {
-      const stored = await repository.load(DEFAULT_CHARACTER_ID)
+      const stored = await repository.load(getActiveCharacterId())
       if (isActive && stored !== null) {
         const hydratedCharacter: Character = {
           ...createDefaultCharacter(),
@@ -120,7 +135,7 @@ export function useCharacterEditor({
         }
         setCharacter(hydratedCharacter)
         species.resetSpeciesDraft()
-        classEditor.resetClassDraft()
+        classEditor.hydrateForCharacter(hydratedCharacter)
         background.resetBackgroundDraft()
         hydrateFromCharacter(hydratedCharacter)
       }
@@ -135,10 +150,11 @@ export function useCharacterEditor({
       isActive = false
     }
   }, [
-    classEditor.resetClassDraft,
+    classEditor.hydrateForCharacter,
     background.resetBackgroundDraft,
     hydrateFromCharacter,
     repository,
+    restoreFromStorage,
     species.resetSpeciesDraft,
   ])
 
@@ -187,7 +203,7 @@ export function useCharacterEditor({
   const classReviewDisplay = useReviewClassDisplay(
     classCatalog,
     character.editionId,
-    character.class,
+    classEditor.committedSelection,
     classEditor.classDraft,
   )
 
@@ -201,7 +217,19 @@ export function useCharacterEditor({
   const wizardStepContext = createWizardStepContext(character)
   const reviewableStepIds = getReviewableStepIds(wizardStepContext)
 
-  const finishPolicy = getFinishPolicyResult(stepStatuses)
+  const spellcastingReview = useReviewSpellcasting(classCatalog, character)
+
+  const unresolvedDeferredRequirements = useDeferredCharacterRequirements(
+    classCatalog,
+    character,
+    classEditor.classDraft,
+    classEditor.activeInstanceId,
+  )
+
+  const finishPolicy = getFinishPolicyResult(
+    stepStatuses,
+    unresolvedDeferredRequirements,
+  )
   const reviewSummaries = buildReviewSummaries(
     {
       character,
@@ -211,6 +239,7 @@ export function useCharacterEditor({
       classDisplay: classReviewDisplay,
       backgroundDraft: background.backgroundDraft,
       backgroundDisplay: backgroundReviewDisplay,
+      unresolvedDeferredRequirements,
       standardArrayValidation: abilityScores.standardArrayValidation,
       pointBuyValidation: abilityScores.pointBuyValidation,
       rolledValidation: abilityScores.rolledValidation,
@@ -235,13 +264,12 @@ export function useCharacterEditor({
     classDisplay: classReviewDisplay,
     backgroundDraft: background.backgroundDraft,
     backgroundDisplay: backgroundReviewDisplay,
+    unresolvedDeferredRequirements,
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
   })
-  const finishBlockedMessage = formatIncompleteRequiredStepsMessage(
-    finishPolicy.canFinish ? [] : finishPolicy.incompleteRequiredSteps,
-  )
+  const finishBlockedMessage = formatFinishBlockedMessage(finishPolicy)
 
   const handleSaveDraft = useCallback(async () => {
     if (!canSaveCharacterState) {
@@ -327,6 +355,60 @@ export function useCharacterEditor({
     [clearSaveMessage],
   )
 
+  const applyCharacterState = useCallback(
+    (nextCharacter: Character) => {
+      setCharacter(nextCharacter)
+      setActiveStepId(DEFAULT_WIZARD_UI_STATE.activeStepId)
+      setBasicsTouched(false)
+      setDetailsTouched(false)
+      setSaveMessage(null)
+      setFinishMessage(null)
+      species.resetSpeciesDraft()
+      classEditor.resetClassDraft()
+      background.resetBackgroundDraft()
+      hydrateFromCharacter(nextCharacter)
+      setActiveCharacterId(nextCharacter.id)
+    },
+    [
+      background.resetBackgroundDraft,
+      classEditor.resetClassDraft,
+      hydrateFromCharacter,
+      species.resetSpeciesDraft,
+    ],
+  )
+
+  const startNewCharacter = useCallback(async () => {
+    const freshCharacter = createDefaultCharacter({
+      id: createCharacterId(),
+    })
+    applyCharacterState(freshCharacter)
+    await repository.save(freshCharacter)
+  }, [applyCharacterState, repository])
+
+  const importCharacter = useCallback(
+    async (importedCharacter: Character) => {
+      applyCharacterState(importedCharacter)
+      await repository.save(importedCharacter)
+    },
+    [applyCharacterState, repository],
+  )
+
+  const handleExportCharacter = useCallback(() => {
+    const characterToExport = buildCharacterForSave({
+      character,
+      standardArrayDraft: abilityScores.standardArrayDraft,
+      pointBuyDraft: abilityScores.pointBuyDraft,
+      rolledDraft: abilityScores.rolledDraft,
+    })
+
+    downloadCharacterFile(characterToExport)
+  }, [
+    abilityScores.pointBuyDraft,
+    abilityScores.rolledDraft,
+    abilityScores.standardArrayDraft,
+    character,
+  ])
+
   return {
     isLoading,
     prefersReducedMotion,
@@ -339,6 +421,10 @@ export function useCharacterEditor({
     stepStatuses,
     reviewSummaries,
     characterDetailsReviewSections,
+    speciesReviewDisplay,
+    classReviewDisplay,
+    spellcastingReview,
+    unresolvedDeferredRequirements,
     finishPolicy,
     finishBlockedMessage,
     finishMessage,
@@ -358,6 +444,9 @@ export function useCharacterEditor({
     speciesCatalog,
     handleSaveDraft,
     handleFinish,
+    handleExportCharacter,
+    startNewCharacter,
+    importCharacter,
     updateName,
   }
 }

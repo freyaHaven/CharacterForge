@@ -10,6 +10,10 @@ import {
   getCreationMethodSelect,
 } from '../test/abilityScoreTestUtils'
 import { goToAbilityScoresStep } from '../test/wizardTestUtils'
+import {
+  clearEditorSession,
+  openCharacterEditor,
+} from '../test/characterEditorTestUtils'
 import { STANDARD_ARRAY_UNASSIGNED_LABEL } from '../features/ability-scores/StandardArrayAbilityInputs'
 import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '../rules/standard-array/standardArray'
 
@@ -29,10 +33,8 @@ async function renderLoadedApp() {
   const user = userEvent.setup()
   render(<App />)
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
-
+  await openCharacterEditor(user)
+  saveMock.mockClear()
   await goToAbilityScoresStep(user, screen)
 
   return { user }
@@ -44,6 +46,7 @@ async function switchToStandardArray(user: ReturnType<typeof userEvent.setup>) {
 
 describe('Standard Array workflow in App', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
     loadMock.mockResolvedValue(null)

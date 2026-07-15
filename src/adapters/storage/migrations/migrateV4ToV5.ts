@@ -1,4 +1,4 @@
-import type { Character } from '../../domain/types'
+import type { Character } from '../../../domain/types'
 import type { StoredCharacterV4, StoredCharacterV5 } from '../storedCharacter'
 
 function stripBackgroundBonuses(
@@ -20,10 +20,11 @@ function stripBackgroundBonuses(
  */
 export function migrateV4ToV5(envelope: unknown): StoredCharacterV5 {
   const v4 = envelope as StoredCharacterV4
+  const background = v4.character.background ?? null
 
-  const character: Character = {
+  const character = {
     ...v4.character,
-    background: stripBackgroundBonuses(v4.character.background),
+    background: stripBackgroundBonuses(background),
   }
 
   return {

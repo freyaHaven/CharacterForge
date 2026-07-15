@@ -4,6 +4,10 @@ import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { Character, EditionId } from '../../domain/types'
 import { needsEditionChangeBackgroundConfirmation } from '../../rules/background/backgroundRules'
+import {
+  EMPTY_CLASS_STATE,
+  getCommittedClassSelection,
+} from '../../domain/character/characterClassSelection'
 import { needsEditionChangeClassConfirmation } from '../../rules/class/classRules'
 import { needsEditionChangeSpeciesConfirmation } from '../../rules/species/speciesRules'
 
@@ -57,7 +61,7 @@ export function useEditionChange({
           (speciesId) => speciesCatalog.getSpecies(speciesId),
         ),
         needsEditionChangeClassConfirmation(
-          character.class,
+          getCommittedClassSelection(character),
           nextEditionId,
           (classId) => classCatalog.getClass(classId),
         ),
@@ -86,10 +90,8 @@ export function useEditionChange({
     },
     [
       backgroundCatalog,
-      character.background,
-      character.class,
+      character,
       character.editionId,
-      character.species,
       classCatalog,
       notifyDraftChange,
       resetBackgroundDraft,
@@ -109,7 +111,7 @@ export function useEditionChange({
       ...current,
       editionId: pendingEditionChange.nextEditionId,
       species: pendingEditionChange.clearsSpecies ? null : current.species,
-      class: pendingEditionChange.clearsClass ? null : current.class,
+      ...(pendingEditionChange.clearsClass ? EMPTY_CLASS_STATE : {}),
       background: pendingEditionChange.clearsBackground
         ? null
         : current.background,

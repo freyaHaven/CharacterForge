@@ -6,7 +6,10 @@ describe('createBundledClassCatalog', () => {
     const catalog = createBundledClassCatalog()
     const classes = await catalog.listClasses('srd-2024')
 
-    expect(classes.map((entry) => entry.id)).toEqual(['srd-2024:fighter'])
+    expect(classes.map((entry) => entry.id)).toEqual([
+      'srd-2024:fighter',
+      'srd-2024:barbarian',
+    ])
   })
 
   it('resolves a class by stable id', async () => {

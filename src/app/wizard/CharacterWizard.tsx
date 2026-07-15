@@ -14,7 +14,10 @@ export type CharacterWizardProps = {
   stepContext: WizardStepContext
   stepStatuses: Record<WizardStepId, StepStatus>
   onStepChange: (stepId: WizardStepId) => void
+  onGoHome?: () => void
   stepContent?: Partial<Record<WizardStepId, ReactNode>>
+  characterContext?: ReactNode
+  editorActions?: ReactNode
 }
 
 export function CharacterWizard({
@@ -22,19 +25,40 @@ export function CharacterWizard({
   stepContext,
   stepStatuses,
   onStepChange,
+  onGoHome,
   stepContent,
+  characterContext,
+  editorActions,
 }: CharacterWizardProps) {
   const previousStepId = goToPreviousStep(activeStepId, stepContext)
   const nextStepId = goToNextStep(activeStepId, stepContext)
 
   return (
     <div className="character-wizard">
-      <WizardNav
-        activeStepId={activeStepId}
-        stepContext={stepContext}
-        stepStatuses={stepStatuses}
-        onStepChange={onStepChange}
-      />
+      <div className="character-wizard__sticky-header">
+        <WizardNav
+          activeStepId={activeStepId}
+          stepContext={stepContext}
+          stepStatuses={stepStatuses}
+          onStepChange={onStepChange}
+          onGoHome={onGoHome}
+        />
+
+        {characterContext !== undefined || editorActions !== undefined ? (
+          <div className="character-wizard__sticky-bar">
+            {characterContext !== undefined ? (
+              <div className="character-wizard__sticky-bar-context">
+                {characterContext}
+              </div>
+            ) : null}
+            {editorActions !== undefined ? (
+              <div className="character-wizard__sticky-bar-actions">
+                {editorActions}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <div className="character-wizard__content">
         <WizardStepPanel

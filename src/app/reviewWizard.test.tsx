@@ -7,13 +7,22 @@ import App from './App'
 import type { Character } from '../domain/types'
 import { createDefaultCharacter } from '../domain/character/defaults'
 import {
+  createTestFighterClassInstance,
+  withSingleClassInstance,
+} from '../domain/character/characterClassSelection'
+import {
   completeFighterSelection,
   getWizardStepButton,
   goToAbilityScoresStep,
   goToSpeciesStep,
   goToWizardStep,
 } from '../test/wizardTestUtils'
-import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '../rules/standard-array/standardArray'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  openCharacterEditor,
+  waitForAppReady,
+} from '../test/characterEditorTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -28,34 +37,39 @@ vi.mock('../adapters/localStorageCharacterRepository', () => ({
 }))
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
+  const fighterInstance = createTestFighterClassInstance()
+
   return createDefaultCharacter({
     id: 'char-1',
     name: 'Aldric',
     editionId: 'srd-2024',
     creationMethod: 'manual',
     species: { speciesId: 'srd-2024:dwarf', choices: {} },
-    class: {
-      classId: 'srd-2024:fighter',
-      level: 1,
-      choices: {
-        'fighting-style': 'defense',
-        'skill-proficiencies': ['athletics', 'perception'],
-      },
-    },
-    background: null,
+    ...withSingleClassInstance(fighterInstance),
     ...overrides,
   })
 }
 
 async function renderApp(character: Character | null = null) {
-  loadMock.mockResolvedValue(character)
+  clearEditorSession()
+
+  if (character !== null) {
+    activateEditorSession(character.id)
+    loadMock.mockResolvedValue(character)
+  } else {
+    loadMock.mockResolvedValue(null)
+  }
+
   saveMock.mockResolvedValue(undefined)
   const user = userEvent.setup()
   render(<App />)
 
-  await waitFor(() => {
-    expect(screen.queryByText(/loading character/i)).not.toBeInTheDocument()
-  })
+  await waitForAppReady()
+
+  if (character === null) {
+    await openCharacterEditor(user)
+    saveMock.mockClear()
+  }
 
   return { user }
 }
@@ -111,42 +125,44 @@ async function completeRequiredSteps(
 
 describe('Review wizard integration', () => {
   beforeEach(() => {
+    clearEditorSession()
     loadMock.mockReset()
     saveMock.mockReset()
   })
 
-  it('renders all six review summaries for a loaded character', async () => {
+  it('renders grouped character sheet sections for a loaded character', async () => {
     const { user } = await renderApp(createStoredCharacter())
     await openReviewStep(user)
 
     await waitFor(() => {
-      expect(screen.getByText('Class: Fighter')).toBeInTheDocument()
-      expect(screen.getByText('Level: 1')).toBeInTheDocument()
       expect(
-        screen.getByText('Choose a Fighting Style: Defense'),
+        screen.getByRole('heading', { name: 'Features', level: 3 }),
       ).toBeInTheDocument()
+      expect(screen.getByText('Defense')).toBeInTheDocument()
     })
     expect(
-      screen.getByRole('heading', { name: 'Basics', level: 3 }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Edition: D&D 5e 2024')).toBeInTheDocument()
-    expect(screen.getByText('Species: Dwarf')).toBeInTheDocument()
-    expect(screen.getByText('Method: Manual')).toBeInTheDocument()
-    expect(screen.getByText('Class: Fighter')).toBeInTheDocument()
-    expect(screen.getByText('Level: 1')).toBeInTheDocument()
+      screen.queryByRole('heading', { name: 'Basics', level: 3 }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Edition: D&D 5e 2024')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Aldric', level: 2 })).toBeInTheDocument()
     expect(
-      screen.getByText('Choose a Fighting Style: Defense'),
+      screen.getByRole('heading', { name: 'Ability Scores', level: 3 }),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('Coming soon')).toHaveLength(1)
+    expect(
+      screen.getByRole('heading', { name: 'Features', level: 3 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Choose 3 Weapon Masteries in Equipment'),
+    ).toBeInTheDocument()
   })
 
   it('navigates to the selected step from an edit action', async () => {
     const { user } = await renderApp(createStoredCharacter())
     await openReviewStep(user)
 
-    await user.click(screen.getByRole('button', { name: 'Edit Species' }))
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[1]!)
 
-    expect(getWizardStepButton(screen, 'Species')).toHaveAttribute(
+    expect(getWizardStepButton(screen, 'Class')).toHaveAttribute(
       'aria-current',
       'step',
     )
@@ -162,7 +178,7 @@ describe('Review wizard integration', () => {
     ).toBeInTheDocument()
   })
 
-  it('allows finish when required steps are complete and optional steps are not', async () => {
+  it('blocks finish when deferred character decisions remain unresolved', async () => {
     const { user } = await renderApp(null)
     await completeRequiredSteps(user)
     await openReviewStep(user)
@@ -170,38 +186,24 @@ describe('Review wizard integration', () => {
     await waitFor(() => {
       expect(getWizardStepButton(screen, 'Species')).toHaveAccessibleName(/complete/i)
     })
-    expect(screen.getByRole('button', { name: /finish character/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /finish character/i })).toBeDisabled()
+    expect(
+      screen.getByText(/complete remaining character decisions before finishing/i),
+    ).toBeInTheDocument()
   })
 
-  it('finishes through the existing save path and shows a success message', async () => {
+  it('does not finish while deferred character decisions remain unresolved', async () => {
     const { user } = await renderApp(null)
     await completeRequiredSteps(user)
     await openReviewStep(user)
 
     await user.click(screen.getByRole('button', { name: /finish character/i }))
 
-    await waitFor(() => {
-      expect(saveMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'Aldric',
-          species: { speciesId: 'srd-2024:dwarf', choices: {} },
-          class: {
-            classId: 'srd-2024:fighter',
-            level: 1,
-            choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
-            },
-          },
-          creationMethod: 'standard-array',
-          abilityScores: DEFAULT_STANDARD_ARRAY_ASSIGNMENT,
-        }),
-      )
-    })
-    expect(screen.getByText('Character complete.')).toBeInTheDocument()
+    expect(saveMock).not.toHaveBeenCalled()
+    expect(screen.queryByText('Character complete.')).not.toBeInTheDocument()
   })
 
-  it('shows Dragonborn ancestry in the species summary', async () => {
+  it('shows Dragonborn ancestry in the background section', async () => {
     const { user } = await renderApp(
       createStoredCharacter({
         species: {
@@ -212,7 +214,6 @@ describe('Review wizard integration', () => {
     )
     await openReviewStep(user)
 
-    expect(screen.getByText('Species: Dragonborn')).toBeInTheDocument()
     expect(screen.getByText('Ancestry: Red (Fire)')).toBeInTheDocument()
   })
 
@@ -227,10 +228,12 @@ describe('Review wizard integration', () => {
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
     await openReviewStep(user)
 
-    expect(screen.getByText('Choice incomplete')).toBeInTheDocument()
     expect(
-      screen.getByText('Needs attention', { selector: '.review-summary-card__warning' }),
+      screen.getByText('Some sections still need attention before you can finish your character.'),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Background & Personality', level: 3 }),
+    ).not.toBeInTheDocument()
   })
 
   it('keeps save draft separate from finish character', async () => {

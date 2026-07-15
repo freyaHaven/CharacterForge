@@ -24,6 +24,7 @@ function createContext(
       backgroundName: null,
       choiceLines: [],
     },
+    unresolvedDeferredRequirements: [],
     standardArrayValidation: null,
     pointBuyValidation: null,
     rolledValidation: null,
@@ -136,7 +137,7 @@ describe('buildReviewSummaries', () => {
     )
   })
 
-  it('summarises a committed class with level and choices', () => {
+  it('summarises a committed class with level, choices, and deferred decisions', () => {
     const summaries = buildReviewSummaries(
       createContext({
         classDisplay: {
@@ -152,11 +153,31 @@ describe('buildReviewSummaries', () => {
               summary: 'Athletics, Perception',
             },
             {
-              prompt: 'Choose a Martial Archetype',
-              summary: 'Champion (placeholder)',
+              prompt: 'Choose a Fighter Subclass',
+              summary: 'Champion',
             },
           ],
         },
+        unresolvedDeferredRequirements: [
+          {
+            requirementId: 'starting-equipment',
+            sourceInstanceId: 'fighter-instance-1',
+            sourceClassId: 'srd-2024:fighter',
+            sourceClassLevel: 3,
+            destinationStep: 'equipment',
+            label: 'Starting Equipment',
+            description: 'Choose starting equipment in Equipment',
+          },
+          {
+            requirementId: 'ability-score-improvement-4',
+            sourceInstanceId: 'fighter-instance-1',
+            sourceClassId: 'srd-2024:fighter',
+            sourceClassLevel: 3,
+            destinationStep: 'ability-scores',
+            label: 'Ability Score Improvement',
+            description: 'Resolve the level 4 Ability Score Improvement or feat',
+          },
+        ],
       }),
       createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
@@ -168,7 +189,11 @@ describe('buildReviewSummaries', () => {
       'Level: 3',
       'Choose a Fighting Style: Defense',
       'Choose two skill proficiencies: Athletics, Perception',
-      'Choose a Martial Archetype: Champion (placeholder)',
+      'Choose a Fighter Subclass: Champion',
+      'Class selection complete',
+      'Remaining character decisions:',
+      '- Choose starting equipment in Equipment',
+      '- Resolve the level 4 Ability Score Improvement or feat',
     ])
   })
 

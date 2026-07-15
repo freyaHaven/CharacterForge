@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultCharacterDetails } from '../../domain/character/details'
 import { createDefaultCharacter } from '../../domain/character/defaults'
+import {
+  createTestFighterClassInstance,
+  withSingleClassInstance,
+} from '../../domain/character/characterClassSelection'
 import type { Character } from '../../domain/types'
 import {
   getAbilityScoresStepStatus,
@@ -161,16 +165,9 @@ describe('getClassStepStatus', () => {
     expect(
       getClassStepStatus(
         createContext({
-          character: createCharacter({
-            class: {
-              classId: 'srd-2024:fighter',
-              level: 1,
-              choices: {
-                'fighting-style': 'defense',
-                'skill-proficiencies': ['athletics', 'perception'],
-              },
-            },
-          }),
+          character: createCharacter(
+            withSingleClassInstance(createTestFighterClassInstance()),
+          ),
           committedClassValid: true,
         }),
       ),
@@ -313,10 +310,16 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'not-started', hasValidationErrors: false },
         species: { completion: 'not-started', hasValidationErrors: false },
+        'character-details': {
+          completion: 'not-started',
+          hasValidationErrors: false,
+        },
         class: { completion: 'not-started', hasValidationErrors: false },
         'ability-scores': { completion: 'not-started', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },
         equipment: { completion: 'not-started', hasValidationErrors: false },
+        feats: { completion: 'not-started', hasValidationErrors: false },
+        spells: { completion: 'not-started', hasValidationErrors: false },
       }),
     ).toEqual({
       completion: 'in-progress',
@@ -329,10 +332,13 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'complete', hasValidationErrors: false },
         species: { completion: 'complete', hasValidationErrors: false },
+        'character-details': { completion: 'complete', hasValidationErrors: false },
         class: { completion: 'complete', hasValidationErrors: false },
         'ability-scores': { completion: 'complete', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },
         equipment: { completion: 'not-started', hasValidationErrors: false },
+        feats: { completion: 'not-started', hasValidationErrors: false },
+        spells: { completion: 'not-started', hasValidationErrors: false },
       }),
     ).toEqual({
       completion: 'complete',
@@ -345,10 +351,13 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'in-progress', hasValidationErrors: true },
         species: { completion: 'complete', hasValidationErrors: false },
+        'character-details': { completion: 'complete', hasValidationErrors: false },
         class: { completion: 'not-started', hasValidationErrors: false },
         'ability-scores': { completion: 'complete', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },
         equipment: { completion: 'not-started', hasValidationErrors: false },
+        feats: { completion: 'not-started', hasValidationErrors: false },
+        spells: { completion: 'not-started', hasValidationErrors: false },
       }),
     ).toEqual({
       completion: 'in-progress',
@@ -417,14 +426,7 @@ describe('getAllStepStatuses', () => {
         character: createCharacter({
           name: 'Aldric',
           species: { speciesId: 'srd-2024:dwarf', choices: {} },
-          class: {
-            classId: 'srd-2024:fighter',
-            level: 1,
-            choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
-            },
-          },
+          ...withSingleClassInstance(createTestFighterClassInstance()),
         }),
         committedSpeciesValid: true,
         committedClassValid: true,

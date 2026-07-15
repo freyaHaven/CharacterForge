@@ -25,19 +25,55 @@ localStorage with explicit schema versioning.
 |------|--------|
 | Basics (name, rules edition) | Required — complete |
 | Species | Required — catalogue, search, choices, edition change |
-| Class | Required — Fighter vertical slice (2024 SRD) |
+| Class | Required — see [Class step](#class-step) below |
 | Ability Scores | Required — manual, standard array, point buy, rolled |
 | Background | Placeholder |
 | Equipment | Placeholder |
 | Review | Summary cards, finish policy |
+
+### Class step
+
+The Class step uses a **class-path introduction** before the catalogue:
+
+1. **Intro** — choose **Single Class** or **Multiclass** (card-style radio
+   options). The catalogue is hidden until a path is selected.
+2. **Change path** — a compact secondary control (`Class path: … Change`) returns
+   to the intro without clearing in-progress work. Switching paths preserves or
+   confirms data as appropriate (e.g. multiclass → single class when multiple
+   classes exist).
+
+**Single class**
+
+- Class catalogue (preview classes such as Barbarian are excluded).
+- After selecting a class, a two-column layout:
+  - **Class Overview** (left) — level stepper, reference metadata as compact
+    chips (primary abilities, saving throws, armour, weapons), and interactive
+    setup choices such as skill proficiencies.
+  - **Class Progression** (right) — level accordions, linked feature choices, and
+    deferred requirements.
+
+**Multiclass**
+
+- Class catalogue with toggle selection (includes preview classes).
+- Staged workflow: select classes → assign levels per class → choose starting
+  class → configure each class instance.
+- Character level is derived from the sum of allocated class levels.
+
+**Editor workflow state** (not part of the saved character model): selected class
+path, in-progress class drafts, and active instance id are persisted in
+`localStorage` per character so refresh and draft recovery restore the Class
+step UI correctly.
 
 ### Rules content (bundled)
 
 **SRD 2024**
 
 - Species: Dwarf, Dragonborn
-- Classes: Fighter (level 1 — fighting style, skill proficiencies, feature
-  progression)
+- Classes:
+  - **Fighter** — levels 1–20, fighting style, skill proficiencies, martial
+    archetype (Champion) at level 3, feature progression through level 20
+  - **Barbarian** — preview entry for multiclass catalogue testing (minimal
+    level-1 features)
 
 **SRD 2014**
 
@@ -46,17 +82,23 @@ localStorage with explicit schema versioning.
 
 ### Persistence
 
-- Versioned localStorage envelope (`schemaVersion: 3`)
-- Sequential migrations from legacy saves (v0 → v3)
+- Versioned localStorage envelope (`schemaVersion: 9`)
+- Sequential migrations from legacy saves (v0 → v9)
+- Multi-instance class model: `classes[]`, `targetLevel`, `startingClassInstanceId`
+- Background selections and character details on the saved character
 - Draft blocking on save when species or class selections are incomplete
+- `.cforge` JSON import/export using the same envelope (see
+  [`src/adapters/STORAGE.md`](src/adapters/STORAGE.md))
 
 ### UI
 
-- Responsive species and class catalogue/detail layouts with live search
+- Responsive species and class catalogue layouts with live search (species)
+- Class-path intro cards and compact path control
+- Single-class overview/progression layout (sticky overview on wide viewports)
 - Edition-change confirmation when incompatible species or class selections
   would be cleared
-- Transparent PNG class icons (Fighter, Rogue, Artificer) with SVG fallback for
-  unregistered classes
+- Transparent PNG class icons (Fighter, Barbarian, Rogue, Artificer) with SVG
+  fallback for unregistered classes
 
 ## Architecture overview
 
@@ -84,6 +126,11 @@ validates.
 resolved definition; changing edition prompts before clearing incompatible
 selections.
 
+**Class editor state:** `Character` stores committed class instances only.
+In-progress class drafts and the selected single/multiclass path live in
+editor workflow storage (`src/app/session/classEditorWorkflowStorage.ts`) and
+are rehydrated on load.
+
 See [`src/adapters/STORAGE.md`](src/adapters/STORAGE.md) for persistence
 details.
 
@@ -91,25 +138,29 @@ details.
 
 ```bash
 npm install    # install dependencies
-npm run dev      # start Vite dev server
-npm run build    # typecheck and production build
-npm test         # run Vitest suite
-npm run lint     # Oxlint
+npm run dev    # start Vite dev server
+npm run build  # typecheck and production build
+npm test       # run Vitest suite
+npm run lint   # Oxlint
 npm run preview  # preview production build
 ```
 
 ## Storage schema version
 
-**Current version: 3**
+**Current version: 9**
 
 Envelope shape:
 
 ```json
 {
-  "schemaVersion": 3,
+  "schemaVersion": 9,
   "character": {
     "species": null,
-    "class": null
+    "targetLevel": 1,
+    "classes": [],
+    "startingClassInstanceId": null,
+    "background": null,
+    "details": {}
   }
 }
 ```
@@ -117,7 +168,11 @@ Envelope shape:
 - **v0:** legacy root-level character JSON
 - **v1:** versioned envelope without species
 - **v2:** adds `species`
-- **v3:** adds `class`
+- **v3:** adds legacy single `class`
+- **v4–v6:** adds and cleans up `background`
+- **v7–v8:** adds and restructures `details`
+- **v9:** replaces `class` with `classes[]`, `targetLevel`, and
+  `startingClassInstanceId`
 
 Migrations run on load in `src/adapters/storage/migrations/`.
 
@@ -125,7 +180,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter |
+| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian (preview) |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
@@ -143,7 +198,7 @@ Attribution and licence metadata live in `src/data/content/{edition}/source.ts`.
 ### Class icon PNGs
 
 Original transparent PNG emblems in `src/assets/classes/`. Currently wired in
-the app: **Fighter**, **Rogue**, **Artificer**. See
+the app: **Fighter**, **Barbarian**, **Rogue**, **Artificer**. See
 [`src/assets/classes/attribution.md`](src/assets/classes/attribution.md).
 
 Icons are decorative; class names in the UI provide accessible labels.
@@ -156,7 +211,7 @@ Icons are decorative; class names in the UI provide accessible labels.
 
 ## Roadmap
 
-- **Class content:** Rogue and additional 2024 SRD classes; parallel
+- **Class content:** Full Barbarian and additional 2024 SRD classes; parallel
   `srd-2014` definitions where rules differ
 - **Class icons:** Register remaining PNG emblems as artwork is finalized
 - **Species:** 2014 SRD species in `src/data/species/srd-2014/`
@@ -164,5 +219,5 @@ Icons are decorative; class names in the UI provide accessible labels.
 - **Equipment step:** starting gear, weapon mastery choices (deferred from
   Fighter level-1 feature text)
 - **Review polish:** richer summaries as more steps ship
-- **Out of scope for now:** multiclassing, subclasses, automatic cross-edition
-  conversion, non-SRD book content
+- **Out of scope for now:** automatic cross-edition conversion, non-SRD book
+  content

@@ -7,6 +7,7 @@ import { migrateV4ToV5 } from './migrateV4ToV5'
 import { migrateV5ToV6 } from './migrateV5ToV6'
 import { migrateV6ToV7 } from './migrateV6ToV7'
 import { migrateV7ToV8 } from './migrateV7ToV8'
+import { migrateV8ToV9 } from './migrateV8ToV9'
 
 /**
  * Sequential migrations keyed by source schema version.
@@ -21,4 +22,5 @@ export const MIGRATIONS: Record<number, MigrationFn> = {
   5: migrateV5ToV6,
   6: migrateV6ToV7,
   7: migrateV7ToV8,
+  8: migrateV8ToV9,
 }

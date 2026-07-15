@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { soldierSrd2024 } from '../../data/backgrounds/srd-2024/soldier'
 import { computeAbilityScoreBonuses } from '../../domain/background/computeAbilityScoreBonuses'
 import {
-  draftToBackgroundSelection,
   tryCommitBackgroundDraft,
 } from '../../features/background/backgroundSelectionDraft'
 import { validateBackgroundSelection } from './backgroundRules'

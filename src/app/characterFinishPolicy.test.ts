@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatFinishBlockedMessage,
   formatIncompleteRequiredStepsMessage,
   getFinishPolicyResult,
 } from './characterFinishPolicy'
+import type { ResolvedDeferredCharacterRequirement } from '../domain/types'
 import type { StepStatus, WizardStepId } from './wizard/types'
 
 function createStatuses(
@@ -16,10 +18,13 @@ function createStatuses(
   return {
     basics: defaultStatus,
     species: defaultStatus,
+    'character-details': defaultStatus,
     class: defaultStatus,
     'ability-scores': defaultStatus,
     background: defaultStatus,
     equipment: defaultStatus,
+    feats: defaultStatus,
+    spells: defaultStatus,
     review: { completion: 'in-progress', hasValidationErrors: false },
     ...overrides,
   }
@@ -39,6 +44,7 @@ describe('getFinishPolicyResult', () => {
     ).toEqual({
       canFinish: true,
       incompleteRequiredSteps: [],
+      unresolvedDeferredRequirements: [],
     })
   })
 
@@ -55,6 +61,37 @@ describe('getFinishPolicyResult', () => {
     ).toEqual({
       canFinish: false,
       incompleteRequiredSteps: [{ stepId: 'species', label: 'Species' }],
+      unresolvedDeferredRequirements: [],
+    })
+  })
+
+  it('blocks finishing when deferred character requirements remain unresolved', () => {
+    const deferredRequirements: ResolvedDeferredCharacterRequirement[] = [
+      {
+        requirementId: 'starting-equipment',
+        sourceInstanceId: 'fighter-instance-1',
+        sourceClassId: 'srd-2024:fighter',
+        sourceClassLevel: 1,
+        destinationStep: 'equipment',
+        label: 'Starting Equipment',
+        description: 'Choose starting equipment in Equipment',
+      },
+    ]
+
+    expect(
+      getFinishPolicyResult(
+        createStatuses({
+          basics: { completion: 'complete', hasValidationErrors: false },
+          species: { completion: 'complete', hasValidationErrors: false },
+          class: { completion: 'complete', hasValidationErrors: false },
+          'ability-scores': { completion: 'complete', hasValidationErrors: false },
+        }),
+        deferredRequirements,
+      ),
+    ).toEqual({
+      canFinish: false,
+      incompleteRequiredSteps: [],
+      unresolvedDeferredRequirements: deferredRequirements,
     })
   })
 
@@ -71,6 +108,30 @@ describe('getFinishPolicyResult', () => {
         }),
       ).canFinish,
     ).toBe(true)
+  })
+})
+
+describe('formatFinishBlockedMessage', () => {
+  it('describes unresolved deferred requirements', () => {
+    expect(
+      formatFinishBlockedMessage({
+        canFinish: false,
+        incompleteRequiredSteps: [],
+        unresolvedDeferredRequirements: [
+          {
+            requirementId: 'starting-equipment',
+            sourceInstanceId: 'fighter-instance-1',
+            sourceClassId: 'srd-2024:fighter',
+            sourceClassLevel: 1,
+            destinationStep: 'equipment',
+            label: 'Starting Equipment',
+            description: 'Choose starting equipment in Equipment',
+          },
+        ],
+      }),
+    ).toBe(
+      'Complete remaining character decisions before finishing your character.',
+    )
   })
 })
 

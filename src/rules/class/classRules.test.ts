@@ -110,7 +110,7 @@ describe('validateClassSelection', () => {
     ).toEqual({ ok: true })
   })
 
-  it('requires martial archetype at level 3', () => {
+  it('requires Fighter Subclass at level 3', () => {
     const result = validateClassSelection(
       createValidFighterSelection({
         level: 3,
@@ -125,9 +125,7 @@ describe('validateClassSelection', () => {
 
     expect(result).toEqual({
       ok: false,
-      issues: [
-        { code: 'missing-required-choice', choiceId: 'martial-archetype' },
-      ],
+      issues: [{ code: 'missing-required-choice', choiceId: 'fighter-subclass' }],
     })
   })
 
@@ -137,7 +135,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'defense',
           'skill-proficiencies': ['athletics', 'perception'],
-          'martial-archetype': 'champion',
+          'fighter-subclass': 'champion',
         },
       }),
       'srd-2024',
@@ -146,7 +144,7 @@ describe('validateClassSelection', () => {
 
     expect(result).toEqual({
       ok: false,
-      issues: [{ code: 'unknown-choice', choiceId: 'martial-archetype' }],
+      issues: [{ code: 'unknown-choice', choiceId: 'fighter-subclass' }],
     })
   })
 
@@ -158,7 +156,7 @@ describe('validateClassSelection', () => {
           choices: {
             'fighting-style': 'defense',
             'skill-proficiencies': ['athletics', 'perception'],
-            'martial-archetype': 'champion',
+            'fighter-subclass': 'champion',
           },
         }),
         'srd-2024',
