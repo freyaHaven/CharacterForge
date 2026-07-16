@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { alertSrd2024 } from '../../data/feats/srd-2024/alert'
+import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
 import {
   needsEditionChangeFeatConfirmation,
   validateFeatSelection,
 } from './featRules'
 
 describe('validateFeatSelection', () => {
-  it('accepts a valid committed feat', () => {
+  it('accepts a valid committed feat', async () => {
+    const alert = await createBundledFeatCatalog().getFeat('srd-2024:alert')
+
     expect(
       validateFeatSelection(
         { featId: 'srd-2024:alert', choices: {} },
         'srd-2024',
-        alertSrd2024,
+        alert,
       ),
     ).toEqual({ ok: true })
   })
@@ -26,17 +28,21 @@ describe('validateFeatSelection', () => {
     ).toEqual({ ok: false, issues: [{ code: 'feat-not-found' }] })
   })
 
-  it('rejects a feat from another edition', () => {
+  it('rejects a feat from another edition', async () => {
+    const alert = await createBundledFeatCatalog().getFeat('srd-2024:alert')
+
     expect(
       validateFeatSelection(
         { featId: 'srd-2024:alert', choices: {} },
         'srd-2014',
-        alertSrd2024,
+        alert,
       ),
     ).toEqual({ ok: false, issues: [{ code: 'wrong-edition' }] })
   })
 
-  it('rejects unknown choice keys', () => {
+  it('rejects unknown choice keys', async () => {
+    const alert = await createBundledFeatCatalog().getFeat('srd-2024:alert')
+
     expect(
       validateFeatSelection(
         {
@@ -44,7 +50,7 @@ describe('validateFeatSelection', () => {
           choices: { 'unknown-choice': 'value' },
         },
         'srd-2024',
-        alertSrd2024,
+        alert,
       ),
     ).toEqual({
       ok: false,
@@ -61,11 +67,13 @@ describe('needsEditionChangeFeatConfirmation', () => {
   })
 
   it('requires confirmation when the feat belongs to another edition', async () => {
+    const catalog = createBundledFeatCatalog()
+
     await expect(
       needsEditionChangeFeatConfirmation(
         { featId: 'srd-2024:alert', choices: {} },
         'srd-2014',
-        async () => alertSrd2024,
+        (featId) => catalog.getFeat(featId),
       ),
     ).resolves.toBe(true)
   })

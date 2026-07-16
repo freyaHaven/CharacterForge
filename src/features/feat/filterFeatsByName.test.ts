@@ -1,23 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { SRD_2024_FEATS } from '../../data/feats/srd-2024/source'
+import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
 import { filterFeatsByName } from './filterFeatsByName'
 
 describe('filterFeatsByName', () => {
-  it('returns all feats for an empty query', () => {
-    expect(filterFeatsByName([...SRD_2024_FEATS], '')).toHaveLength(
-      SRD_2024_FEATS.length,
+  it('returns all feats for an empty query', async () => {
+    const feats = await createBundledFeatCatalog().listFeats('srd-2024')
+
+    expect(filterFeatsByName(feats, '')).toHaveLength(feats.length)
+  })
+
+  it('matches by name case-insensitively', async () => {
+    const feats = await createBundledFeatCatalog().listFeats('srd-2024')
+
+    expect(filterFeatsByName(feats, 'alert').map((feat) => feat.id)).toEqual([
+      'srd-2024:alert',
+    ])
+  })
+
+  it('matches origin category text for the current catalogue', async () => {
+    const feats = await createBundledFeatCatalog().listFeats('srd-2024')
+
+    expect(filterFeatsByName(feats, 'origin').map((feat) => feat.id)).toEqual(
+      feats.map((feat) => feat.id),
     )
-  })
-
-  it('filters by feat name', () => {
-    expect(
-      filterFeatsByName([...SRD_2024_FEATS], 'alert').map((feat) => feat.id),
-    ).toEqual(['srd-2024:alert'])
-  })
-
-  it('filters by category label text', () => {
-    expect(
-      filterFeatsByName([...SRD_2024_FEATS], 'origin').map((feat) => feat.id),
-    ).toEqual(SRD_2024_FEATS.map((feat) => feat.id))
   })
 })

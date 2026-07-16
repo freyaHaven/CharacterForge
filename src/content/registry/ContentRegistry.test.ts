@@ -68,4 +68,18 @@ describe('ContentRegistry (bundled)', () => {
       features: champion!.features,
     })
   })
+
+  it('indexes bundled feats for lookup and edition listing', () => {
+    const registry = createBundledContentRegistry()
+
+    expect(registry.listFeats('srd-2024').map((feat) => feat.id)).toEqual([
+      'srd-2024:alert',
+      'srd-2024:magic-initiate-cleric',
+      'srd-2024:magic-initiate-wizard',
+      'srd-2024:savage-attacker',
+    ])
+    expect(registry.listFeats('srd-2014')).toEqual([])
+    expect(registry.getFeat('srd-2024:alert')?.name).toBe('Alert')
+    expect(registry.getFeat('srd-2014:alert')).toBeNull()
+  })
 })

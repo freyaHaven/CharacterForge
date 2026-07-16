@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alertSrd2024 } from '../../data/feats/srd-2024/alert'
+import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
 import {
   createFeatSelectionDraft,
   draftToFeatSelection,
@@ -8,10 +8,11 @@ import {
 } from './featSelectionDraft'
 
 describe('featSelectionDraft', () => {
-  it('commits Alert immediately because it has no required choices', () => {
+  it('commits Alert immediately because it has no required choices', async () => {
+    const alert = await createBundledFeatCatalog().getFeat('srd-2024:alert')
     const draft = createFeatSelectionDraft('srd-2024:alert')
 
-    expect(tryCommitFeatDraft(draft, 'srd-2024', alertSrd2024)).toEqual({
+    expect(tryCommitFeatDraft(draft, 'srd-2024', alert)).toEqual({
       committed: { featId: 'srd-2024:alert', choices: {} },
       validation: { ok: true },
     })

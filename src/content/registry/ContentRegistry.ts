@@ -50,6 +50,7 @@ export class ContentRegistry {
   private readonly backgroundsById = new Map<string, BackgroundDefinition>()
   private readonly featsById = new Map<string, FeatDefinition>()
   private readonly classesByEdition = new Map<EditionId, ClassDefinition[]>()
+  private readonly featsByEdition = new Map<EditionId, FeatDefinition[]>()
   private readonly subclassesByClassId = new Map<string, SubclassDefinition[]>()
 
   registerPack(pack: ContentPack): void {
@@ -86,6 +87,9 @@ export class ContentRegistry {
 
     for (const feat of pack.feats ?? []) {
       this.indexById(this.featsById, feat.id, feat, 'feat')
+      const editionFeats = this.featsByEdition.get(feat.editionId) ?? []
+      editionFeats.push(feat)
+      this.featsByEdition.set(feat.editionId, editionFeats)
     }
   }
 
@@ -127,6 +131,10 @@ export class ContentRegistry {
 
   getFeat(featId: string): FeatDefinition | null {
     return this.featsById.get(featId) ?? null
+  }
+
+  listFeats(editionId: EditionId): FeatDefinition[] {
+    return this.featsByEdition.get(editionId) ?? []
   }
 
   getSpell(_spellId: string): null {

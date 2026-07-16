@@ -110,11 +110,10 @@ src/
   content/         Content packs + Content Registry (game definitions only)
     registry/      ContentRegistry — single lookup surface for bundled content
     packs/
-      srd-2024/    Bundled SRD 2024 pack (classes, subclasses, …)
+      srd-2024/    Bundled SRD 2024 pack (classes, subclasses, feats, …)
   data/            Remaining edition content still migrating into packs
     species/srd-2024/
     backgrounds/srd-2024/
-    feats/srd-2024/
   adapters/        ClassCatalog, SpeciesCatalog, localStorage repository
   features/        React UI (pickers, drafts, icons)
   app/             Wizard shell, hooks, step status, save/finish policy
