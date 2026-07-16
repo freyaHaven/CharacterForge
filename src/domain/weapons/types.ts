@@ -42,6 +42,47 @@ export const WEAPON_IDS = [
 
 export type WeaponId = (typeof WEAPON_IDS)[number]
 
+/** Melee Simple and Martial weapons (Barbarian Weapon Mastery pool). */
+export const MELEE_WEAPON_IDS = [
+  'club',
+  'dagger',
+  'greatclub',
+  'handaxe',
+  'javelin',
+  'light-hammer',
+  'mace',
+  'quarterstaff',
+  'sickle',
+  'spear',
+  'battleaxe',
+  'flail',
+  'glaive',
+  'greataxe',
+  'greatsword',
+  'halberd',
+  'lance',
+  'longsword',
+  'maul',
+  'morningstar',
+  'pike',
+  'rapier',
+  'scimitar',
+  'shortsword',
+  'trident',
+  'war-pick',
+  'warhammer',
+  'whip',
+] as const satisfies readonly WeaponId[]
+
+export type MeleeWeaponId = (typeof MELEE_WEAPON_IDS)[number]
+
+export function isMeleeWeaponId(value: unknown): value is MeleeWeaponId {
+  return (
+    typeof value === 'string' &&
+    (MELEE_WEAPON_IDS as readonly string[]).includes(value)
+  )
+}
+
 export function isWeaponId(value: unknown): value is WeaponId {
   return (
     typeof value === 'string' &&

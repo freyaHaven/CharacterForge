@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
+import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
 import type { ClassSelection } from '../../domain/class/types'
 import { createAsiChoicesUpToLevel } from '../../domain/class/abilityScoreImprovement'
-import { createWeaponMasteryChoices } from '../../domain/class/weaponMastery'
+import { createFighterWeaponMasteryChoices } from '../../content/packs/srd-2024/classes/fighter.weaponMastery'
 import { validateClassSelection } from './classRules'
 
 function createValidFighterSelection(
@@ -16,7 +16,7 @@ function createValidFighterSelection(
     choices: {
       'fighting-style': 'defense',
       'skill-proficiencies': ['athletics', 'perception'],
-      ...createWeaponMasteryChoices(level),
+      ...createFighterWeaponMasteryChoices(level),
       ...createAsiChoicesUpToLevel(level),
     },
     ...overrides,
@@ -55,7 +55,7 @@ describe('validateClassSelection', () => {
       createValidFighterSelection({
         choices: {
           'skill-proficiencies': ['athletics', 'perception'],
-          'weapon-mastery': createWeaponMasteryChoices(1)['weapon-mastery'],
+          'weapon-mastery': createFighterWeaponMasteryChoices(1)['weapon-mastery'],
         },
       }),
       'srd-2024',
@@ -74,7 +74,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'archery',
           'skill-proficiencies': ['athletics'],
-          'weapon-mastery': createWeaponMasteryChoices(1)['weapon-mastery'],
+          'weapon-mastery': createFighterWeaponMasteryChoices(1)['weapon-mastery'],
         },
       }),
       'srd-2024',
@@ -143,7 +143,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'defense',
           'skill-proficiencies': ['athletics', 'perception'],
-          'weapon-mastery': createWeaponMasteryChoices(3)['weapon-mastery'],
+          'weapon-mastery': createFighterWeaponMasteryChoices(3)['weapon-mastery'],
         },
       }),
       'srd-2024',
@@ -162,7 +162,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'defense',
           'skill-proficiencies': ['athletics', 'perception'],
-          'weapon-mastery': createWeaponMasteryChoices(1)['weapon-mastery'],
+          'weapon-mastery': createFighterWeaponMasteryChoices(1)['weapon-mastery'],
           'fighter-subclass': 'champion',
         },
       }),
@@ -184,7 +184,7 @@ describe('validateClassSelection', () => {
           choices: {
             'fighting-style': 'defense',
             'skill-proficiencies': ['athletics', 'perception'],
-            ...createWeaponMasteryChoices(5),
+            ...createFighterWeaponMasteryChoices(5),
             ...createAsiChoicesUpToLevel(5),
             'fighter-subclass': 'champion',
           },

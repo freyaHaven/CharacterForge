@@ -1,29 +1,21 @@
 import type { ClassCatalog } from '../domain/ports/classCatalog'
-import type { EditionId } from '../domain/types'
-import type { ClassDefinition } from '../domain/class/types'
-import { barbarianSrd2024 } from '../data/classes/srd-2024/barbarian'
-import { fighterSrd2024 } from '../data/classes/srd-2024/fighter'
+import type { ContentRegistry } from '../content/registry/ContentRegistry'
+import { getBundledContentRegistry } from '../content/registry/bundledContent'
 
-const CLASSES_BY_ID = new Map<string, ClassDefinition>(
-  [fighterSrd2024, barbarianSrd2024].map((classDefinition) => [
-    classDefinition.id,
-    classDefinition,
-  ]),
-)
-
-const CLASSES_BY_EDITION = new Map<EditionId, ClassDefinition[]>([
-  ['srd-2024', [fighterSrd2024, barbarianSrd2024]],
-  ['srd-2014', []],
-])
-
-export function createBundledClassCatalog(): ClassCatalog {
+/**
+ * ClassCatalog adapter over the Content Registry.
+ * Application code that already depends on ClassCatalog keeps working unchanged.
+ */
+export function createBundledClassCatalog(
+  registry: ContentRegistry = getBundledContentRegistry(),
+): ClassCatalog {
   return {
     async listClasses(editionId) {
-      return CLASSES_BY_EDITION.get(editionId) ?? []
+      return registry.listClasses(editionId)
     },
 
     async getClass(classId) {
-      return CLASSES_BY_ID.get(classId) ?? null
+      return registry.getClass(classId)
     },
   }
 }

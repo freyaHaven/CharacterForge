@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
+import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
 import type { ClassDefinition } from '../../domain/class/types'
 import { createDeferredRequirementKey } from '../../features/class/classChoiceStateKeys'
 import { resolveDeferredRequirementsForInstances } from './resolveCharacterDeferredRequirements'

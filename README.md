@@ -72,8 +72,9 @@ step UI correctly.
 - Classes:
   - **Fighter** — levels 1–20, fighting style, skill proficiencies, martial
     archetype (Champion) at level 3, feature progression through level 20
-  - **Barbarian** — preview entry for multiclass catalogue testing (minimal
-    level-1 features)
+  - **Barbarian** — levels 1–20, Rage, Unarmored Defense, weapon mastery
+    (melee), Path of the Berserker at level 3, feature progression through
+    level 20
 
 **SRD 2014**
 
@@ -106,20 +107,25 @@ step UI correctly.
 src/
   domain/          Types, ports, edition-safe schemas (Character, species, class)
   rules/           Validation and effect resolution from definitions + selections
-  data/            Edition-specific content trees
+  content/         Content packs + Content Registry (game definitions only)
+    registry/      ContentRegistry — single lookup surface for bundled content
+    packs/
+      srd-2024/    Bundled SRD 2024 pack (classes, subclasses, …)
+  data/            Remaining edition content still migrating into packs
     species/srd-2024/
-    classes/srd-2024/
-    content/       Shared SRD source metadata per edition
+    backgrounds/srd-2024/
+    feats/srd-2024/
   adapters/        ClassCatalog, SpeciesCatalog, localStorage repository
   features/        React UI (pickers, drafts, icons)
   app/             Wizard shell, hooks, step status, save/finish policy
   assets/classes/  Class emblem PNGs (and future artwork)
 ```
 
-**Data flow:** UI loads definitions from catalog ports → user selections are
-held as drafts until validation passes → committed selections live on
-`Character` → save writes the current schema envelope → load migrates and
-validates.
+**Data flow:** UI and rules load definitions through catalog ports backed by the
+Content Registry → user selections are held as drafts until validation passes →
+committed selections live on `Character` → save writes the current schema
+envelope → load migrates and validates. Features must not import pack files
+directly; packs contain definitions only (no UI or engine logic).
 
 **Edition safety:** `ClassDefinition` and `SpeciesDefinition` each carry
 `editionId` and a full stable `id`. Validation compares selection IDs to the
@@ -180,7 +186,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian (preview) |
+| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
@@ -211,8 +217,8 @@ Icons are decorative; class names in the UI provide accessible labels.
 
 ## Roadmap
 
-- **Class content:** Full Barbarian and additional 2024 SRD classes; parallel
-  `srd-2014` definitions where rules differ
+- **Class content:** Additional 2024 SRD classes (Rogue, Monk, Paladin, and
+  others); parallel `srd-2014` definitions where rules differ
 - **Class icons:** Register remaining PNG emblems as artwork is finalized
 - **Species:** 2014 SRD species in `src/data/species/srd-2014/`
 - **Background step:** edition-specific background definitions and picker

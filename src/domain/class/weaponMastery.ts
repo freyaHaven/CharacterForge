@@ -1,12 +1,10 @@
 import type { ClassChoice, ClassChoiceValue } from './types'
 
-/** Fighter Weapon Mastery slot unlocks (SRD 2024). */
-export const WEAPON_MASTERY_SLOT_THRESHOLDS = [
-  { level: 1, total: 3, choiceId: 'weapon-mastery' },
-  { level: 4, total: 4, choiceId: 'weapon-mastery-weapons-4' },
-  { level: 10, total: 5, choiceId: 'weapon-mastery-weapons-5' },
-  { level: 16, total: 6, choiceId: 'weapon-mastery-weapons-6' },
-] as const
+export type WeaponMasterySlotThreshold = {
+  level: number
+  total: number
+  choiceId: string
+}
 
 export type WeaponMasterySlotGain = {
   level: number
@@ -14,11 +12,26 @@ export type WeaponMasterySlotGain = {
   choiceId: string
 }
 
-/** Fighter Weapon Mastery slot counts by class level (SRD 2024 table). */
-export function getWeaponMasterySlotCount(level: number): number {
-  let count = WEAPON_MASTERY_SLOT_THRESHOLDS[0]!.total
+/** Weapon Mastery choice ids follow `weapon-mastery` / `weapon-mastery-weapons-*`. */
+export function isWeaponMasteryChoiceId(choiceId: string): boolean {
+  return (
+    choiceId === 'weapon-mastery' ||
+    choiceId.startsWith('weapon-mastery-weapons-')
+  )
+}
 
-  for (const threshold of WEAPON_MASTERY_SLOT_THRESHOLDS) {
+/** Slot counts by class level for the given schedule. */
+export function getWeaponMasterySlotCount(
+  level: number,
+  thresholds: readonly WeaponMasterySlotThreshold[],
+): number {
+  if (thresholds.length === 0) {
+    return 0
+  }
+
+  let count = thresholds[0]!.total
+
+  for (const threshold of thresholds) {
     if (level < threshold.level) {
       break
     }
@@ -32,11 +45,12 @@ export function getWeaponMasterySlotCount(level: number): number {
 /** Slot gains unlocked at or below the given class level. */
 export function getWeaponMasterySlotGains(
   level: number,
+  thresholds: readonly WeaponMasterySlotThreshold[],
 ): WeaponMasterySlotGain[] {
   const gains: WeaponMasterySlotGain[] = []
   let previousTotal = 0
 
-  for (const threshold of WEAPON_MASTERY_SLOT_THRESHOLDS) {
+  for (const threshold of thresholds) {
     if (level < threshold.level) {
       break
     }
@@ -52,24 +66,17 @@ export function getWeaponMasterySlotGains(
   return gains
 }
 
-export function isWeaponMasteryChoiceId(choiceId: string): boolean {
-  return WEAPON_MASTERY_SLOT_THRESHOLDS.some(
-    (threshold) => threshold.choiceId === choiceId,
-  )
-}
-
 export function collectWeaponMasterySelections(
   choices: Record<string, ClassChoiceValue>,
   exceptChoiceId?: string,
 ): string[] {
   const selected: string[] = []
 
-  for (const threshold of WEAPON_MASTERY_SLOT_THRESHOLDS) {
-    if (threshold.choiceId === exceptChoiceId) {
+  for (const [choiceId, value] of Object.entries(choices)) {
+    if (!isWeaponMasteryChoiceId(choiceId) || choiceId === exceptChoiceId) {
       continue
     }
 
-    const value = choices[threshold.choiceId]
     if (!Array.isArray(value)) {
       continue
     }
@@ -80,27 +87,17 @@ export function collectWeaponMasterySelections(
   return selected
 }
 
-const DEFAULT_WEAPON_MASTERY_POOL = [
-  'longsword',
-  'shortbow',
-  'battleaxe',
-  'greatsword',
-  'rapier',
-  'warhammer',
-] as const
-
 /** Deterministic Weapon Mastery picks for tests and fixtures. */
 export function createWeaponMasteryChoices(
   level: number,
+  thresholds: readonly WeaponMasterySlotThreshold[],
+  pool: readonly string[],
 ): Record<string, string[]> {
   const result: Record<string, string[]> = {}
   let offset = 0
 
-  for (const gain of getWeaponMasterySlotGains(level)) {
-    result[gain.choiceId] = DEFAULT_WEAPON_MASTERY_POOL.slice(
-      offset,
-      offset + gain.slots,
-    )
+  for (const gain of getWeaponMasterySlotGains(level, thresholds)) {
+    result[gain.choiceId] = [...pool.slice(offset, offset + gain.slots)]
     offset += gain.slots
   }
 

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from './fighter'
-import { getChoicesAvailableAtLevel, pruneClassChoicesForLevel } from '../../../domain/class/choiceAvailability'
+import { getChoicesAvailableAtLevel, pruneClassChoicesForLevel } from '../../../../domain/class/choiceAvailability'
 import {
   getClassFeatureProgressionUpToLevel,
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
-} from '../../../domain/class/featureProgression'
-import { createAsiChoicesUpToLevel } from '../../../domain/class/abilityScoreImprovement'
-import { createWeaponMasteryChoices } from '../../../domain/class/weaponMastery'
-import { validateClassSelection } from '../../../rules/class/classRules'
-import { resolveDeferredCharacterRequirements } from '../../../rules/class/deferredRequirements'
+} from '../../../../domain/class/featureProgression'
+import { createAsiChoicesUpToLevel } from '../../../../domain/class/abilityScoreImprovement'
+import { createFighterWeaponMasteryChoices } from './fighter.weaponMastery'
+import { validateClassSelection } from '../../../../rules/class/classRules'
+import { resolveDeferredCharacterRequirements } from '../../../../rules/class/deferredRequirements'
 
 const FEATURE_IDS_BY_LEVEL: Record<number, readonly string[]> = {
   1: ['fighting-style', 'second-wind', 'weapon-mastery'],
@@ -66,7 +66,7 @@ function createValidFighterSelection(level: number) {
   const choices: Record<string, string | string[]> = {
     'fighting-style': 'defense',
     'skill-proficiencies': ['athletics', 'perception'],
-    ...createWeaponMasteryChoices(level),
+    ...createFighterWeaponMasteryChoices(level),
     ...createAsiChoicesUpToLevel(level),
   }
 
@@ -186,7 +186,7 @@ describe('fighterSrd2024 progression', () => {
           choices: {
             'fighting-style': 'defense',
             'skill-proficiencies': ['athletics', 'perception'],
-            'weapon-mastery': createWeaponMasteryChoices(3)['weapon-mastery'],
+            'weapon-mastery': createFighterWeaponMasteryChoices(3)['weapon-mastery'],
           },
         },
         'srd-2024',
@@ -203,7 +203,7 @@ describe('fighterSrd2024 progression', () => {
       {
         'fighting-style': 'archery',
         'skill-proficiencies': ['athletics', 'perception'],
-        ...createWeaponMasteryChoices(1),
+        ...createFighterWeaponMasteryChoices(1),
         'fighter-subclass': 'champion',
       },
       getChoicesAvailableAtLevel(fighterSrd2024, 1),
@@ -212,7 +212,7 @@ describe('fighterSrd2024 progression', () => {
     expect(pruned).toEqual({
       'fighting-style': 'archery',
       'skill-proficiencies': ['athletics', 'perception'],
-      ...createWeaponMasteryChoices(1),
+      ...createFighterWeaponMasteryChoices(1),
     })
   })
 

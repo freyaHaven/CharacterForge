@@ -21,9 +21,30 @@ import { getOverviewSetupChoices } from './classOverviewSetupChoices'
 import { formatClassValidationIssue } from './formatClassValidation'
 import type { ClassSelectionDraft } from './classSelectionDraft'
 import {
+  choiceGrantsSkillProficiency,
+  collectSkillProficiencySelections,
+} from '../../domain/class/skillProficiencySelections'
+import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
 } from '../../domain/class/weaponMastery'
+
+function getExcludedMultiSelectOptionIds(
+  definition: ClassDefinition,
+  choiceId: string,
+  choices: Record<string, ClassChoiceValue>,
+): string[] {
+  if (isWeaponMasteryChoiceId(choiceId)) {
+    return collectWeaponMasterySelections(choices, choiceId)
+  }
+
+  const choice = definition.choices.find((entry) => entry.id === choiceId)
+  if (choice !== undefined && choiceGrantsSkillProficiency(choice)) {
+    return collectSkillProficiencySelections(definition, choices, choiceId)
+  }
+
+  return []
+}
 
 export type ClassProgressionSectionProps = {
   editionId: EditionId
@@ -255,14 +276,11 @@ export function ClassProgressionSection({
                         value={activeChoices[item.multiSelectChoice.id]}
                         errorId={errorId}
                         ariaLabel={item.multiSelectChoice.prompt}
-                        excludedOptionIds={
-                          isWeaponMasteryChoiceId(item.multiSelectChoice.id)
-                            ? collectWeaponMasterySelections(
-                                activeChoices,
-                                item.multiSelectChoice.id,
-                              )
-                            : []
-                        }
+                        excludedOptionIds={getExcludedMultiSelectOptionIds(
+                          activeDefinition,
+                          item.multiSelectChoice.id,
+                          activeChoices,
+                        )}
                         onChange={onChoiceChange}
                       />
                     </div>

@@ -4,7 +4,7 @@ import type {
   ClassSelection,
 } from '../class/types'
 import { createAsiChoicesUpToLevel } from '../class/abilityScoreImprovement'
-import { createWeaponMasteryChoices } from '../class/weaponMastery'
+import { createFighterWeaponMasteryChoices } from '../../content/packs/srd-2024/classes/fighter.weaponMastery'
 import type { Character } from '../types'
 import { createClassInstanceId } from './createClassInstanceId'
 
@@ -68,7 +68,7 @@ export function createTestFighterClassInstance(
     choices: {
       'fighting-style': 'defense',
       'skill-proficiencies': ['athletics', 'perception'],
-      ...createWeaponMasteryChoices(level),
+      ...createFighterWeaponMasteryChoices(level),
       ...createAsiChoicesUpToLevel(level),
       ...(level >= 3 ? { 'fighter-subclass': 'champion' } : {}),
     },

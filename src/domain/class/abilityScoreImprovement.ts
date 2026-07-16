@@ -290,13 +290,16 @@ export function createAsiChoiceDefinition(
 
 export const ASI_FEATURE_LEVELS = [4, 6, 8, 12, 14, 16] as const
 
+export const BARBARIAN_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
 /** Deterministic complete ASI picks for tests and fixtures. */
 export function createAsiChoicesUpToLevel(
   level: number,
+  asiLevels: readonly number[] = ASI_FEATURE_LEVELS,
 ): Record<string, string> {
   const result: Record<string, string> = {}
 
-  for (const asiLevel of ASI_FEATURE_LEVELS) {
+  for (const asiLevel of asiLevels) {
     if (level >= asiLevel) {
       result[`ability-score-improvement-${asiLevel}`] = selectAsiPlus2('strength')
     }

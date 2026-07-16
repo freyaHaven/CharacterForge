@@ -249,6 +249,19 @@ describe('Class workflow in App', () => {
       screen.getByRole('checkbox', { name: /^Battleaxe\b/ }),
     )
 
+    await user.click(screen.getByRole('button', { name: /Barbarian 1/i }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('checkbox', { name: /^Athletics\b/ }),
+      ).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('checkbox', { name: /^Athletics\b/ }))
+    await user.click(screen.getByRole('checkbox', { name: /^Perception\b/ }))
+    await user.click(screen.getByRole('checkbox', { name: /^Greataxe\b/ }))
+    await user.click(screen.getByRole('checkbox', { name: /^Handaxe\b/ }))
+
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
         expect.objectContaining({

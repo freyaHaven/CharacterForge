@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
+import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
 import { pruneClassInstanceChoicesForLevel } from '../../domain/class/pruneClassInstanceChoices'
 
 describe('pruneClassInstanceChoicesForLevel', () => {

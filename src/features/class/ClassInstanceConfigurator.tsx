@@ -36,9 +36,30 @@ import { LevelStepper } from './LevelStepper'
 import { formatClassValidationIssue } from './formatClassValidation'
 import type { ClassSelectionDraft } from './classSelectionDraft'
 import {
+  choiceGrantsSkillProficiency,
+  collectSkillProficiencySelections,
+} from '../../domain/class/skillProficiencySelections'
+import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
 } from '../../domain/class/weaponMastery'
+
+function getExcludedMultiSelectOptionIds(
+  definition: ClassDefinition,
+  choiceId: string,
+  choices: Record<string, ClassChoiceValue>,
+): string[] {
+  if (isWeaponMasteryChoiceId(choiceId)) {
+    return collectWeaponMasterySelections(choices, choiceId)
+  }
+
+  const choice = definition.choices.find((entry) => entry.id === choiceId)
+  if (choice !== undefined && choiceGrantsSkillProficiency(choice)) {
+    return collectSkillProficiencySelections(definition, choices, choiceId)
+  }
+
+  return []
+}
 
 export type ClassInstanceConfiguratorProps = {
   editionId: EditionId
@@ -314,14 +335,11 @@ export function ClassInstanceConfigurator({
                               value={activeChoices[linkedMultiSelect.id]}
                               errorId={errorId}
                               legend={feature.name}
-                              excludedOptionIds={
-                                isWeaponMasteryChoiceId(linkedMultiSelect.id)
-                                  ? collectWeaponMasterySelections(
-                                      activeChoices,
-                                      linkedMultiSelect.id,
-                                    )
-                                  : []
-                              }
+                              excludedOptionIds={getExcludedMultiSelectOptionIds(
+                                activeDefinition,
+                                linkedMultiSelect.id,
+                                activeChoices,
+                              )}
                               onChange={onChoiceChange}
                             />
                             {issue !== undefined && errorId !== undefined ? (
@@ -373,14 +391,11 @@ export function ClassInstanceConfigurator({
                       value={activeChoices[choice.id]}
                       errorId={errorId}
                       legend={choice.prompt}
-                      excludedOptionIds={
-                        isWeaponMasteryChoiceId(choice.id)
-                          ? collectWeaponMasterySelections(
-                              activeChoices,
-                              choice.id,
-                            )
-                          : []
-                      }
+                      excludedOptionIds={getExcludedMultiSelectOptionIds(
+                        activeDefinition,
+                        choice.id,
+                        activeChoices,
+                      )}
                       onChange={onChoiceChange}
                     />
                     {issue !== undefined && errorId !== undefined ? (

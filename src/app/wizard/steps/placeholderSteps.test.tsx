@@ -55,11 +55,12 @@ describe('ClassStep', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByText(/class path:/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fighter' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Barbarian' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Barbarian' })).toBeInTheDocument()
     expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument()
   })
 
-  it('includes preview classes in multiclass mode', async () => {
+  it('includes Barbarian alongside Fighter in multiclass mode', async () => {
     renderClassStep('multiclass')
 
     await waitFor(() => {
@@ -71,7 +72,7 @@ describe('ClassStep', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Fighter/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Barbarian/i })).toBeInTheDocument()
-    expect(screen.getByText('Preview')).toBeInTheDocument()
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument()
   })
 
   it('shows the class-path introduction when no path is selected', async () => {

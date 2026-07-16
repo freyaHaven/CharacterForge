@@ -107,6 +107,23 @@ export type ClassSpellcasting = {
 
 export type ClassCatalogStatus = 'available' | 'preview'
 
+/**
+ * First-class subclass definition for content packs.
+ * Assembled into a {@link ClassChoiceOption} on the parent class's subclass choice.
+ * `choiceOptionId` is the value stored in character selections (must stay stable).
+ */
+export type SubclassDefinition = {
+  id: string
+  classId: string
+  editionId: EditionId
+  name: string
+  description: string
+  source: ContentSource
+  /** Option id written into ClassSelection.choices (e.g. `'champion'`). */
+  choiceOptionId: string
+  features: ClassOptionFeature[]
+}
+
 export type ClassDefinition = {
   id: string
   editionId: EditionId
