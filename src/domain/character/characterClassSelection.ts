@@ -3,8 +3,6 @@ import type {
   ClassLevel,
   ClassSelection,
 } from '../class/types'
-import { createAsiChoicesUpToLevel } from '../class/abilityScoreImprovement'
-import { createFighterWeaponMasteryChoices } from '../../content/packs/srd-2024/classes/fighter.weaponMastery'
 import type { Character } from '../types'
 import { createClassInstanceId } from './createClassInstanceId'
 
@@ -53,26 +51,6 @@ export function withSingleClassInstance(
     targetLevel: instance.level,
     classes: [instance],
     startingClassInstanceId: instance.instanceId,
-  }
-}
-
-export function createTestFighterClassInstance(
-  overrides: Partial<CharacterClassSelection> = {},
-): CharacterClassSelection {
-  const level = overrides.level ?? 1
-
-  return {
-    instanceId: 'fighter-instance-1',
-    classId: 'srd-2024:fighter',
-    level,
-    choices: {
-      'fighting-style': 'defense',
-      'skill-proficiencies': ['athletics', 'perception'],
-      ...createFighterWeaponMasteryChoices(level),
-      ...createAsiChoicesUpToLevel(level),
-      ...(level >= 3 ? { 'fighter-subclass': 'champion' } : {}),
-    },
-    ...overrides,
   }
 }
 

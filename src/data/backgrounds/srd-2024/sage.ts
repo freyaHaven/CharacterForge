@@ -12,6 +12,7 @@ export const sageSrd2024: BackgroundDefinition = {
   eligibleAbilityScores: ['constitution', 'intelligence', 'wisdom'],
   originFeat: {
     id: 'magic-initiate-wizard',
+    featId: 'srd-2024:magic-initiate-wizard',
     name: 'Magic Initiate (Wizard)',
     description:
       'You learn two cantrips and one 1st-level spell from the Wizard spell list. Spell selection will be configured in a later step.',

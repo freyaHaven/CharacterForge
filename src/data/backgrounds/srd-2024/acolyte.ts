@@ -12,6 +12,7 @@ export const acolyteSrd2024: BackgroundDefinition = {
   eligibleAbilityScores: ['intelligence', 'wisdom', 'charisma'],
   originFeat: {
     id: 'magic-initiate-cleric',
+    featId: 'srd-2024:magic-initiate-cleric',
     name: 'Magic Initiate (Cleric)',
     description:
       'You learn two cantrips and one 1st-level spell from the Cleric spell list. Spell selection will be configured in a later step.',

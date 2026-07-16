@@ -16,10 +16,8 @@ import {
   clearEditorSession,
   waitForAppReady,
 } from '../test/characterEditorTestUtils'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../testing/classFixtures'
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({

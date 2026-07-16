@@ -1,27 +1,49 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
 import type { ClassDefinition } from '../../domain/class/types'
 import { sortClassesForCatalog } from './sortClassesForCatalog'
+
+const EMPTY_SOURCE = {
+  id: 'test',
+  name: 'Test',
+  version: '1',
+  licence: 'test',
+  attribution: 'test',
+  documentUrl: 'https://example.test',
+} as const
 
 function createStubClass(
   id: string,
   name: string,
-  orderHint?: number,
+  catalogOrder?: number,
 ): ClassDefinition {
   return {
-    ...fighterSrd2024,
     id,
+    editionId: 'srd-2024',
     name,
-    ...(orderHint === undefined ? {} : {}),
+    description: `${name} stub`,
+    source: EMPTY_SOURCE,
+    hitDie: { sides: 8 },
+    primaryAbilities: ['strength'],
+    savingThrows: ['strength'],
+    proficiencies: {
+      armor: [],
+      weapons: ['simple'],
+      tools: [],
+      skillOptions: [],
+    },
+    featureProgression: [],
+    choices: [],
+    deferredRequirements: [],
+    ...(catalogOrder === undefined ? {} : { catalogOrder }),
   }
 }
 
 describe('sortClassesForCatalog', () => {
-  it('orders known martial classes melee before ranged-leaning options', () => {
+  it('orders by catalogOrder then name', () => {
     const sorted = sortClassesForCatalog([
-      createStubClass('srd-2024:rogue', 'Rogue'),
-      createStubClass('srd-2024:artificer', 'Artificer'),
-      createStubClass('srd-2024:fighter', 'Fighter'),
+      createStubClass('pack:rogue', 'Rogue', 20),
+      createStubClass('pack:artificer', 'Artificer', 30),
+      createStubClass('pack:fighter', 'Fighter', 10),
     ])
 
     expect(sorted.map((entry) => entry.name)).toEqual([
@@ -31,10 +53,10 @@ describe('sortClassesForCatalog', () => {
     ])
   })
 
-  it('falls back to name order for unknown class ids', () => {
+  it('falls back to name order when catalogOrder is omitted', () => {
     const sorted = sortClassesForCatalog([
-      createStubClass('srd-2024:zealot', 'Zealot'),
-      createStubClass('srd-2024:warden', 'Warden'),
+      createStubClass('pack:zealot', 'Zealot'),
+      createStubClass('pack:warden', 'Warden'),
     ])
 
     expect(sorted.map((entry) => entry.name)).toEqual(['Warden', 'Zealot'])

@@ -17,10 +17,8 @@ import {
   clearEditorSession,
   waitForAppReady,
 } from '../test/characterEditorTestUtils'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../testing/classFixtures'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),

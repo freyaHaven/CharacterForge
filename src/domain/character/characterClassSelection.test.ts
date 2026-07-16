@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCommittedClassSelection,
   classInstanceToSelection,
-  createTestFighterClassInstance,
   getCommittedClassSelection,
   removeClassInstanceFromCharacter,
   selectionToClassInstance,
@@ -10,11 +9,15 @@ import {
   withSingleClassInstance,
 } from './characterClassSelection'
 import { createDefaultCharacter } from './defaults'
+import {
+  createTestClassInstance,
+  createTestFighterClassInstance,
+} from '../../testing/classFixtures'
 
 describe('characterClassSelection helpers', () => {
   it('converts between class instances and legacy selection payloads', () => {
     const selection = {
-      classId: 'srd-2024:fighter',
+      classId: 'test:sample-fighter',
       level: 3,
       choices: { 'fighting-style': 'defense' },
     }
@@ -31,7 +34,12 @@ describe('characterClassSelection helpers', () => {
   })
 
   it('returns the first committed class as a selection payload', () => {
-    const instance = createTestFighterClassInstance()
+    const instance = createTestClassInstance({
+      instanceId: 'fighter-instance-1',
+      classId: 'test:sample-fighter',
+      level: 1,
+      choices: { 'fighting-style': 'defense' },
+    })
 
     expect(
       getCommittedClassSelection({
@@ -39,18 +47,17 @@ describe('characterClassSelection helpers', () => {
         ...withSingleClassInstance(instance),
       }),
     ).toEqual({
-      classId: 'srd-2024:fighter',
+      classId: 'test:sample-fighter',
       level: 1,
-      choices: {
-        'fighting-style': 'defense',
-        'skill-proficiencies': ['athletics', 'perception'],
-        'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
-      },
+      choices: { 'fighting-style': 'defense' },
     })
   })
 
   it('clears class state when committing null', () => {
-    const instance = createTestFighterClassInstance()
+    const instance = createTestClassInstance({
+      instanceId: 'fighter-instance-1',
+      classId: 'test:sample-fighter',
+    })
     const character = {
       ...createDefaultCharacter(),
       ...withSingleClassInstance(instance),
@@ -68,7 +75,7 @@ describe('characterClassSelection helpers', () => {
     const committed = applyCommittedClassSelection(
       createDefaultCharacter(),
       {
-        classId: 'srd-2024:fighter',
+        classId: 'test:sample-fighter',
         level: 2,
         choices: {},
       },
@@ -81,7 +88,7 @@ describe('characterClassSelection helpers', () => {
       classes: [
         {
           instanceId: 'new-instance',
-          classId: 'srd-2024:fighter',
+          classId: 'test:sample-fighter',
           level: 2,
           choices: {},
         },
@@ -91,13 +98,15 @@ describe('characterClassSelection helpers', () => {
   })
 
   it('upserts class instances without replacing other committed classes', () => {
-    const fighter = createTestFighterClassInstance()
-    const barbarian = {
+    const fighter = createTestClassInstance({
+      instanceId: 'fighter-instance-1',
+      classId: 'test:sample-fighter',
+    })
+    const barbarian = createTestClassInstance({
       instanceId: 'barbarian-instance',
-      classId: 'srd-2024:barbarian',
+      classId: 'test:sample-barbarian',
       level: 2,
-      choices: {},
-    }
+    })
     const character = {
       ...createDefaultCharacter(),
       targetLevel: 5,
@@ -113,13 +122,15 @@ describe('characterClassSelection helpers', () => {
   })
 
   it('removes a class instance and fixes the starting class reference', () => {
-    const fighter = createTestFighterClassInstance()
-    const barbarian = {
+    const fighter = createTestClassInstance({
+      instanceId: 'fighter-instance-1',
+      classId: 'test:sample-fighter',
+    })
+    const barbarian = createTestClassInstance({
       instanceId: 'barbarian-instance',
-      classId: 'srd-2024:barbarian',
+      classId: 'test:sample-barbarian',
       level: 2,
-      choices: {},
-    }
+    })
     const character = {
       ...createDefaultCharacter(),
       targetLevel: 3,
@@ -132,5 +143,16 @@ describe('characterClassSelection helpers', () => {
       classes: [fighter],
       startingClassInstanceId: fighter.instanceId,
     })
+  })
+
+  it('supports real fighter fixture from testing module', () => {
+    const instance = createTestFighterClassInstance()
+
+    expect(instance.classId).toBe('srd-2024:fighter')
+    expect(instance.choices['fighting-style']).toBe('defense')
+    expect(instance.choices['skill-proficiencies']).toEqual([
+      'athletics',
+      'perception',
+    ])
   })
 })

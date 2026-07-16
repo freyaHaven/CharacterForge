@@ -7,10 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Character } from '../domain/types'
 import { createDefaultCharacter } from '../domain/character/defaults'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../testing/classFixtures'
 import {
   completeFighterSelection,
   goToClassStep,

@@ -1,41 +1,34 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
+import { createSyntheticClassDefinition } from '../../testing/syntheticClassDefinition'
 import {
   getChoicesAvailableAtLevel,
   pruneClassChoicesForLevel,
 } from './choiceAvailability'
 
+const sampleClass = createSyntheticClassDefinition()
+
 describe('choiceAvailability', () => {
   it('returns only choices at or below the selected level', () => {
     expect(
-      getChoicesAvailableAtLevel(fighterSrd2024, 1).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies', 'weapon-mastery'])
+      getChoicesAvailableAtLevel(sampleClass, 1).map((choice) => choice.id),
+    ).toEqual(['skill-proficiencies'])
 
     expect(
-      getChoicesAvailableAtLevel(fighterSrd2024, 3).map((choice) => choice.id),
-    ).toEqual([
-      'fighting-style',
-      'skill-proficiencies',
-      'weapon-mastery',
-      'fighter-subclass',
-    ])
+      getChoicesAvailableAtLevel(sampleClass, 3).map((choice) => choice.id),
+    ).toEqual(['skill-proficiencies', 'sample-subclass'])
   })
 
   it('prunes choices that are no longer available while preserving others', () => {
     const pruned = pruneClassChoicesForLevel(
       {
-        'fighting-style': 'archery',
         'skill-proficiencies': ['athletics', 'perception'],
-        'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
-        'fighter-subclass': 'champion',
+        'sample-subclass': 'path-a',
       },
-      getChoicesAvailableAtLevel(fighterSrd2024, 1),
+      getChoicesAvailableAtLevel(sampleClass, 1),
     )
 
     expect(pruned).toEqual({
-      'fighting-style': 'archery',
       'skill-proficiencies': ['athletics', 'perception'],
-      'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
     })
   })
 })

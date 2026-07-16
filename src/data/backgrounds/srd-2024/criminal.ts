@@ -12,6 +12,7 @@ export const criminalSrd2024: BackgroundDefinition = {
   eligibleAbilityScores: ['dexterity', 'constitution', 'intelligence'],
   originFeat: {
     id: 'alert',
+    featId: 'srd-2024:alert',
     name: 'Alert',
     description:
       'You gain a +2 bonus to Initiative rolls and cannot be Surprised while conscious.',

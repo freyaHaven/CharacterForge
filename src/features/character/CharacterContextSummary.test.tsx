@@ -6,10 +6,8 @@ import { describe, expect, it } from 'vitest'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
 import { createBundledSpeciesCatalog } from '../../adapters/bundledSpeciesCatalog'
 import { createDefaultCharacter } from '../../domain/character/defaults'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import type { Character } from '../../domain/types'
 import { createClassInstanceDraft, createEmptyClassSelectionDrafts } from '../class/classSelectionDraft'
 import { createSpeciesSelectionDraft } from '../species/speciesSelectionDraft'

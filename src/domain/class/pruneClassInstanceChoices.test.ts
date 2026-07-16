@@ -1,66 +1,64 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
-import { pruneClassInstanceChoicesForLevel } from '../../domain/class/pruneClassInstanceChoices'
+import { createSyntheticClassDefinition } from '../../testing/syntheticClassDefinition'
+import { pruneClassInstanceChoicesForLevel } from './pruneClassInstanceChoices'
+
+const sampleClass = createSyntheticClassDefinition()
 
 describe('pruneClassInstanceChoicesForLevel', () => {
   it('lowers one instance without changing another', () => {
-    const fighter = {
-      instanceId: 'fighter-1',
-      classId: 'srd-2024:fighter',
+    const primary = {
+      instanceId: 'primary-1',
+      classId: 'test:sample-class',
       level: 5,
       choices: {
-        'fighting-style': 'defense',
         'skill-proficiencies': ['athletics', 'perception'],
-        'fighter-subclass': 'champion',
+        'sample-subclass': 'path-a',
       },
     }
-    const rogue = {
-      instanceId: 'rogue-1',
-      classId: 'srd-2024:rogue',
+    const secondary = {
+      instanceId: 'secondary-1',
+      classId: 'test:other-class',
       level: 2,
       choices: {
-        'fighting-style': 'archery',
+        'skill-proficiencies': ['survival', 'athletics'],
       },
     }
 
-    const prunedFighter = pruneClassInstanceChoicesForLevel(
-      fighter,
-      fighterSrd2024,
+    const prunedPrimary = pruneClassInstanceChoicesForLevel(
+      primary,
+      sampleClass,
       1,
     )
 
-    expect(prunedFighter.instanceId).toBe('fighter-1')
-    expect(prunedFighter.level).toBe(1)
-    expect(prunedFighter.choices).toEqual({
-      'fighting-style': 'defense',
+    expect(prunedPrimary.instanceId).toBe('primary-1')
+    expect(prunedPrimary.level).toBe(1)
+    expect(prunedPrimary.choices).toEqual({
       'skill-proficiencies': ['athletics', 'perception'],
     })
-    expect(rogue).toEqual({
-      instanceId: 'rogue-1',
-      classId: 'srd-2024:rogue',
+    expect(secondary).toEqual({
+      instanceId: 'secondary-1',
+      classId: 'test:other-class',
       level: 2,
       choices: {
-        'fighting-style': 'archery',
+        'skill-proficiencies': ['survival', 'athletics'],
       },
     })
   })
 
   it('removes subclass choice when lowering below subclass level', () => {
-    const fighter = {
-      instanceId: 'fighter-1',
-      classId: 'srd-2024:fighter',
+    const primary = {
+      instanceId: 'primary-1',
+      classId: 'test:sample-class',
       level: 5,
       choices: {
-        'fighting-style': 'defense',
         'skill-proficiencies': ['athletics', 'perception'],
-        'fighter-subclass': 'champion',
+        'sample-subclass': 'path-a',
       },
     }
 
     expect(
-      pruneClassInstanceChoicesForLevel(fighter, fighterSrd2024, 2).choices,
+      pruneClassInstanceChoicesForLevel(primary, sampleClass, 2).choices,
     ).toEqual({
-      'fighting-style': 'defense',
       'skill-proficiencies': ['athletics', 'perception'],
     })
   })

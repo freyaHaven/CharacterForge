@@ -139,6 +139,11 @@ export type ClassDefinition = {
   deferredRequirements: DeferredCharacterRequirement[]
   /** When preview, the class is shown only in multiclass setup and labelled accordingly. */
   catalogStatus?: ClassCatalogStatus
+  /**
+   * Optional catalogue sort key (lower first). When omitted, sort falls back to name.
+   * Owned by content definitions — UI must not hardcode class ids for ordering.
+   */
+  catalogOrder?: number
   /** Present when the class grants spellcasting at or before the selected level. */
   spellcasting?: ClassSpellcasting
 }

@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultCharacterDetails } from '../../domain/character/details'
 import { createDefaultCharacter } from '../../domain/character/defaults'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import type { Character } from '../../domain/types'
 import {
   getAbilityScoresStepStatus,

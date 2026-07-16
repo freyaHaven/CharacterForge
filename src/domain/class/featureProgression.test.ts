@@ -1,34 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { fighterSrd2024 } from '../../content/packs/srd-2024/classes/fighter'
+import { createSyntheticClassDefinition } from '../../testing/syntheticClassDefinition'
 import {
   getClassFeatureProgressionUpToLevel,
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
 } from './featureProgression'
 
+const sampleClass = createSyntheticClassDefinition()
+
 describe('class feature progression', () => {
-  it('returns features for a specific level from edition data', () => {
-    const levelOneFeatures = getClassFeaturesForLevel(fighterSrd2024, 1)
+  it('returns features for a specific level from definition data', () => {
+    const levelOneFeatures = getClassFeaturesForLevel(sampleClass, 1)
 
     expect(levelOneFeatures.map((feature) => feature.id)).toEqual([
-      'fighting-style',
-      'second-wind',
-      'weapon-mastery',
+      'sample-feature',
     ])
   })
 
   it('returns cumulative features up to the selected level', () => {
-    expect(getClassFeaturesUpToLevel(fighterSrd2024, 1)).toHaveLength(3)
-    expect(getClassFeaturesUpToLevel(fighterSrd2024, 20)).toHaveLength(32)
+    expect(getClassFeaturesUpToLevel(sampleClass, 1)).toHaveLength(1)
+    expect(getClassFeaturesUpToLevel(sampleClass, 3)).toHaveLength(2)
   })
 
   it('returns level-banded progression up to the selected level', () => {
-    expect(getClassFeatureProgressionUpToLevel(fighterSrd2024, 5)).toEqual([
+    expect(getClassFeatureProgressionUpToLevel(sampleClass, 3)).toEqual([
       expect.objectContaining({ level: 1 }),
-      expect.objectContaining({ level: 2 }),
       expect.objectContaining({ level: 3 }),
-      expect.objectContaining({ level: 4 }),
-      expect.objectContaining({ level: 5 }),
     ])
   })
 })

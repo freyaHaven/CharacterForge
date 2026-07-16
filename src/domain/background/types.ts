@@ -4,7 +4,13 @@ import type { EditionId } from '../edition'
 import type { SkillId } from '../skills/types'
 
 export type BackgroundOriginFeat = {
+  /** Local slug within the background definition (e.g. `'savage-attacker'`). */
   id: string
+  /**
+   * Canonical feat catalog id used for lookups (e.g. `'srd-2024:savage-attacker'`).
+   * Callers must use this instead of manufacturing namespaced ids.
+   */
+  featId: string
   name: string
   description: string
   /** Reserved for deferred Magic Initiate spell selection. */

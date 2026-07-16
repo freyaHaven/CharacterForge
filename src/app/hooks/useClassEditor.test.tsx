@@ -4,10 +4,8 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import type { Character } from '../../domain/types'
 import { useReviewClassDisplay } from '../useReviewClassDisplay'

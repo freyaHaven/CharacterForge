@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { subclassToChoiceOption } from './subclassDefinition'
 import type { SubclassDefinition } from './types'
-import { SRD_2024_SOURCE } from '../../content/packs/srd-2024/source'
 
 const sampleSubclass: SubclassDefinition = {
-  id: 'srd-2024:sample',
-  classId: 'srd-2024:fighter',
+  id: 'test:sample-subclass',
+  classId: 'test:sample-class',
   editionId: 'srd-2024',
   name: 'Sample',
   description: 'A sample subclass.',
-  source: SRD_2024_SOURCE,
+  source: {
+    id: 'test-source',
+    name: 'Synthetic Test Source',
+    version: '1',
+    licence: 'test',
+    attribution: 'test',
+    documentUrl: 'https://example.test',
+  },
   choiceOptionId: 'sample',
   features: [
     {

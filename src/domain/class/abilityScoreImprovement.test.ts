@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { SRD_2024_SOURCE } from '../../data/content/srd-2024/source'
 import {
   createAsiChoicesUpToLevel,
   formatAsiChoiceSummary,
@@ -12,6 +11,15 @@ import {
   serializeAsiChoice,
   validateAsiEncodedValue,
 } from './abilityScoreImprovement'
+
+const SYNTHETIC_SOURCE = {
+  id: 'test-source',
+  name: 'Synthetic Test Source',
+  version: '1',
+  licence: 'test',
+  attribution: 'test',
+  documentUrl: 'https://example.test',
+} as const
 
 describe('abilityScoreImprovement encoding', () => {
   it('serializes and parses plus-2', () => {
@@ -108,7 +116,7 @@ describe('abilityScoreImprovement encoding', () => {
           name: 'Alert',
           summary: 'Always ready',
           description: 'Always ready',
-          source: SRD_2024_SOURCE,
+          source: SYNTHETIC_SOURCE,
           category: 'general' as const,
           prerequisite: { kind: 'none' as const },
           benefits: [],

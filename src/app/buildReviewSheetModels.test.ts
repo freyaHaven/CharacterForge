@@ -3,10 +3,8 @@ import { createBundledBackgroundCatalog } from '../adapters/bundledBackgroundCat
 import { createBundledClassCatalog } from '../adapters/bundledClassCatalog'
 import { createBundledFeatCatalog } from '../adapters/bundledFeatCatalog'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../testing/classFixtures'
 import { createDefaultCharacter } from '../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../domain/character/details'
 import type { Character } from '../domain/types'

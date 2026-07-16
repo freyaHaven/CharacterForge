@@ -4,10 +4,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from '../domain/character/characterClassSelection'
+import { withSingleClassInstance } from '../domain/character/characterClassSelection'
+import { createTestFighterClassInstance } from '../testing/classFixtures'
 import { createDefaultCharacter } from '../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../domain/character/details'
 import type { Character } from '../domain/types'

@@ -13,6 +13,7 @@ export const soldierSrd2024: BackgroundDefinition = {
   eligibleAbilityScores: ['strength', 'dexterity', 'constitution'],
   originFeat: {
     id: 'savage-attacker',
+    featId: 'srd-2024:savage-attacker',
     name: 'Savage Attacker',
     description:
       'Once per turn when you hit with a weapon attack, you can roll the weapon’s damage dice twice and use either total.',

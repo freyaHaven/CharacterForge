@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createDefaultCharacter } from './defaults'
 import { isCharacter } from './isCharacter'
 import type { Character } from '../types'
-import {
-  createTestFighterClassInstance,
-  withSingleClassInstance,
-} from './characterClassSelection'
+import { withSingleClassInstance } from './characterClassSelection'
+import { createTestFighterClassInstance } from '../../testing/classFixtures'
 
 function createValidCharacter(): Character {
   return createDefaultCharacter({

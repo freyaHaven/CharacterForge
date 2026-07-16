@@ -48,4 +48,24 @@ describe('ContentRegistry (bundled)', () => {
         : [],
     ).toEqual(['champion'])
   })
+
+  it('assembles subclass choice options from pack subclasses at registration', () => {
+    const registry = createBundledContentRegistry()
+    const fighter = registry.getClass('srd-2024:fighter')
+    const champion = registry.getSubclass('srd-2024:champion')
+    const subclassChoice = fighter?.choices.find(
+      (choice) => choice.id === 'fighter-subclass',
+    )
+
+    expect(champion).not.toBeNull()
+    expect(
+      subclassChoice?.type === 'single-select'
+        ? subclassChoice.options[0]
+        : null,
+    ).toMatchObject({
+      id: champion!.choiceOptionId,
+      label: champion!.name,
+      features: champion!.features,
+    })
+  })
 })

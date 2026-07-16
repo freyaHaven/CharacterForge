@@ -36,6 +36,7 @@ export const fighterSrd2024: ClassDefinition = {
   description:
     'A master of martial combat, skilled with a variety of weapons and armor.',
   source: SRD_2024_SOURCE,
+  catalogOrder: 10,
   hitDie: { sides: 10 },
   primaryAbilities: ['strength', 'dexterity'],
   savingThrows: ['strength', 'constitution'],

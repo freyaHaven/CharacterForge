@@ -48,9 +48,7 @@ export function useReviewSheetModels(
           : null
       const originFeatDefinition =
         featDefinition === null && backgroundDefinition !== null
-          ? await featCatalog.getFeat(
-              `srd-2024:${backgroundDefinition.originFeat.id}`,
-            )
+          ? await featCatalog.getFeat(backgroundDefinition.originFeat.featId)
           : null
 
       const classDefinitions = new Map<string, ClassDefinition>()

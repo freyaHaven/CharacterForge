@@ -1,9 +1,42 @@
 import type { BackgroundDefinition } from '../../domain/background/types'
 import type { ClassDefinition, SubclassDefinition } from '../../domain/class/types'
+import { subclassToChoiceOption } from '../../domain/class/subclassDefinition'
 import type { EditionId } from '../../domain/edition'
 import type { FeatDefinition } from '../../domain/feat/types'
 import type { SpeciesDefinition } from '../../domain/species/types'
 import type { ContentPack, ContentPackManifest } from '../types/contentPack'
+
+/**
+ * When a pack declares subclasses, overwrite matching `*-subclass` choice options
+ * from those definitions so the registry is the single assembled view.
+ * If the pack lists no subclasses for a class, embedded options are left as-is.
+ */
+export function attachPackSubclasses(
+  classDefinition: ClassDefinition,
+  subclasses: readonly SubclassDefinition[],
+): ClassDefinition {
+  const matching = subclasses.filter(
+    (subclass) => subclass.classId === classDefinition.id,
+  )
+
+  if (matching.length === 0) {
+    return classDefinition
+  }
+
+  return {
+    ...classDefinition,
+    choices: classDefinition.choices.map((choice) => {
+      if (choice.type !== 'single-select' || !choice.id.endsWith('-subclass')) {
+        return choice
+      }
+
+      return {
+        ...choice,
+        options: matching.map(subclassToChoiceOption),
+      }
+    }),
+  }
+}
 
 /**
  * Indexes bundled content packs and exposes lookup APIs.
@@ -26,18 +59,21 @@ export class ContentRegistry {
 
     this.packsById.set(pack.manifest.id, pack.manifest)
 
-    for (const classDefinition of pack.classes ?? []) {
-      this.indexById(this.classesById, classDefinition.id, classDefinition, 'class')
-      const editionClasses = this.classesByEdition.get(classDefinition.editionId) ?? []
-      editionClasses.push(classDefinition)
-      this.classesByEdition.set(classDefinition.editionId, editionClasses)
-    }
+    const subclasses = pack.subclasses ?? []
 
-    for (const subclass of pack.subclasses ?? []) {
+    for (const subclass of subclasses) {
       this.indexById(this.subclassesById, subclass.id, subclass, 'subclass')
       const classSubclasses = this.subclassesByClassId.get(subclass.classId) ?? []
       classSubclasses.push(subclass)
       this.subclassesByClassId.set(subclass.classId, classSubclasses)
+    }
+
+    for (const classDefinition of pack.classes ?? []) {
+      const assembled = attachPackSubclasses(classDefinition, subclasses)
+      this.indexById(this.classesById, assembled.id, assembled, 'class')
+      const editionClasses = this.classesByEdition.get(assembled.editionId) ?? []
+      editionClasses.push(assembled)
+      this.classesByEdition.set(assembled.editionId, editionClasses)
     }
 
     for (const species of pack.species ?? []) {
