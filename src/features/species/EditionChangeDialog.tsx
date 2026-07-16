@@ -76,7 +76,7 @@ export function EditionChangeDialog({
           )}
         </p>
         <div className="dialog__actions">
-          <button type="button" onClick={onConfirm}>
+          <button type="button" className="dialog__action--primary" onClick={onConfirm}>
             Continue
           </button>
           <button type="button" onClick={onCancel}>

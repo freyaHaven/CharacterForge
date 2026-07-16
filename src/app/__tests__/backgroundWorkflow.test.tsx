@@ -20,6 +20,7 @@ import {
 import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
 import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import { createLocalStorageCharacterRepository } from '../../adapters/localStorageCharacterRepository'
+import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('../../adapters/localStorageCharacterRepository', () => ({
   createLocalStorageCharacterRepository: () => ({
     load: loadMock,
     save: saveMock,
+    remove: vi.fn(),
   }),
 }))
 
@@ -74,7 +76,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       wisdom: 10,
       charisma: 10,
     },
-    species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    species: { ...COMPLETE_DWARF_SELECTION },
     ...withSingleClassInstance(fighterInstance),
     background: null,
     ...overrides,

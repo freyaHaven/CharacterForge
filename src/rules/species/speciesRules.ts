@@ -2,8 +2,10 @@ import type {
   SpeciesDefinition,
   SpeciesEffect,
   SpeciesSelection,
+  SpeciesSelectionChoiceValue,
 } from '../../domain/species/types'
 import type { EditionId } from '../../domain/types'
+import { resolveLanguageChoicePool } from '../../domain/species/standardLanguages'
 import { resolveSpeciesEffects } from './resolveSpeciesEffects'
 
 export type SpeciesValidationIssueCode =
@@ -22,6 +24,26 @@ export type SpeciesValidationResult =
   | { ok: true }
   | { ok: false; issues: SpeciesValidationIssue[] }
 
+function getSelectedIds(
+  value: SpeciesSelectionChoiceValue | undefined,
+): string[] {
+  if (value === undefined) {
+    return []
+  }
+
+  return typeof value === 'string' ? [value] : value
+}
+
+function isKnownChoiceId(
+  definition: SpeciesDefinition,
+  choiceId: string,
+): boolean {
+  return (
+    definition.choices.some((choice) => choice.id === choiceId) ||
+    definition.languages.choices.some((choice) => choice.id === choiceId)
+  )
+}
+
 export function validateSpeciesSelection(
   selection: SpeciesSelection,
   editionId: EditionId,
@@ -38,19 +60,24 @@ export function validateSpeciesSelection(
   const issues: SpeciesValidationIssue[] = []
 
   for (const choice of definition.choices) {
-    const selectedOptionId = selection.choices[choice.id]
+    const selectedValue = selection.choices[choice.id]
 
-    if (choice.required && selectedOptionId === undefined) {
+    if (choice.required && selectedValue === undefined) {
       issues.push({ code: 'missing-required-choice', choiceId: choice.id })
       continue
     }
 
-    if (selectedOptionId === undefined) {
+    if (selectedValue === undefined) {
+      continue
+    }
+
+    if (typeof selectedValue !== 'string') {
+      issues.push({ code: 'invalid-choice', choiceId: choice.id })
       continue
     }
 
     const isValidOption = choice.options.some(
-      (option) => option.id === selectedOptionId,
+      (option) => option.id === selectedValue,
     )
 
     if (!isValidOption) {
@@ -58,12 +85,39 @@ export function validateSpeciesSelection(
     }
   }
 
-  for (const choiceId of Object.keys(selection.choices)) {
-    const isKnownChoice = definition.choices.some(
-      (choice) => choice.id === choiceId,
-    )
+  for (const languageChoice of definition.languages.choices) {
+    const selectedIds = getSelectedIds(selection.choices[languageChoice.id])
 
-    if (!isKnownChoice) {
+    if (languageChoice.required && selectedIds.length < languageChoice.count) {
+      issues.push({
+        code: 'missing-required-choice',
+        choiceId: languageChoice.id,
+      })
+      continue
+    }
+
+    if (selectedIds.length === 0) {
+      continue
+    }
+
+    if (selectedIds.length > languageChoice.count) {
+      issues.push({ code: 'invalid-choice', choiceId: languageChoice.id })
+      continue
+    }
+
+    const pool = resolveLanguageChoicePool(languageChoice.pool)
+    const hasInvalidOption = selectedIds.some(
+      (optionId) => !pool.some((option) => option.id === optionId),
+    )
+    const hasDuplicates = new Set(selectedIds).size !== selectedIds.length
+
+    if (hasInvalidOption || hasDuplicates) {
+      issues.push({ code: 'invalid-choice', choiceId: languageChoice.id })
+    }
+  }
+
+  for (const choiceId of Object.keys(selection.choices)) {
+    if (!isKnownChoiceId(definition, choiceId)) {
       issues.push({ code: 'unknown-choice', choiceId })
     }
   }

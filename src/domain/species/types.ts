@@ -11,8 +11,14 @@ export type CreatureSize =
   | 'huge'
   | 'gargantuan'
 
+export type CreatureTypeId = 'humanoid'
+
 export type MovementSpeed = {
   walk: number
+  fly?: number
+  swim?: number
+  climb?: number
+  burrow?: number
 }
 
 export type DamageTypeId =
@@ -34,6 +40,8 @@ export type SpeciesTrait = {
   id: string
   name: string
   description: string
+  /** Mechanical effects granted by this trait (single source of truth for Highlights + rules). */
+  effects?: SpeciesEffect[]
 }
 
 export type SpeciesChoiceOption = {
@@ -49,6 +57,30 @@ export type SpeciesChoice = {
   type: 'single-select'
   options: SpeciesChoiceOption[]
   required: boolean
+  /** Optional helper copy shown under the choice UI. */
+  helperText?: string
+}
+
+export type SpeciesLanguageGrant = {
+  id: string
+  label: string
+}
+
+export type SpeciesLanguageChoicePool =
+  | 'standard'
+  | SpeciesLanguageGrant[]
+
+export type SpeciesLanguageChoice = {
+  id: string
+  prompt: string
+  count: number
+  pool: SpeciesLanguageChoicePool
+  required: boolean
+}
+
+export type SpeciesLanguages = {
+  grants: SpeciesLanguageGrant[]
+  choices: SpeciesLanguageChoice[]
 }
 
 export type SpeciesGuidance = {
@@ -62,15 +94,20 @@ export type SpeciesDefinition = {
   name: string
   description: string
   source: ContentSource
+  creatureType: CreatureTypeId
   size: CreatureSize
   speed: MovementSpeed
+  languages: SpeciesLanguages
   traits: SpeciesTrait[]
+  /** Orphan mechanical effects not owned by a trait. Prefer trait.effects. */
   effects: SpeciesEffect[]
   choices: SpeciesChoice[]
   guidance?: SpeciesGuidance
 }
 
+export type SpeciesSelectionChoiceValue = string | string[]
+
 export type SpeciesSelection = {
   speciesId: string
-  choices: Record<string, string>
+  choices: Record<string, SpeciesSelectionChoiceValue>
 }

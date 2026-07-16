@@ -18,7 +18,7 @@ describe('createRecentTrackingRepository', () => {
     const character = createDefaultCharacter({ id: 'char-tracked' })
     const save = vi.fn().mockResolvedValue(undefined)
     const load = vi.fn().mockResolvedValue(null)
-    const inner: CharacterRepository = { save, load }
+    const inner: CharacterRepository = { save, load, remove: vi.fn() }
     const recentStore = createRecentCharactersStore(() => 42)
     const repository = createRecentTrackingRepository(inner, recentStore)
 
@@ -32,7 +32,7 @@ describe('createRecentTrackingRepository', () => {
     const character = createDefaultCharacter({ id: 'char-fail' })
     const save = vi.fn().mockRejectedValue(new Error('save failed'))
     const load = vi.fn().mockResolvedValue(null)
-    const inner: CharacterRepository = { save, load }
+    const inner: CharacterRepository = { save, load, remove: vi.fn() }
     const recentStore = createRecentCharactersStore(() => 42)
     const repository = createRecentTrackingRepository(inner, recentStore)
 
@@ -44,12 +44,30 @@ describe('createRecentTrackingRepository', () => {
     const character = createDefaultCharacter({ id: 'char-load' })
     const save = vi.fn()
     const load = vi.fn().mockResolvedValue(character)
-    const inner: CharacterRepository = { save, load }
+    const inner: CharacterRepository = { save, load, remove: vi.fn() }
     const recentStore = createRecentCharactersStore(() => 42)
     const repository = createRecentTrackingRepository(inner, recentStore)
 
     await expect(repository.load('char-load')).resolves.toBe(character)
     expect(load).toHaveBeenCalledWith('char-load')
     expect(recentStore.list()).toEqual([])
+  })
+
+  it('removes the character and its recent entry', async () => {
+    const remove = vi.fn().mockResolvedValue(undefined)
+    const inner: CharacterRepository = {
+      save: vi.fn(),
+      load: vi.fn(),
+      remove,
+    }
+    const recentStore = createRecentCharactersStore(() => 42)
+    recentStore.touch('char-tracked')
+    recentStore.touch('char-keep')
+    const repository = createRecentTrackingRepository(inner, recentStore)
+
+    await repository.remove('char-tracked')
+
+    expect(remove).toHaveBeenCalledWith('char-tracked')
+    expect(recentStore.list().map((entry) => entry.id)).toEqual(['char-keep'])
   })
 })

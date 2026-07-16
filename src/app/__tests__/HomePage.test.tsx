@@ -5,6 +5,14 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { HomePage } from '../HomePage'
 
+const recentCharacter = {
+  id: 'char-1',
+  name: 'Freya',
+  speciesName: 'Dwarf',
+  classes: [{ className: 'Barbarian', level: 3 }],
+  updatedAt: Date.now() - 2 * 60 * 60 * 1000,
+}
+
 describe('HomePage', () => {
   it('renders the primary create and import actions', () => {
     render(
@@ -12,6 +20,7 @@ describe('HomePage', () => {
         onCreateNew={() => {}}
         onImportFile={() => {}}
         onContinue={() => {}}
+        onDelete={() => {}}
       />,
     )
 
@@ -35,6 +44,7 @@ describe('HomePage', () => {
         onCreateNew={onCreateNew}
         onImportFile={() => {}}
         onContinue={() => {}}
+        onDelete={() => {}}
       />,
     )
 
@@ -52,6 +62,7 @@ describe('HomePage', () => {
         onCreateNew={() => {}}
         onImportFile={() => {}}
         onContinue={() => {}}
+        onDelete={() => {}}
       />,
     )
 
@@ -69,15 +80,8 @@ describe('HomePage', () => {
         onCreateNew={() => {}}
         onImportFile={() => {}}
         onContinue={onContinue}
-        recentCharacters={[
-          {
-            id: 'char-1',
-            name: 'Freya',
-            speciesName: 'Dwarf',
-            classes: [{ className: 'Barbarian', level: 3 }],
-            updatedAt: Date.now() - 2 * 60 * 60 * 1000,
-          },
-        ]}
+        onDelete={() => {}}
+        recentCharacters={[recentCharacter]}
       />,
     )
 
@@ -92,12 +96,73 @@ describe('HomePage', () => {
     expect(onContinue).toHaveBeenCalledWith('char-1')
   })
 
+  it('opens a confirmation dialog from the delete icon and confirms deletion', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn()
+    const onContinue = vi.fn()
+
+    render(
+      <HomePage
+        onCreateNew={() => {}}
+        onImportFile={() => {}}
+        onContinue={onContinue}
+        onDelete={onDelete}
+        recentCharacters={[recentCharacter]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: /delete character freya/i }),
+    )
+
+    const dialog = screen.getByRole('alertdialog', {
+      name: /delete character\?/i,
+    })
+    expect(dialog).toBeInTheDocument()
+    expect(dialog).toHaveTextContent('Freya • Dwarf')
+    expect(dialog).toHaveTextContent('Barbarian 3')
+    expect(dialog).toHaveTextContent(/cannot be undone/i)
+
+    await user.click(
+      screen.getByRole('button', { name: /^delete character$/i }),
+    )
+
+    expect(onDelete).toHaveBeenCalledWith('char-1')
+    expect(onContinue).not.toHaveBeenCalled()
+  })
+
+  it('cancels deletion without calling onDelete', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn()
+
+    render(
+      <HomePage
+        onCreateNew={() => {}}
+        onImportFile={() => {}}
+        onContinue={() => {}}
+        onDelete={onDelete}
+        recentCharacters={[recentCharacter]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: /delete character freya/i }),
+    )
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole('alertdialog', { name: /delete character\?/i }),
+    ).not.toBeInTheDocument()
+  })
+
   it('hides the Continue section when there are no recent characters', () => {
     render(
       <HomePage
         onCreateNew={() => {}}
         onImportFile={() => {}}
         onContinue={() => {}}
+        onDelete={() => {}}
         recentCharacters={[]}
       />,
     )

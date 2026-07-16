@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { createBundledSpeciesCatalog } from '../../../adapters/bundledSpeciesCatalog'
@@ -11,6 +14,10 @@ import {
   type SpeciesSelectionDraft,
 } from '../speciesSelectionDraft'
 import { SpeciesPicker } from '../SpeciesPicker'
+import {
+  COMPLETE_DWARF_SELECTION,
+  selectStandardLanguages,
+} from '../../../testing/speciesSelectionTestUtils'
 
 function SpeciesPickerHarness({
   initialCommitted = null,
@@ -36,8 +43,19 @@ function SpeciesPickerHarness({
   )
 }
 
+async function selectAncestryOption(user: ReturnType<typeof userEvent.setup>, label: RegExp) {
+  const ancestryTrigger = screen.getByRole('button', {
+    name: /choose your draconic ancestor/i,
+  })
+  if (ancestryTrigger.getAttribute('aria-expanded') !== 'true') {
+    await user.click(ancestryTrigger)
+  }
+
+  await user.click(screen.getByRole('radio', { name: label }))
+}
+
 describe('SpeciesPicker', () => {
-  it('shows the ancestry selector on the first Dragonborn click', async () => {
+  it('shows the ancestry card grid on the first Dragonborn click', async () => {
     const user = userEvent.setup()
     render(<SpeciesPickerHarness />)
 
@@ -48,14 +66,20 @@ describe('SpeciesPicker', () => {
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
     expect(
-      screen.getByRole('combobox', { name: /choose your draconic ancestor/i }),
+      screen.getByRole('button', { name: /choose your draconic ancestor/i }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
     expect(
       screen.getByText(/complete required choices to confirm/i),
     ).toBeInTheDocument()
     expect(
       screen.queryByText(/selected: dragonborn/i),
     ).not.toBeInTheDocument()
+    expect(
+      document.querySelector(
+        '.species-picker__section-accordion-warning',
+      ),
+    ).not.toBeNull()
   })
 
   it('does not show ancestry after focus alone when detail would have appeared early', async () => {
@@ -68,14 +92,14 @@ describe('SpeciesPicker', () => {
     fireEvent.focus(screen.getByRole('button', { name: 'Dragonborn' }))
 
     expect(
-      screen.queryByRole('combobox', { name: /choose your draconic ancestor/i }),
+      screen.queryByRole('button', { name: /choose your draconic ancestor/i }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByText(/complete required choices to confirm/i),
     ).not.toBeInTheDocument()
   })
 
-  it('selects Dwarf immediately without a draft message', async () => {
+  it('keeps Dwarf as a draft until standard languages are chosen', async () => {
     const user = userEvent.setup()
     render(<SpeciesPickerHarness />)
 
@@ -85,15 +109,18 @@ describe('SpeciesPicker', () => {
 
     await user.click(screen.getByRole('button', { name: 'Dwarf' }))
 
+    expect(
+      screen.getByText(/complete required choices to confirm/i),
+    ).toBeInTheDocument()
+
+    await selectStandardLanguages(user)
+
     expect(document.querySelector('.species-picker__selection')).toHaveTextContent(
       'Selected: Dwarf',
     )
-    expect(
-      screen.queryByText(/complete required choices to confirm/i),
-    ).not.toBeInTheDocument()
   })
 
-  it('keeps draft and committed in sync when ancestry is chosen', async () => {
+  it('keeps draft and committed in sync when ancestry and languages are chosen', async () => {
     const user = userEvent.setup()
     render(
       <SpeciesPickerHarness
@@ -105,10 +132,8 @@ describe('SpeciesPicker', () => {
       expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
     })
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: /choose your draconic ancestor/i }),
-      'red',
-    )
+    await selectAncestryOption(user, /red \(fire\)/i)
+    await selectStandardLanguages(user, [/draconic/i, /common sign language/i])
 
     expect(document.querySelector('.species-picker__selection')).toHaveTextContent(
       'Selected: Dragonborn',
@@ -142,11 +167,12 @@ describe('SpeciesPicker', () => {
     })
 
     await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+    await selectStandardLanguages(user)
     await user.type(screen.getByRole('searchbox', { name: /search species/i }), 'dragon')
 
     expect(screen.queryByRole('button', { name: 'Dwarf' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Dragonborn' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Dwarf' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /dwarf/i })).toBeInTheDocument()
     expect(
       screen.getByText(/selected species is hidden by the current search/i),
     ).toBeInTheDocument()
@@ -179,6 +205,7 @@ describe('SpeciesPicker', () => {
     })
 
     await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+    await selectStandardLanguages(user)
     const search = screen.getByRole('searchbox', { name: /search species/i })
     await user.type(search, 'dragon')
     await user.clear(search)
@@ -190,7 +217,7 @@ describe('SpeciesPicker', () => {
     ).not.toBeNull()
   })
 
-  it('renders metadata row and individual trait cards in the detail panel', async () => {
+  it('renders hero overview, highlights, languages, and traits', async () => {
     const user = userEvent.setup()
     render(<SpeciesPickerHarness />)
 
@@ -202,29 +229,48 @@ describe('SpeciesPicker', () => {
 
     const detail = document.querySelector('.species-picker__detail')
     expect(detail).not.toBeNull()
-    expect(detail?.querySelector('.species-picker__identity-row')).not.toBeNull()
+    expect(detail?.querySelector('.species-picker__hero')).not.toBeNull()
     expect(detail?.querySelector('.species-picker__detail-icon')).not.toBeNull()
+    expect(detail?.querySelector('.species-picker__highlights')).not.toBeNull()
     expect(detail?.querySelector('.species-picker__metadata')).not.toBeNull()
     expect(detail?.querySelectorAll('.species-picker__metadata-item')).toHaveLength(
       2,
     )
-    expect(detail?.querySelectorAll('.species-picker__trait-icon')).toHaveLength(3)
-    expect(detail?.querySelectorAll('.species-picker__trait-card')).toHaveLength(3)
+    expect(screen.getByRole('heading', { name: /dwarf.*humanoid/i })).toBeInTheDocument()
     expect(screen.getByText('Medium')).toBeInTheDocument()
-    expect(screen.getByText('30 feet')).toBeInTheDocument()
+    expect(screen.getByText('30 ft.')).toBeInTheDocument()
+
+    const highlights = detail?.querySelector('.species-picker__highlights')
+    expect(highlights).not.toBeNull()
+    expect(within(highlights as HTMLElement).getByText('Darkvision')).toBeInTheDocument()
+    expect(within(highlights as HTMLElement).getByText('120 ft.')).toBeInTheDocument()
+
+    const languagesTrigger = screen.getByRole('button', { name: /languages/i })
+    if (languagesTrigger.getAttribute('aria-expanded') !== 'true') {
+      await user.click(languagesTrigger)
+    }
+    expect(screen.getAllByText('Common').length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(/choose 2 standard languages/i),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /dwarvish/i })).toBeInTheDocument()
+
+    const traitsTrigger = screen.getByRole('button', { name: /^traits/i })
+    if (traitsTrigger.getAttribute('aria-expanded') !== 'true') {
+      await user.click(traitsTrigger)
+    }
+    expect(detail?.querySelectorAll('.species-picker__trait-card')).toHaveLength(4)
+    expect(screen.getByRole('heading', { name: 'Darkvision', level: 5 })).toBeInTheDocument()
   })
 
   it('shows a decorative check badge only on the selected catalogue card', async () => {
-    const user = userEvent.setup()
-    render(<SpeciesPickerHarness />)
+    render(
+      <SpeciesPickerHarness initialCommitted={{ ...COMPLETE_DWARF_SELECTION }} />,
+    )
 
     await waitFor(() => {
       expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
     })
-
-    expect(document.querySelector('.species-picker__card-badge')).toBeNull()
-
-    await user.click(screen.getByRole('button', { name: 'Dwarf' }))
 
     const selectedCard = screen.getByRole('button', { name: 'Dwarf' })
     expect(selectedCard).toHaveAttribute('aria-pressed', 'true')
@@ -236,5 +282,26 @@ describe('SpeciesPicker', () => {
         '.species-picker__card-badge',
       ),
     ).toBeNull()
+  })
+})
+
+describe('species feature modules', () => {
+  it('contain no concrete species-id branching outside tests', () => {
+    const speciesDir = path.dirname(fileURLToPath(import.meta.url))
+    const featuresDir = path.resolve(speciesDir, '..')
+    const forbidden = ['srd-2024:dwarf', 'srd-2024:dragonborn']
+
+    const sourceFiles = readdirSync(featuresDir)
+      .filter((name) => name.endsWith('.ts') || name.endsWith('.tsx'))
+      .filter((name) => !name.includes('.test.'))
+
+    for (const fileName of sourceFiles) {
+      const contents = readFileSync(path.join(featuresDir, fileName), 'utf8')
+      for (const token of forbidden) {
+        expect(contents.includes(token), `${fileName} must not contain ${token}`).toBe(
+          false,
+        )
+      }
+    }
   })
 })

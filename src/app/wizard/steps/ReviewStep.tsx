@@ -100,6 +100,7 @@ export function ReviewStep({
     stepStatuses,
     speciesDisplay,
     classDisplay,
+    sheetModels,
     unresolvedDeferredRequirements,
     hasSpellcastingCapability,
     spellLines,
@@ -112,7 +113,7 @@ export function ReviewStep({
     hasCharacterDetailsReviewContent(characterDetailsReview)
 
   const combatStats = [
-    { label: 'Hit Points', value: '—' },
+    { label: 'Hit Points', value: sheetModels.hitPointMaximumLabel },
     { label: 'Armor Class', value: '—' },
     { label: 'Initiative', value: sheetModels.initiativeLabel },
     { label: 'Speed', value: sheetModels.speedLabel ?? '—' },

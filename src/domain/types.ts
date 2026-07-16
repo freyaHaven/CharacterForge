@@ -51,6 +51,8 @@ export type {
   DeferredDestinationStep,
   ResolvedDeferredCharacterRequirement,
   HitDie,
+  HitPointIncrease,
+  HitPointIncreaseMethod,
   ResolvedClassEffect,
   ToolProficiency,
   WeaponProficiency,

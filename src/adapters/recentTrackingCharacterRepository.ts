@@ -17,5 +17,10 @@ export function createRecentTrackingRepository(
     async load(id) {
       return repository.load(id)
     },
+
+    async remove(id) {
+      await repository.remove(id)
+      recentStore.remove(id)
+    },
   }
 }

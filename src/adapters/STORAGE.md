@@ -1,12 +1,12 @@
 # Storage format
 
-## Current format (schema version 10)
+## Current format (schema version 11)
 
 Characters are persisted inside a versioned envelope:
 
 ```json
 {
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "character": { }
 }
 ```
@@ -26,6 +26,7 @@ Each `CharacterClassSelection` has:
 
 - `instanceId` — stable identifier for UI state and deferred requirement ownership
 - `classId`, `level`, `choices` — same shape as the legacy single-class selection
+- `hitPointIncreases` — per-class-level Fixed / Roll / Max choices for HP
 
 The localStorage adapter reads stored JSON, migrates legacy shapes, validates
 the inner character with `isCharacter()`, and returns the domain model.
@@ -44,8 +45,9 @@ the inner character with `isCharacter()`, and returns the domain model.
 | 7 | Adds `details` |
 | 8 | Restructures `details` for the roleplay-focused layout |
 | 9 | Replaces legacy `class` with `targetLevel`, `classes[]`, and `startingClassInstanceId` |
+| 10 | Adds `feat: null` |
 
-On load, schema 0–9 saves migrate forward to schema 10. Migration path:
+On load, schema 0–10 saves migrate forward to schema 11. Migration path:
 
 - `species: null` (v1→v2)
 - legacy `class: null` (v2→v3)
@@ -55,6 +57,7 @@ On load, schema 0–9 saves migrate forward to schema 10. Migration path:
 - replace legacy `class` with `targetLevel`, `classes[]`, and
   `startingClassInstanceId` (v8→v9)
 - `feat: null` (v9→v10)
+- `hitPointIncreases` on each class instance (v10→v11)
 
 ## Migration rules
 
@@ -72,7 +75,7 @@ Explicit import/export uses the same versioned envelope as local storage:
 
 ```json
 {
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "character": { }
 }
 ```

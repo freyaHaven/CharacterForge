@@ -23,14 +23,25 @@ describe('createBundledSpeciesCatalog', () => {
 
     expect(dwarf).not.toBeNull()
     expect(dwarf?.name).toBe('Dwarf')
+    expect(dwarf?.creatureType).toBe('humanoid')
     expect(dwarf?.size).toBe('medium')
     expect(dwarf?.speed).toEqual({ walk: 30 })
-    expect(dwarf?.effects).toEqual([
-      { kind: 'darkvision', rangeFeet: 120 },
-      { kind: 'damage-resistance', damageType: 'poison' },
-      { kind: 'save-advantage', condition: 'poisoned' },
-      { kind: 'hit-point-maximum-per-level', amount: 1 },
+    expect(dwarf?.languages.grants.map((grant) => grant.label)).toEqual([
+      'Common',
     ])
+    expect(dwarf?.languages.choices).toEqual([
+      {
+        id: 'standard-languages',
+        prompt: 'Choose 2 Standard Languages',
+        count: 2,
+        pool: 'standard',
+        required: true,
+      },
+    ])
+    expect(dwarf?.effects).toEqual([])
+    expect(
+      dwarf?.traits.find((trait) => trait.id === 'darkvision')?.effects,
+    ).toEqual([{ kind: 'darkvision', rangeFeet: 120 }])
     expect(dwarf?.choices).toEqual([])
   })
 

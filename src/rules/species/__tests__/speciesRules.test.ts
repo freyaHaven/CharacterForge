@@ -21,20 +21,41 @@ describe('validateSpeciesSelection', () => {
     dragonborn = resolvedDragonborn!
   })
 
-  it('accepts dwarf with no choices for srd-2024', () => {
+  it('accepts dwarf with completed standard language choices for srd-2024', () => {
     expect(
       validateSpeciesSelection(
-        { speciesId: 'srd-2024:dwarf', choices: {} },
+        {
+          speciesId: 'srd-2024:dwarf',
+          choices: { 'standard-languages': ['dwarvish', 'elvish'] },
+        },
         'srd-2024',
         dwarf,
       ),
     ).toEqual({ ok: true })
   })
 
+  it('requires standard language choices for Dwarf', () => {
+    expect(
+      validateSpeciesSelection(
+        { speciesId: 'srd-2024:dwarf', choices: {} },
+        'srd-2024',
+        dwarf,
+      ),
+    ).toEqual({
+      ok: false,
+      issues: [
+        { code: 'missing-required-choice', choiceId: 'standard-languages' },
+      ],
+    })
+  })
+
   it('requires a draconic ancestry for Dragonborn', () => {
     expect(
       validateSpeciesSelection(
-        { speciesId: 'srd-2024:dragonborn', choices: {} },
+        {
+          speciesId: 'srd-2024:dragonborn',
+          choices: { 'standard-languages': ['draconic', 'elvish'] },
+        },
         'srd-2024',
         dragonborn,
       ),
@@ -69,6 +90,7 @@ describe('validateSpeciesSelection', () => {
   it('returns missing-required-choice for an unfilled required choice', () => {
     const definition: SpeciesDefinition = {
       ...dwarf,
+      languages: { grants: [], choices: [] },
       choices: [
         {
           id: 'language',
@@ -110,13 +132,24 @@ describe('resolveSpecies', () => {
   it('returns the definition and effects for a known species id', async () => {
     await expect(
       resolveSpecies(
-        { speciesId: 'srd-2024:dwarf', choices: {} },
+        {
+          speciesId: 'srd-2024:dwarf',
+          choices: { 'standard-languages': ['dwarvish', 'elvish'] },
+        },
         async (speciesId) => (speciesId === 'srd-2024:dwarf' ? dwarf : null),
       ),
     ).resolves.toEqual({
       definition: dwarf,
-      selection: { speciesId: 'srd-2024:dwarf', choices: {} },
-      effects: dwarf.effects,
+      selection: {
+        speciesId: 'srd-2024:dwarf',
+        choices: { 'standard-languages': ['dwarvish', 'elvish'] },
+      },
+      effects: [
+        { kind: 'darkvision', rangeFeet: 120 },
+        { kind: 'damage-resistance', damageType: 'poison' },
+        { kind: 'save-advantage', condition: 'poisoned' },
+        { kind: 'hit-point-maximum-per-level', amount: 1 },
+      ],
     })
   })
 
@@ -125,7 +158,10 @@ describe('resolveSpecies', () => {
       resolveSpecies(
         {
           speciesId: 'srd-2024:dragonborn',
-          choices: { 'draconic-ancestry': 'red' },
+          choices: {
+            'draconic-ancestry': 'red',
+            'standard-languages': ['draconic', 'common-sign'],
+          },
         },
         async (speciesId) =>
           speciesId === 'srd-2024:dragonborn' ? dragonborn : null,
@@ -134,7 +170,10 @@ describe('resolveSpecies', () => {
       definition: dragonborn,
       selection: {
         speciesId: 'srd-2024:dragonborn',
-        choices: { 'draconic-ancestry': 'red' },
+        choices: {
+          'draconic-ancestry': 'red',
+          'standard-languages': ['draconic', 'common-sign'],
+        },
       },
       effects: [
         { kind: 'darkvision', rangeFeet: 60 },
@@ -148,7 +187,10 @@ describe('resolveSpecies', () => {
       resolveSpecies(
         {
           speciesId: 'srd-2024:dragonborn',
-          choices: { 'draconic-ancestry': 'silver' },
+          choices: {
+            'draconic-ancestry': 'silver',
+            'standard-languages': ['draconic', 'common-sign'],
+          },
         },
         async (speciesId) =>
           speciesId === 'srd-2024:dragonborn' ? dragonborn : null,
@@ -157,7 +199,10 @@ describe('resolveSpecies', () => {
       definition: dragonborn,
       selection: {
         speciesId: 'srd-2024:dragonborn',
-        choices: { 'draconic-ancestry': 'silver' },
+        choices: {
+          'draconic-ancestry': 'silver',
+          'standard-languages': ['draconic', 'common-sign'],
+        },
       },
       effects: [
         { kind: 'darkvision', rangeFeet: 60 },

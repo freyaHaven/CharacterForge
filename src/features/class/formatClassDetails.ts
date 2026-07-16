@@ -62,6 +62,10 @@ export function formatWeaponProficiencyChipLabels(
   return proficiencies.map((entry) => WEAPON_LABELS[entry])
 }
 
-export function formatHitDie(definition: ClassDefinition): string {
-  return `d${definition.hitDie.sides}`
+export function formatHitDie(
+  definition: ClassDefinition,
+  level = 1,
+): string {
+  const diceCount = Math.max(1, Math.floor(level))
+  return `${diceCount}d${definition.hitDie.sides}`
 }

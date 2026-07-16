@@ -41,6 +41,7 @@ describe('loadRecentCharacterSummaries', () => {
     const repository: CharacterRepository = {
       load,
       save: vi.fn(),
+      remove: vi.fn(),
     }
 
     const summaries = await loadRecentCharacterSummaries({

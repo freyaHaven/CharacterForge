@@ -10,10 +10,16 @@ export function resolveSpeciesEffects(
 ): SpeciesEffect[] {
   const effects: SpeciesEffect[] = [...definition.effects]
 
+  for (const trait of definition.traits) {
+    if (trait.effects !== undefined) {
+      effects.push(...trait.effects)
+    }
+  }
+
   for (const choice of definition.choices) {
     const selectedOptionId = selection.choices[choice.id]
 
-    if (selectedOptionId === undefined) {
+    if (typeof selectedOptionId !== 'string') {
       continue
     }
 

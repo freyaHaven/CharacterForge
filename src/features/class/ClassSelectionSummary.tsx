@@ -106,7 +106,7 @@ export function ClassSelectionSummary({
           </div>
           <div className="class-picker__summary-metadata-item">
             <dt>Hit Die</dt>
-            <dd>{formatHitDie(definition)}</dd>
+            <dd>{formatHitDie(definition, level)}</dd>
           </div>
           <div className="class-picker__summary-metadata-item">
             <dt>Saving Throws</dt>

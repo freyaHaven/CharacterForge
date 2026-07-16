@@ -14,7 +14,12 @@ import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
 import { CharacterContextSummary } from '../features/character/CharacterContextSummary'
 import { HomePage } from './HomePage'
 import { useCharacterEditor } from './hooks/useCharacterEditor'
-import { activateEditorSession } from './session/editorSession'
+import {
+  activateEditorSession,
+  clearEditorSession,
+  ACTIVE_CHARACTER_ID_KEY,
+} from './session/editorSession'
+import { deleteSavedCharacter } from './session/deleteSavedCharacter'
 import { loadRecentCharacterSummaries } from './session/loadRecentCharacterSummaries'
 import type { RecentCharacterSummary } from './session/recentCharacterDisplay'
 import { recentCharactersStore } from './session/recentCharacters'
@@ -133,6 +138,25 @@ export default function App({ randomSource = Math.random }: AppProps) {
     [editor, refreshRecentCharacters],
   )
 
+  const handleDelete = useCallback(
+    async (characterId: string) => {
+      setImportError(null)
+      await deleteSavedCharacter({
+        characterId,
+        repository,
+        recentStore: recentCharactersStore,
+      })
+
+      if (sessionStorage.getItem(ACTIVE_CHARACTER_ID_KEY) === characterId) {
+        clearEditorSession()
+        setAppView('home')
+      }
+
+      await refreshRecentCharacters()
+    },
+    [refreshRecentCharacters],
+  )
+
   if (editor.isLoading) {
     return <p className="status">Loading character...</p>
   }
@@ -179,6 +203,9 @@ export default function App({ randomSource = Math.random }: AppProps) {
           }}
           onContinue={(characterId) => {
             void handleContinue(characterId)
+          }}
+          onDelete={(characterId) => {
+            void handleDelete(characterId)
           }}
         />
       ) : (
@@ -261,7 +288,10 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   startingClassInstanceId={classEditor.startingClassInstanceId}
                   activeInstanceId={classEditor.activeInstanceId}
                   draft={classEditor.classDraft}
+                  abilityScores={character.abilityScores}
+                  speciesSelection={character.species}
                   catalog={editor.classCatalog}
+                  speciesCatalog={editor.speciesCatalog}
                   featCatalog={featCatalog}
                   characterFeatId={character.feat?.featId ?? null}
                   onBuildModeChange={classEditor.setBuildMode}

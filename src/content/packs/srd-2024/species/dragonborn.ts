@@ -4,6 +4,7 @@ import type {
   SpeciesDefinition,
 } from '../../../../domain/species/types'
 import { SRD_2024_SOURCE } from '../source'
+import { SRD_2024_ORIGIN_LANGUAGES } from './originLanguages'
 
 type DraconicAncestryDefinition = {
   id: string
@@ -42,6 +43,9 @@ function createDraconicAncestryOptions(): SpeciesChoiceOption[] {
   })
 }
 
+const DARKVISION_DESCRIPTION =
+  'You have Darkvision with a range of 60 feet.'
+
 export const dragonbornSrd2024: SpeciesDefinition = {
   id: 'srd-2024:dragonborn',
   editionId: 'srd-2024',
@@ -49,9 +53,17 @@ export const dragonbornSrd2024: SpeciesDefinition = {
   description:
     'The ancestors of dragonborn hatched from the eggs of chromatic and metallic dragons. Dragonborn look like wingless, bipedal dragons.',
   source: SRD_2024_SOURCE,
+  creatureType: 'humanoid',
   size: 'medium',
   speed: { walk: 30 },
+  languages: SRD_2024_ORIGIN_LANGUAGES,
   traits: [
+    {
+      id: 'darkvision',
+      name: 'Darkvision',
+      description: DARKVISION_DESCRIPTION,
+      effects: [{ kind: 'darkvision', rangeFeet: 60 }],
+    },
     {
       id: 'breath-weapon',
       name: 'Breath Weapon',
@@ -65,13 +77,15 @@ export const dragonbornSrd2024: SpeciesDefinition = {
         'At level 5, you can sprout spectral wings for 10 minutes, gaining a Fly Speed equal to your Speed. Once used, you cannot use it again until you finish a Long Rest.',
     },
   ],
-  effects: [{ kind: 'darkvision', rangeFeet: 60 }],
+  effects: [],
   choices: [
     {
       id: 'draconic-ancestry',
       prompt: 'Choose your draconic ancestor',
       type: 'single-select',
       required: true,
+      helperText:
+        'The damage type of your selected ancestor applies to your Breath Weapon and Damage Resistance.',
       options: createDraconicAncestryOptions(),
     },
   ],

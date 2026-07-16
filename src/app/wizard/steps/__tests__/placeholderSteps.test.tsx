@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { createBundledBackgroundCatalog } from '../../../../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../../../../adapters/bundledClassCatalog'
 import { createBundledFeatCatalog } from '../../../../adapters/bundledFeatCatalog'
+import { createBundledSpeciesCatalog } from '../../../../adapters/bundledSpeciesCatalog'
+import { DEFAULT_ABILITY_SCORES } from '../../../../domain/character/defaults'
 import type { ClassBuildMode } from '../../../../features/class/classBuildMode'
 import { createEmptyClassSelectionDrafts } from '../../../../features/class/classSelectionDraft'
 import { BackgroundStep } from '../BackgroundStep'
@@ -22,7 +24,10 @@ function renderClassStep(buildMode: ClassBuildMode | null = 'single-class') {
       startingClassInstanceId={null}
       activeInstanceId={null}
       draft={null}
+      abilityScores={DEFAULT_ABILITY_SCORES}
+      speciesSelection={null}
       catalog={createBundledClassCatalog()}
+      speciesCatalog={createBundledSpeciesCatalog()}
       featCatalog={createBundledFeatCatalog()}
       characterFeatId={null}
       onBuildModeChange={() => {}}

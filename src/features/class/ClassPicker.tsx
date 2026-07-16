@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
-import type { EditionId } from '../../domain/types'
+import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
+import type { AbilityScores, EditionId } from '../../domain/types'
 import type {
   CharacterClassSelection,
   ClassChoiceValue,
   ClassDefinition,
 } from '../../domain/class/types'
 import { MAX_CLASS_LEVEL } from '../../domain/class/types'
+import {
+  syncHitPointIncreases,
+  updateHitPointIncrease,
+  type HitPointIncrease,
+} from '../../domain/class/hitPointIncreases'
 import { classInstanceToSelection } from '../../domain/character/characterClassSelection'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
@@ -45,10 +51,13 @@ import {
   legacyDraftToInstanceDraft,
   tryCommitClassInstanceDraft,
   updateClassDraftChoice,
+  updateClassDraftHitPointIncrease,
   updateClassDraftLevel,
   type ClassSelectionDraft,
   type ClassSelectionDrafts,
 } from './classSelectionDraft'
+import type { SpeciesDefinition, SpeciesSelection } from '../../domain/species/types'
+import { resolveHitPointMaximum } from '../../rules/hit-points/resolveHitPointMaximum'
 
 type ClassPickerProps = {
   editionId: EditionId
@@ -59,7 +68,10 @@ type ClassPickerProps = {
   startingClassInstanceId: string | null
   activeInstanceId: string | null
   draft: ClassSelectionDraft | null
+  abilityScores: AbilityScores
+  speciesSelection: SpeciesSelection | null
   catalog: ClassCatalog
+  speciesCatalog: SpeciesCatalog
   featCatalog: FeatCatalog
   characterFeatId?: string | null
   onBuildModeChange: (mode: ClassBuildMode) => void
@@ -108,7 +120,10 @@ export function ClassPicker({
   startingClassInstanceId,
   activeInstanceId,
   draft,
+  abilityScores,
+  speciesSelection,
   catalog,
+  speciesCatalog,
   featCatalog,
   characterFeatId = null,
   onBuildModeChange,
@@ -127,6 +142,8 @@ export function ClassPicker({
 }: ClassPickerProps) {
   const [classList, setClassList] = useState<ClassDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [speciesDefinition, setSpeciesDefinition] =
+    useState<SpeciesDefinition | null>(null)
   const [, setChoiceExpansionState] =
     useState<FeatureChoiceExpansionState>({})
   const [pendingModeSwitch, setPendingModeSwitch] =
@@ -225,6 +242,67 @@ export function ClassPicker({
   const maxInstanceLevel =
     buildMode === 'single-class' ? MAX_CLASS_LEVEL : MAX_CLASS_LEVEL
 
+  const activeHitPointIncreases =
+    draft?.hitPointIncreases ?? committedInstance?.hitPointIncreases
+
+  const isActiveStartingClass =
+    buildMode === 'single-class' ||
+    (activeInstanceId !== null &&
+      startingClassInstanceId !== null &&
+      activeInstanceId === startingClassInstanceId)
+
+  const hitPointsLabel = useMemo(() => {
+    if (effectiveInstances.length === 0) {
+      return null
+    }
+
+    const classesForHp = effectiveInstances.map((instance) => {
+      const isStarting =
+        buildMode === 'single-class' ||
+        (startingClassInstanceId !== null &&
+          instance.instanceId === startingClassInstanceId)
+      const draftForInstance = classDrafts[instance.instanceId]
+      const increases =
+        instance.instanceId === activeInstanceId && draft?.hitPointIncreases !== undefined
+          ? draft.hitPointIncreases
+          : (draftForInstance?.hitPointIncreases ?? instance.hitPointIncreases)
+
+      return {
+        ...instance,
+        hitPointIncreases: syncHitPointIncreases(increases, instance.level, {
+          isStartingClass: isStarting,
+        }),
+      }
+    })
+
+    const resolved = resolveHitPointMaximum({
+      classes: classesForHp,
+      startingClassInstanceId:
+        buildMode === 'single-class'
+          ? (activeInstanceId ?? classesForHp[0]?.instanceId ?? null)
+          : startingClassInstanceId,
+      classDefinitionsById: new Map(
+        classList.map((definition) => [definition.id, definition]),
+      ),
+      abilityScores,
+      speciesDefinition,
+      speciesSelection,
+    })
+
+    return resolved.isComplete ? String(resolved.maximum) : '—'
+  }, [
+    abilityScores,
+    activeInstanceId,
+    buildMode,
+    classDrafts,
+    classList,
+    draft?.hitPointIncreases,
+    effectiveInstances,
+    speciesDefinition,
+    speciesSelection,
+    startingClassInstanceId,
+  ])
+
   useEffect(() => {
     let isActive = true
     setIsLoading(true)
@@ -244,6 +322,27 @@ export function ClassPicker({
   }, [catalog, editionId])
 
   useEffect(() => {
+    let isActive = true
+
+    if (speciesSelection == null) {
+      setSpeciesDefinition(null)
+      return
+    }
+
+    void speciesCatalog.getSpecies(speciesSelection.speciesId).then((definition) => {
+      if (!isActive) {
+        return
+      }
+
+      setSpeciesDefinition(definition)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [speciesCatalog, speciesSelection])
+
+  useEffect(() => {
     if (
       buildMode === 'multiclass' &&
       multiclassStage === 'configure' &&
@@ -260,6 +359,16 @@ export function ClassPicker({
     onActiveInstanceChange,
   ])
 
+  function resolveIsStartingClass(instanceId: string): boolean {
+    return (
+      buildMode === 'single-class' ||
+      startingClassInstanceId === instanceId ||
+      (startingClassInstanceId === null &&
+        buildMode !== 'multiclass' &&
+        effectiveInstances.length <= 1)
+    )
+  }
+
   async function commitDraft(
     nextDraft: ClassSelectionDraft,
     instanceId: string | null = resolveActiveInstanceId(),
@@ -274,6 +383,7 @@ export function ClassPicker({
       instanceDraft,
       editionId,
       definition,
+      { isStartingClass: resolveIsStartingClass(instanceId) },
     )
 
     if (committed !== null) {
@@ -299,6 +409,9 @@ export function ClassPicker({
         classId: activeClassId,
         level: activeLevel,
         choices: activeChoices,
+        hitPointIncreases: syncHitPointIncreases(undefined, activeLevel, {
+          isStartingClass: true,
+        }),
       }
     }
 
@@ -308,6 +421,11 @@ export function ClassPicker({
         classId: activeClassId,
         level: activeLevel,
         choices: activeChoices,
+        hitPointIncreases:
+          committedInstance?.hitPointIncreases ??
+          syncHitPointIncreases(undefined, activeLevel, {
+            isStartingClass: resolveIsStartingClass(activeInstanceId),
+          }),
       }),
     )
   }
@@ -318,12 +436,15 @@ export function ClassPicker({
     activeInstanceRef.current = instanceId
     onActiveInstanceChange(instanceId)
 
-    const nextDraft = createClassSelectionDraft(classDefinition.id)
+    const nextDraft = createClassSelectionDraft(classDefinition.id, {
+      isStartingClass: true,
+    })
     const instanceDraft = legacyDraftToInstanceDraft(nextDraft, instanceId)
     const { committed } = tryCommitClassInstanceDraft(
       instanceDraft,
       editionId,
       classDefinition,
+      { isStartingClass: true },
     )
 
     if (committed !== null) {
@@ -392,6 +513,7 @@ export function ClassPicker({
       currentDraft,
       clampedLevel,
       activeDefinition,
+      { isStartingClass: resolveIsStartingClass(instanceId) },
     )
 
     setChoiceExpansionState((current) =>
@@ -404,6 +526,40 @@ export function ClassPicker({
         ),
       ),
     )
+
+    await commitDraft(nextDraft, instanceId)
+  }
+
+  async function handleHitPointIncreaseChange(
+    classLevel: number,
+    patch: Partial<Pick<HitPointIncrease, 'method' | 'rolledValue'>>,
+  ) {
+    const instanceId = resolveActiveInstanceId()
+
+    if (instanceId === null) {
+      return
+    }
+
+    const currentDraft = ensureDraft()
+
+    if (currentDraft === null) {
+      return
+    }
+
+    const nextDraft = updateClassDraftHitPointIncrease(currentDraft, classLevel, patch)
+
+    if (committedInstance !== null && draft === null) {
+      const increases = syncHitPointIncreases(
+        committedInstance.hitPointIncreases,
+        committedInstance.level,
+        { isStartingClass: resolveIsStartingClass(instanceId) },
+      )
+      onCommitInstance({
+        ...committedInstance,
+        hitPointIncreases: updateHitPointIncrease(increases, classLevel, patch),
+      })
+      return
+    }
 
     await commitDraft(nextDraft, instanceId)
   }
@@ -521,6 +677,9 @@ export function ClassPicker({
                       maxInstanceLevel={maxInstanceLevel}
                       draft={draft}
                       committedSelection={committedSelection}
+                      isStartingClass={isActiveStartingClass}
+                      hitPointIncreases={activeHitPointIncreases}
+                      hitPointsLabel={hitPointsLabel}
                       featCatalog={featCatalog}
                       characterFeatId={characterFeatId}
                       onLevelChange={(level) => {
@@ -528,6 +687,9 @@ export function ClassPicker({
                       }}
                       onChoiceChange={(choiceId, value) => {
                         void handleChoiceChange(choiceId, value)
+                      }}
+                      onHitPointIncreaseChange={(classLevel, patch) => {
+                        void handleHitPointIncreaseChange(classLevel, patch)
                       }}
                     />
                   ) : null}
@@ -633,6 +795,8 @@ export function ClassPicker({
                           maxInstanceLevel={MAX_CLASS_LEVEL}
                           draft={draft}
                           committedSelection={committedSelection}
+                          isStartingClass={isActiveStartingClass}
+                          hitPointIncreases={activeHitPointIncreases}
                           featCatalog={featCatalog}
                           characterFeatId={characterFeatId}
                           onLevelChange={(level) => {
@@ -640,6 +804,9 @@ export function ClassPicker({
                           }}
                           onChoiceChange={(choiceId, value) => {
                             void handleChoiceChange(choiceId, value)
+                          }}
+                          onHitPointIncreaseChange={(classLevel, patch) => {
+                            void handleHitPointIncreaseChange(classLevel, patch)
                           }}
                         />
                       ) : (

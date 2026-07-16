@@ -32,31 +32,60 @@ describe('speciesSelectionDraft', () => {
         ok: false,
         issues: [
           { code: 'missing-required-choice', choiceId: 'draconic-ancestry' },
+          { code: 'missing-required-choice', choiceId: 'standard-languages' },
         ],
       },
     })
   })
 
-  it('commits Dwarf immediately because it has no required choices', () => {
+  it('keeps Dwarf from committing until languages are chosen', () => {
     const draft = createSpeciesSelectionDraft('srd-2024:dwarf')
 
     expect(tryCommitSpeciesDraft(draft, 'srd-2024', dwarf)).toEqual({
-      committed: { speciesId: 'srd-2024:dwarf', choices: {} },
+      committed: null,
+      validation: {
+        ok: false,
+        issues: [
+          { code: 'missing-required-choice', choiceId: 'standard-languages' },
+        ],
+      },
+    })
+  })
+
+  it('commits Dwarf once standard languages are chosen', () => {
+    const draft = updateSpeciesDraftChoice(
+      createSpeciesSelectionDraft('srd-2024:dwarf'),
+      'standard-languages',
+      ['dwarvish', 'elvish'],
+    )
+
+    expect(tryCommitSpeciesDraft(draft, 'srd-2024', dwarf)).toEqual({
+      committed: {
+        speciesId: 'srd-2024:dwarf',
+        choices: { 'standard-languages': ['dwarvish', 'elvish'] },
+      },
       validation: { ok: true },
     })
   })
 
-  it('commits Dragonborn once a valid ancestry is chosen', () => {
+  it('commits Dragonborn once ancestry and languages are chosen', () => {
     const draft = updateSpeciesDraftChoice(
-      createSpeciesSelectionDraft('srd-2024:dragonborn'),
-      'draconic-ancestry',
-      'red',
+      updateSpeciesDraftChoice(
+        createSpeciesSelectionDraft('srd-2024:dragonborn'),
+        'draconic-ancestry',
+        'red',
+      ),
+      'standard-languages',
+      ['draconic', 'common-sign'],
     )
 
     expect(tryCommitSpeciesDraft(draft, 'srd-2024', dragonborn)).toEqual({
       committed: {
         speciesId: 'srd-2024:dragonborn',
-        choices: { 'draconic-ancestry': 'red' },
+        choices: {
+          'draconic-ancestry': 'red',
+          'standard-languages': ['draconic', 'common-sign'],
+        },
       },
       validation: { ok: true },
     })
@@ -65,9 +94,13 @@ describe('speciesSelectionDraft', () => {
   it('clears committed selection when a required choice is removed', () => {
     const draft = updateSpeciesDraftChoice(
       updateSpeciesDraftChoice(
-        createSpeciesSelectionDraft('srd-2024:dragonborn'),
-        'draconic-ancestry',
-        'red',
+        updateSpeciesDraftChoice(
+          createSpeciesSelectionDraft('srd-2024:dragonborn'),
+          'draconic-ancestry',
+          'red',
+        ),
+        'standard-languages',
+        ['draconic', 'common-sign'],
       ),
       'draconic-ancestry',
       undefined,

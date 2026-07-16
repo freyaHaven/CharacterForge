@@ -47,6 +47,8 @@ export type ClassOverviewPanelProps = {
   committedSelection: ClassSelection | null
   draft: ClassSelectionDraft | null
   draftValidation: ClassValidationResult | null
+  /** Character hit point maximum label, e.g. `28` or `—`. */
+  hitPointsLabel?: string | null
   onLevelChange: (level: number) => void
 }
 
@@ -55,6 +57,7 @@ export function ClassOverviewPanel({
   level,
   maxLevel,
   choices,
+  hitPointsLabel = null,
   onLevelChange,
 }: ClassOverviewPanelProps) {
   const subclassLabel = getSubclassLabel(definition, choices)
@@ -106,9 +109,16 @@ export function ClassOverviewPanel({
             </dd>
           </div>
 
-          <div className="class-picker__overview-metadata-group">
-            <dt>Hit Die</dt>
-            <dd>{formatHitDie(definition)}</dd>
+          <div className="class-picker__overview-metadata-row">
+            <div className="class-picker__overview-metadata-group">
+              <dt>Hit Die</dt>
+              <dd>{formatHitDie(definition, level)}</dd>
+            </div>
+
+            <div className="class-picker__overview-metadata-group">
+              <dt>Hit Points</dt>
+              <dd>{hitPointsLabel ?? '—'}</dd>
+            </div>
           </div>
 
           <div className="class-picker__overview-metadata-group">

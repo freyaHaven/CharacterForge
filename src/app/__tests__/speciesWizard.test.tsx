@@ -18,6 +18,10 @@ import {
   openStoredCharacterEditor,
   seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
+import {
+  COMPLETE_DWARF_SELECTION,
+  selectStandardLanguages,
+} from '../../testing/speciesSelectionTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -28,6 +32,7 @@ vi.mock('../../adapters/localStorageCharacterRepository', () => ({
   createLocalStorageCharacterRepository: () => ({
     load: loadMock,
     save: saveMock,
+    remove: vi.fn(),
   }),
 }))
 
@@ -62,8 +67,31 @@ async function openSpeciesStep(user: ReturnType<typeof userEvent.setup>) {
   await waitForSpeciesLoaded()
 }
 
-function getAncestrySelect() {
-  return screen.getByRole('combobox', { name: /choose your draconic ancestor/i })
+function getAncestryTrigger() {
+  return screen.getByRole('button', {
+    name: /choose your draconic ancestor/i,
+  })
+}
+
+async function ensureAncestryExpanded(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  const trigger = getAncestryTrigger()
+  if (trigger.getAttribute('aria-expanded') !== 'true') {
+    await user.click(trigger)
+  }
+}
+
+async function selectAncestry(
+  user: ReturnType<typeof userEvent.setup>,
+  label: RegExp,
+) {
+  await ensureAncestryExpanded(user)
+  await user.click(screen.getByRole('radio', { name: label }))
+}
+
+function expectAncestrySelected(label: RegExp) {
+  expect(screen.getByRole('radio', { name: label })).toBeChecked()
 }
 
 async function renderEditor(
@@ -126,10 +154,11 @@ describe('Species wizard integration', () => {
     })
   })
 
-  it('shows complete status after selecting Dwarf', async () => {
+  it('shows complete status after selecting Dwarf and languages', async () => {
     const user = await renderEditor()
     await openSpeciesStep(user)
     await user.click(screen.getByRole('button', { name: 'Dwarf' }))
+    await selectStandardLanguages(user)
 
     await waitFor(() => {
       expect(getWizardStepButton(screen, 'Species')).toHaveAccessibleName(
@@ -141,11 +170,10 @@ describe('Species wizard integration', () => {
   it('shows complete status for a loaded committed Dwarf selection', async () => {
     const user = await renderEditor(
       createStoredCharacter({
-        species: { speciesId: 'srd-2024:dwarf', choices: {} },
+        species: { ...COMPLETE_DWARF_SELECTION },
       }),
     )
     await openSpeciesStep(user)
-    await user.click(screen.getByRole('button', { name: 'Dwarf' }))
 
     await waitFor(() => {
       expect(getWizardStepButton(screen, 'Species')).toHaveAccessibleName(
@@ -158,7 +186,8 @@ describe('Species wizard integration', () => {
     const user = await renderEditor()
     await openSpeciesStep(user)
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
-    await user.selectOptions(getAncestrySelect(), 'red')
+    await selectAncestry(user, /red \(fire\)/i)
+    await selectStandardLanguages(user, [/draconic/i, /common sign language/i])
 
     await goToWizardStep(user, screen, 'Basics')
     await openSpeciesStep(user)
@@ -166,7 +195,8 @@ describe('Species wizard integration', () => {
     expect(
       screen.getByRole('button', { name: 'Dragonborn', pressed: true }),
     ).toBeInTheDocument()
-    expect(getAncestrySelect()).toHaveValue('red')
+    await ensureAncestryExpanded(user)
+    expectAncestrySelected(/red \(fire\)/i)
     expect(document.querySelector('.species-picker__selection')).toHaveTextContent(
       /Selected:\s*Dragonborn/i,
     )
@@ -183,7 +213,7 @@ describe('Species wizard integration', () => {
     expect(
       screen.getByRole('button', { name: 'Dragonborn', pressed: true }),
     ).toBeInTheDocument()
-    expect(getAncestrySelect()).toBeInTheDocument()
+    expect(getAncestryTrigger()).toBeInTheDocument()
     expect(
       screen.getByText(/complete required choices to confirm/i),
     ).toBeInTheDocument()
@@ -192,7 +222,7 @@ describe('Species wizard integration', () => {
   it('loads saved species without marking the step as touched on a fresh render', async () => {
     await renderEditor(
       createStoredCharacter({
-        species: { speciesId: 'srd-2024:dwarf', choices: {} },
+        species: { ...COMPLETE_DWARF_SELECTION },
       }),
     )
 

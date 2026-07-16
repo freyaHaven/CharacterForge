@@ -44,7 +44,7 @@ describe('useCharacterEditor.openCharacter', () => {
     const character = createStoredCharacter()
     const load = vi.fn().mockResolvedValue(character)
     const save = vi.fn().mockResolvedValue(undefined)
-    const repository: CharacterRepository = { load, save }
+    const repository: CharacterRepository = { load, save, remove: vi.fn() }
 
     saveClassEditorWorkflow(character.id, {
       buildMode: 'single-class',
@@ -84,7 +84,7 @@ describe('useCharacterEditor.openCharacter', () => {
   it('returns false when the character is missing', async () => {
     const load = vi.fn().mockResolvedValue(null)
     const save = vi.fn().mockResolvedValue(undefined)
-    const repository: CharacterRepository = { load, save }
+    const repository: CharacterRepository = { load, save, remove: vi.fn() }
 
     const { result } = renderHook(() =>
       useCharacterEditor({

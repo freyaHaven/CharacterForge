@@ -22,6 +22,10 @@ import {
   openStoredCharacterEditor,
   seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
+import {
+  COMPLETE_DWARF_SELECTION,
+  selectStandardLanguages,
+} from '../../testing/speciesSelectionTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -32,6 +36,7 @@ vi.mock('../../adapters/localStorageCharacterRepository', () => ({
   createLocalStorageCharacterRepository: () => ({
     load: loadMock,
     save: saveMock,
+    remove: vi.fn(),
   }),
 }))
 
@@ -43,7 +48,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     name: 'Aldric',
     editionId: 'srd-2024',
     creationMethod: 'manual',
-    species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    species: { ...COMPLETE_DWARF_SELECTION },
     ...withSingleClassInstance(fighterInstance),
     ...overrides,
   })
@@ -102,10 +107,16 @@ async function completeRequiredSteps(
   await user.click(screen.getByRole('button', { name: species }))
 
   if (species === 'Dragonborn') {
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: /choose your draconic ancestor/i }),
-      'red',
-    )
+    const ancestryTrigger = screen.getByRole('button', {
+      name: /choose your draconic ancestor/i,
+    })
+    if (ancestryTrigger.getAttribute('aria-expanded') !== 'true') {
+      await user.click(ancestryTrigger)
+    }
+    await user.click(screen.getByRole('radio', { name: /red \(fire\)/i }))
+    await selectStandardLanguages(user, [/draconic/i, /common sign language/i])
+  } else {
+    await selectStandardLanguages(user)
   }
 
   if (useStandardArray) {

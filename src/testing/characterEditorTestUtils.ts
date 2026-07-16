@@ -76,7 +76,13 @@ export async function openStoredCharacterEditor(
     'i',
   )
 
-  await user.click(screenInstance.getByRole('button', { name: namePattern }))
+  await user.click(
+    screenInstance.getByRole('button', {
+      name: (accessibleName) =>
+        namePattern.test(accessibleName) &&
+        !/^delete character/i.test(accessibleName),
+    }),
+  )
 
   await waitFor(() => {
     expect(

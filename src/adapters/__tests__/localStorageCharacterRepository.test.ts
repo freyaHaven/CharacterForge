@@ -119,6 +119,16 @@ describe('createLocalStorageCharacterRepository', () => {
     expect(loaded).toEqual(character)
   })
 
+  it('removes a saved character', async () => {
+    const repository = createLocalStorageCharacterRepository()
+    const character = createTestCharacter()
+
+    await repository.save(character)
+    await repository.remove(character.id)
+
+    await expect(repository.load(character.id)).resolves.toBeNull()
+  })
+
   it('persists characters in a versioned envelope', async () => {
     const repository = createLocalStorageCharacterRepository()
     const character = createTestCharacter()
@@ -126,7 +136,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 10,
+      schemaVersion: 11,
       character,
     })
   })

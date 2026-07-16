@@ -20,6 +20,15 @@ describe('isSpeciesSelection', () => {
     ).toBe(true)
   })
 
+  it('returns true when choices contain string array values', () => {
+    expect(
+      isSpeciesSelection({
+        speciesId: 'srd-2024:dwarf',
+        choices: { 'standard-languages': ['dwarvish', 'elvish'] },
+      }),
+    ).toBe(true)
+  })
+
   it('returns false when speciesId is empty', () => {
     expect(isSpeciesSelection({ speciesId: '', choices: {} })).toBe(false)
   })

@@ -18,6 +18,7 @@ describe('classSelectionDraft', () => {
       classId: 'srd-2024:fighter',
       level: 1,
       choices: {},
+      hitPointIncreases: [{ classLevel: 1, method: 'max' }],
     })
   })
 
@@ -42,6 +43,7 @@ describe('classSelectionDraft', () => {
           'skill-proficiencies': ['athletics', 'perception'],
           ...createFighterWeaponMasteryChoices(1),
         },
+        hitPointIncreases: [{ classLevel: 1, method: 'max' }],
       },
       validation: { ok: true },
     })
@@ -122,6 +124,7 @@ describe('classSelectionDraft', () => {
         'skill-proficiencies': ['athletics', 'perception'],
         ...createFighterWeaponMasteryChoices(1),
       },
+      hitPointIncreases: [{ classLevel: 1, method: 'max' }],
     })
   })
 

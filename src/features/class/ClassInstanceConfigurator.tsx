@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { HitPointIncrease } from '../../domain/class/hitPointIncreases'
 import type { EditionId } from '../../domain/types'
 import type {
   ClassChoiceValue,
@@ -32,6 +33,7 @@ import {
 } from './ClassSelectionSummary'
 import { AsiChoiceField } from './AsiChoiceField'
 import { ClassMultiSelectChoiceField } from './ClassMultiSelectChoiceField'
+import { HitPointIncreasePanel } from './HitPointIncreasePanel'
 import { LevelStepper } from './LevelStepper'
 import { formatClassValidationIssue } from './formatClassValidation'
 import type { ClassSelectionDraft } from './classSelectionDraft'
@@ -71,12 +73,18 @@ export type ClassInstanceConfiguratorProps = {
   maxInstanceLevel: number
   draft: ClassSelectionDraft | null
   committedSelection: ClassSelection | null
+  isStartingClass: boolean
+  hitPointIncreases?: readonly HitPointIncrease[]
   featCatalog: FeatCatalog
   characterFeatId?: string | null
   levelLabel?: string
   showRemoveButton?: boolean
   onLevelChange: (level: number) => void
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
+  onHitPointIncreaseChange: (
+    classLevel: number,
+    patch: Partial<Pick<HitPointIncrease, 'method' | 'rolledValue'>>,
+  ) => void
   onRemove?: () => void
 }
 
@@ -90,12 +98,15 @@ export function ClassInstanceConfigurator({
   maxInstanceLevel,
   draft,
   committedSelection,
+  isStartingClass,
+  hitPointIncreases,
   featCatalog,
   characterFeatId = null,
   levelLabel = 'Levels in this class',
   showRemoveButton = false,
   onLevelChange,
   onChoiceChange,
+  onHitPointIncreaseChange,
   onRemove,
 }: ClassInstanceConfiguratorProps) {
   const [choiceExpansionState, setChoiceExpansionState] =
@@ -184,6 +195,14 @@ export function ClassInstanceConfigurator({
               onChange={onLevelChange}
             />
           </div>
+
+          <HitPointIncreasePanel
+            hitDie={activeDefinition.hitDie}
+            level={activeLevel}
+            isStartingClass={isStartingClass}
+            increases={hitPointIncreases ?? draft?.hitPointIncreases}
+            onChange={onHitPointIncreaseChange}
+          />
 
           {featureProgression.length > 0 ? (
             <div className="class-picker__features">

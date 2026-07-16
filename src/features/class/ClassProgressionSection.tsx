@@ -19,7 +19,9 @@ import { ClassDeferredRequirementsPanel } from './ClassSelectionSummary'
 import { ClassMultiSelectChoiceField } from './ClassMultiSelectChoiceField'
 import { getOverviewSetupChoices } from './classOverviewSetupChoices'
 import { formatClassValidationIssue } from './formatClassValidation'
+import type { HitPointIncrease } from '../../domain/class/hitPointIncreases'
 import type { ClassSelectionDraft } from './classSelectionDraft'
+import { HitPointIncreasePanel } from './HitPointIncreasePanel'
 import {
   choiceGrantsSkillProficiency,
   collectSkillProficiencySelections,
@@ -54,9 +56,15 @@ export type ClassProgressionSectionProps = {
   activeLevel: number
   activeChoices: Record<string, ClassChoiceValue>
   draft: ClassSelectionDraft | null
+  isStartingClass: boolean
+  hitPointIncreases?: readonly HitPointIncrease[]
   featCatalog: FeatCatalog
   characterFeatId?: string | null
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
+  onHitPointIncreaseChange: (
+    classLevel: number,
+    patch: Partial<Pick<HitPointIncrease, 'method' | 'rolledValue'>>,
+  ) => void
 }
 
 export function ClassProgressionSection({
@@ -67,9 +75,12 @@ export function ClassProgressionSection({
   activeLevel,
   activeChoices,
   draft,
+  isStartingClass,
+  hitPointIncreases,
   featCatalog,
   characterFeatId = null,
   onChoiceChange,
+  onHitPointIncreaseChange,
 }: ClassProgressionSectionProps) {
   const [featNameById, setFeatNameById] = useState<Map<string, string>>(
     () => new Map(),
@@ -173,6 +184,14 @@ export function ClassProgressionSection({
       </h3>
 
       <div className="class-picker__progression-content">
+        <HitPointIncreasePanel
+          hitDie={activeDefinition.hitDie}
+          level={activeLevel}
+          isStartingClass={isStartingClass}
+          increases={hitPointIncreases ?? draft?.hitPointIncreases}
+          onChange={onHitPointIncreaseChange}
+        />
+
         {featureItems.length > 0 ? (
           <div className="class-picker__feature-accordions">
             {featureItems.map((item) => {

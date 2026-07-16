@@ -9,7 +9,7 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 10
+export const CURRENT_SCHEMA_VERSION = 11
 
 type CharacterIdentity = {
   id: string
@@ -98,7 +98,13 @@ export type StoredCharacterV10 = {
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV10
+/** Schema v11: class instances include hit point increase choices. */
+export type StoredCharacterV11 = {
+  schemaVersion: 11
+  character: Character
+}
+
+export type StoredCharacter = StoredCharacterV11
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -120,7 +126,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV7
   | StoredCharacterV8
   | StoredCharacterV9
-  | StoredCharacterV10 {
+  | StoredCharacterV10
+  | StoredCharacterV11 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

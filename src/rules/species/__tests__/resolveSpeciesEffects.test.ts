@@ -4,14 +4,32 @@ import type { SpeciesDefinition } from '../../../domain/species/types'
 import { resolveSpeciesEffects } from '../resolveSpeciesEffects'
 
 describe('resolveSpeciesEffects', () => {
+  let dwarf: SpeciesDefinition
   let dragonborn: SpeciesDefinition
 
   beforeAll(async () => {
-    const definition = await createBundledSpeciesCatalog().getSpecies(
-      'srd-2024:dragonborn',
-    )
-    expect(definition).not.toBeNull()
-    dragonborn = definition!
+    const catalog = createBundledSpeciesCatalog()
+    const resolvedDwarf = await catalog.getSpecies('srd-2024:dwarf')
+    const resolvedDragonborn = await catalog.getSpecies('srd-2024:dragonborn')
+    expect(resolvedDwarf).not.toBeNull()
+    expect(resolvedDragonborn).not.toBeNull()
+    dwarf = resolvedDwarf!
+    dragonborn = resolvedDragonborn!
+  })
+
+  it('resolves Darkvision and other effects from trait.effects', () => {
+    expect(
+      resolveSpeciesEffects(dwarf, {
+        speciesId: 'srd-2024:dwarf',
+        choices: {},
+      }),
+    ).toEqual([
+      { kind: 'darkvision', rangeFeet: 120 },
+      { kind: 'damage-resistance', damageType: 'poison' },
+      { kind: 'save-advantage', condition: 'poisoned' },
+      { kind: 'hit-point-maximum-per-level', amount: 1 },
+    ])
+    expect(dwarf.effects).toEqual([])
   })
 
   it('resolves Red ancestry to Fire resistance', () => {

@@ -1,4 +1,5 @@
 import type { ClassChoiceValue, ClassSelection } from './types'
+import { isHitPointIncrease } from './hitPointIncreases'
 
 function isClassChoiceValue(value: unknown): value is ClassChoiceValue {
   if (typeof value === 'string') {
@@ -40,5 +41,16 @@ export function isClassSelection(value: unknown): value is ClassSelection {
 
   const choices = candidate.choices as Record<string, unknown>
 
-  return Object.values(choices).every(isClassChoiceValue)
+  if (!Object.values(choices).every(isClassChoiceValue)) {
+    return false
+  }
+
+  if (candidate.hitPointIncreases === undefined) {
+    return true
+  }
+
+  return (
+    Array.isArray(candidate.hitPointIncreases) &&
+    candidate.hitPointIncreases.every(isHitPointIncrease)
+  )
 }

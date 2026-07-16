@@ -1,3 +1,4 @@
+import type { HitPointIncrease } from '../../domain/class/hitPointIncreases'
 import type { EditionId } from '../../domain/types'
 import type {
   ClassChoiceValue,
@@ -20,10 +21,17 @@ export type SingleClassConfiguratorProps = {
   maxInstanceLevel: number
   draft: ClassSelectionDraft | null
   committedSelection: ClassSelection | null
+  isStartingClass: boolean
+  hitPointIncreases?: readonly HitPointIncrease[]
+  hitPointsLabel?: string | null
   featCatalog: FeatCatalog
   characterFeatId?: string | null
   onLevelChange: (level: number) => void
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
+  onHitPointIncreaseChange: (
+    classLevel: number,
+    patch: Partial<Pick<HitPointIncrease, 'method' | 'rolledValue'>>,
+  ) => void
 }
 
 export function SingleClassConfigurator({
@@ -36,10 +44,14 @@ export function SingleClassConfigurator({
   maxInstanceLevel,
   draft,
   committedSelection,
+  isStartingClass,
+  hitPointIncreases,
+  hitPointsLabel = null,
   featCatalog,
   characterFeatId = null,
   onLevelChange,
   onChoiceChange,
+  onHitPointIncreaseChange,
 }: SingleClassConfiguratorProps) {
   const draftValidation =
     draft === null
@@ -64,6 +76,7 @@ export function SingleClassConfigurator({
         committedSelection={committedSelection}
         draft={draft}
         draftValidation={draftValidation}
+        hitPointsLabel={hitPointsLabel}
         onLevelChange={onLevelChange}
       />
       <ClassProgressionSection
@@ -74,9 +87,12 @@ export function SingleClassConfigurator({
         activeLevel={activeLevel}
         activeChoices={activeChoices}
         draft={draft}
+        isStartingClass={isStartingClass}
+        hitPointIncreases={hitPointIncreases}
         featCatalog={featCatalog}
         characterFeatId={characterFeatId}
         onChoiceChange={onChoiceChange}
+        onHitPointIncreaseChange={onHitPointIncreaseChange}
       />
     </div>
   )

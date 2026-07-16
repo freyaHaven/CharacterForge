@@ -1,5 +1,8 @@
 import type { SpeciesDefinition } from '../../domain/species/types'
-import type { SpeciesSelection } from '../../domain/species/types'
+import type {
+  SpeciesSelection,
+  SpeciesSelectionChoiceValue,
+} from '../../domain/species/types'
 import type { EditionId } from '../../domain/types'
 import {
   validateSpeciesSelection,
@@ -8,7 +11,7 @@ import {
 
 export type SpeciesSelectionDraft = {
   speciesId: string
-  choices: Record<string, string>
+  choices: Record<string, SpeciesSelectionChoiceValue>
 }
 
 export function createSpeciesSelectionDraft(
@@ -41,11 +44,13 @@ export function draftToSpeciesSelection(
 export function updateSpeciesDraftChoice(
   draft: SpeciesSelectionDraft,
   choiceId: string,
-  optionId: string | undefined,
+  optionId: SpeciesSelectionChoiceValue | undefined,
 ): SpeciesSelectionDraft {
   const nextChoices = { ...draft.choices }
 
   if (optionId === undefined) {
+    delete nextChoices[choiceId]
+  } else if (Array.isArray(optionId) && optionId.length === 0) {
     delete nextChoices[choiceId]
   } else {
     nextChoices[choiceId] = optionId

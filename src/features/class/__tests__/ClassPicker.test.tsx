@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createBundledClassCatalog } from '../../../adapters/bundledClassCatalog'
 import { createBundledFeatCatalog } from '../../../adapters/bundledFeatCatalog'
+import { createBundledSpeciesCatalog } from '../../../adapters/bundledSpeciesCatalog'
 import { useClassEditor } from '../../../app/hooks/useClassEditor'
 import { clearClassEditorWorkflow } from '../../../app/session/classEditorWorkflowStorage'
 import { createDefaultCharacter } from '../../../domain/character/defaults'
@@ -36,6 +37,7 @@ function ClassPickerHarness({
 }: ClassPickerHarnessProps) {
   const catalog = useMemo(() => createBundledClassCatalog(), [])
   const featCatalog = useMemo(() => createBundledFeatCatalog(), [])
+  const speciesCatalog = useMemo(() => createBundledSpeciesCatalog(), [])
   const [character, setCharacter] = useState<Character>(() => ({
     ...createDefaultCharacter(),
     ...initialCharacter,
@@ -67,7 +69,10 @@ function ClassPickerHarness({
       startingClassInstanceId={editor.startingClassInstanceId}
       activeInstanceId={editor.activeInstanceId}
       draft={editor.classDraft}
+      abilityScores={character.abilityScores}
+      speciesSelection={character.species}
       catalog={catalog}
+      speciesCatalog={speciesCatalog}
       featCatalog={featCatalog}
       characterFeatId={null}
       onBuildModeChange={editor.setBuildMode}
@@ -535,6 +540,7 @@ describe('ClassPicker', () => {
       'Champion',
     )
     expect(screen.getByRole('spinbutton', { name: /^level$/i })).toHaveValue(5)
+    expect(screen.getByText('5d10')).toBeInTheDocument()
     expectFeatureComplete(/Fighting Style/i)
   })
 
@@ -619,7 +625,7 @@ describe('ClassPicker', () => {
         selector: '.class-picker__overview-chip',
       }),
     ).toBeInTheDocument()
-    expect(within(overviewColumn).getByText('d10')).toBeInTheDocument()
+    expect(within(overviewColumn).getByText('1d10')).toBeInTheDocument()
     expect(
       overviewColumn.compareDocumentPosition(progressionColumn) &
         Node.DOCUMENT_POSITION_FOLLOWING,

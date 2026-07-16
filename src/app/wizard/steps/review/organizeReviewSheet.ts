@@ -4,6 +4,7 @@ import type {
   SpeciesReviewDisplay,
 } from '../../../reviewSummary'
 import type { ResolvedDeferredCharacterRequirement } from '../../../../domain/types'
+import type { ReviewSheetModels } from '../../../buildReviewSheetModels'
 import type { StepStatus } from '../../types'
 
 export type ReviewStatItem = {
@@ -173,6 +174,13 @@ export function organizeReviewSheet(input: {
   stepStatuses: Record<ReviewableStepId, StepStatus>
   speciesDisplay: SpeciesReviewDisplay
   classDisplay: ClassReviewDisplay
+  sheetModels: Pick<
+    ReviewSheetModels,
+    | 'hitPointMaximumLabel'
+    | 'initiativeLabel'
+    | 'speedLabel'
+    | 'proficiencyBonusLabel'
+  >
   unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[]
   hasSpellcastingCapability: boolean
   spellLines: string[]
@@ -209,13 +217,13 @@ export function organizeReviewSheet(input: {
 
   return {
     headerStats: [
-      { label: 'Hit Points', value: '—' },
+      { label: 'Hit Points', value: input.sheetModels.hitPointMaximumLabel },
       { label: 'Armor Class', value: '—' },
-      { label: 'Initiative', value: '—' },
+      { label: 'Initiative', value: input.sheetModels.initiativeLabel },
     ],
     coreStats: [
-      { label: 'Speed', value: '—' },
-      { label: 'Proficiency', value: '—' },
+      { label: 'Speed', value: input.sheetModels.speedLabel ?? '—' },
+      { label: 'Proficiency', value: input.sheetModels.proficiencyBonusLabel },
     ],
     skillsAndSaves: skills,
     equipmentLines,

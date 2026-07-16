@@ -16,4 +16,10 @@ export interface CharacterRepository {
    * - the parsed value does not match the expected character shape
    */
   load(id: string): Promise<Character | null>
+
+  /**
+   * Removes the stored character for the given id.
+   * No-ops when no value exists for the id.
+   */
+  remove(id: string): Promise<void>
 }

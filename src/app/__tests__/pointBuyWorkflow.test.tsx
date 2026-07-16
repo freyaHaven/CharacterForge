@@ -29,6 +29,7 @@ vi.mock('../../adapters/localStorageCharacterRepository', () => ({
   createLocalStorageCharacterRepository: () => ({
     load: loadMock,
     save: saveMock,
+    remove: vi.fn(),
   }),
 }))
 

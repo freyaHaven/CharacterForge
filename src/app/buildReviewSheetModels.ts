@@ -10,6 +10,7 @@ import type { SpeciesDefinition, SpeciesSelection } from '../domain/species/type
 import { SKILL_IDS, SKILL_LABELS, type SkillId } from '../domain/skills/types'
 import { resolveClassEffects } from '../rules/class/resolveClassEffects'
 import { resolveSpeciesEffects } from '../rules/species/resolveSpeciesEffects'
+import { resolveHitPointMaximum } from '../rules/hit-points/resolveHitPointMaximum'
 import {
   formatAbilityScoreBonusSummary,
   formatBackgroundChoiceSummary,
@@ -111,6 +112,8 @@ export type ReviewSheetModels = {
   speedLabel: string | null
   initiativeModifier: number
   initiativeLabel: string
+  hitPointMaximum: number | null
+  hitPointMaximumLabel: string
 }
 
 function formatSizeLabel(size: SpeciesDefinition['size']): string {
@@ -526,6 +529,18 @@ export function buildReviewSheetModels(
     input.speciesDefinition,
     character.species,
   )
+  const hitPoints = resolveHitPointMaximum({
+    classes: character.classes,
+    startingClassInstanceId: character.startingClassInstanceId,
+    classDefinitionsById: input.classDefinitions,
+    abilityScores: character.abilityScores,
+    speciesDefinition: input.speciesDefinition,
+    speciesSelection: character.species,
+  })
+  const hitPointMaximum =
+    character.classes.length > 0 && hitPoints.isComplete
+      ? hitPoints.maximum
+      : null
 
   return {
     species: speciesCard,
@@ -570,5 +585,8 @@ export function buildReviewSheetModels(
       speciesCard !== null ? `${speciesCard.speedFeet} ft.` : null,
     initiativeModifier,
     initiativeLabel: formatSignedModifier(initiativeModifier),
+    hitPointMaximum,
+    hitPointMaximumLabel:
+      hitPointMaximum === null ? '—' : String(hitPointMaximum),
   }
 }

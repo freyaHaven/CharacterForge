@@ -19,6 +19,9 @@ export function classInstanceToSelection(
     classId: instance.classId,
     level: instance.level,
     choices: { ...instance.choices },
+    ...(instance.hitPointIncreases !== undefined
+      ? { hitPointIncreases: instance.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 
@@ -31,6 +34,9 @@ export function selectionToClassInstance(
     classId: selection.classId,
     level: selection.level,
     choices: { ...selection.choices },
+    ...(selection.hitPointIncreases !== undefined
+      ? { hitPointIncreases: selection.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 

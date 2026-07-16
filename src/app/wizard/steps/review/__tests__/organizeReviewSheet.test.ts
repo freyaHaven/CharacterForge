@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import { organizeReviewSheet } from '../organizeReviewSheet'
 import type { StepStatus, WizardStepId } from '../../../types'
 
@@ -24,6 +24,13 @@ function createStatuses(
   }
 }
 
+const emptySheetModels = {
+  hitPointMaximumLabel: '—',
+  initiativeLabel: '+0',
+  speedLabel: null as string | null,
+  proficiencyBonusLabel: '+2',
+}
+
 describe('organizeReviewSheet', () => {
   it('groups class choices into skills and features while omitting sticky-header duplicates', () => {
     const sheet = organizeReviewSheet({
@@ -47,6 +54,7 @@ describe('organizeReviewSheet', () => {
       stepStatuses: createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
       }),
+      sheetModels: emptySheetModels,
       speciesDisplay: {
         speciesName: 'Dwarf',
         ancestryLabel: null,
@@ -131,6 +139,7 @@ describe('organizeReviewSheet', () => {
       stepStatuses: createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
       }),
+      sheetModels: emptySheetModels,
       speciesDisplay: {
         speciesName: 'Dwarf',
         ancestryLabel: null,
@@ -197,6 +206,7 @@ describe('organizeReviewSheet', () => {
       stepStatuses: createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
       }),
+      sheetModels: emptySheetModels,
       speciesDisplay: {
         speciesName: 'Dwarf',
         ancestryLabel: null,
@@ -274,6 +284,7 @@ describe('organizeReviewSheet', () => {
         spells: [],
       },
       stepStatuses: createStatuses(),
+      sheetModels: emptySheetModels,
       speciesDisplay: {
         speciesName: null,
         ancestryLabel: null,
@@ -351,6 +362,7 @@ describe('organizeReviewSheet', () => {
         spells: [],
       },
       stepStatuses: createStatuses(),
+      sheetModels: emptySheetModels,
       speciesDisplay: {
         speciesName: 'Dragonborn',
         ancestryLabel: 'Red (Fire)',

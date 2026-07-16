@@ -23,5 +23,9 @@ export function createLocalStorageCharacterRepository(): CharacterRepository {
       const result = parseStoredCharacter(raw)
       return result.ok ? result.character : null
     },
+
+    async remove(id) {
+      localStorage.removeItem(storageKey(id))
+    },
   }
 }

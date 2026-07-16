@@ -18,16 +18,19 @@ import {
   RECENT_CHARACTERS_STORAGE_KEY,
   recentCharactersStore,
 } from '../session/recentCharacters'
+import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
 
-const { loadMock, saveMock } = vi.hoisted(() => ({
+const { loadMock, saveMock, removeMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
   saveMock: vi.fn(),
+  removeMock: vi.fn(),
 }))
 
 vi.mock('../../adapters/localStorageCharacterRepository', () => ({
   createLocalStorageCharacterRepository: () => ({
     load: loadMock,
     save: saveMock,
+    remove: removeMock,
   }),
 }))
 
@@ -45,7 +48,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       wisdom: 10,
       charisma: 10,
     },
-    species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    species: { ...COMPLETE_DWARF_SELECTION },
     background: null,
     ...overrides,
   })
@@ -59,7 +62,13 @@ async function continueRecentCharacter(
     expect(screen.getByRole('heading', { name: /^continue$/i })).toBeInTheDocument()
   })
 
-  await user.click(screen.getByRole('button', { name: namePattern }))
+  await user.click(
+    screen.getByRole('button', {
+      name: (accessibleName) =>
+        namePattern.test(accessibleName) &&
+        !/^delete character/i.test(accessibleName),
+    }),
+  )
 }
 
 describe('App entry flow', () => {
@@ -69,7 +78,9 @@ describe('App entry flow', () => {
     localStorage.removeItem(RECENT_CHARACTERS_STORAGE_KEY)
     loadMock.mockReset()
     saveMock.mockReset()
+    removeMock.mockReset()
     saveMock.mockResolvedValue(undefined)
+    removeMock.mockResolvedValue(undefined)
     loadMock.mockResolvedValue(null)
   })
 
@@ -359,6 +370,49 @@ describe('App entry flow', () => {
         expect.objectContaining({ name: 'Swapped In' }),
       )
     })
+  })
+
+  it('deletes a recent character after confirmation', async () => {
+    const user = userEvent.setup()
+    const character = createStoredCharacter({ name: 'Delete Me' })
+    const other = createStoredCharacter({
+      id: 'char-2',
+      name: 'Keep Me',
+    })
+    recentCharactersStore.touch(other.id, Date.now() - 1000)
+    recentCharactersStore.touch(character.id, Date.now())
+    loadMock.mockImplementation(async (id: string) => {
+      if (id === character.id) {
+        return character
+      }
+      if (id === other.id) {
+        return other
+      }
+      return null
+    })
+
+    render(<App />)
+    await waitForAppReady()
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Me • Dwarf')).toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: /delete character delete me/i }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: /^delete character$/i }),
+    )
+
+    await waitFor(() => {
+      expect(removeMock).toHaveBeenCalledWith(character.id)
+    })
+    expect(screen.queryByText('Delete Me • Dwarf')).not.toBeInTheDocument()
+    expect(screen.getByText('Keep Me • Dwarf')).toBeInTheDocument()
+    expect(recentCharactersStore.list().map((entry) => entry.id)).toEqual([
+      'char-2',
+    ])
   })
 
   it('still uses local storage only after entering the editor from the home page', async () => {

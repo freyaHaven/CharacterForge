@@ -15,6 +15,11 @@ import {
   openStoredCharacterEditor,
   seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
+import {
+  COMPLETE_DRAGONBORN_RED_SELECTION,
+  COMPLETE_DWARF_SELECTION,
+  selectStandardLanguages,
+} from '../../testing/speciesSelectionTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -25,6 +30,7 @@ vi.mock('../../adapters/localStorageCharacterRepository', () => ({
   createLocalStorageCharacterRepository: () => ({
     load: loadMock,
     save: saveMock,
+    remove: vi.fn(),
   }),
 }))
 
@@ -42,7 +48,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
       wisdom: 10,
       charisma: 10,
     },
-    species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    species: { ...COMPLETE_DWARF_SELECTION },
     background: null,
     ...overrides,
   })
@@ -101,8 +107,31 @@ function getEditionSelect() {
   return screen.getByRole('combobox', { name: /rules edition/i })
 }
 
-function getAncestrySelect() {
-  return screen.getByRole('combobox', { name: /choose your draconic ancestor/i })
+function getAncestryTrigger() {
+  return screen.getByRole('button', {
+    name: /choose your draconic ancestor/i,
+  })
+}
+
+async function ensureAncestryExpanded(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  const trigger = getAncestryTrigger()
+  if (trigger.getAttribute('aria-expanded') !== 'true') {
+    await user.click(trigger)
+  }
+}
+
+async function selectAncestry(
+  user: ReturnType<typeof userEvent.setup>,
+  label: RegExp,
+) {
+  await ensureAncestryExpanded(user)
+  await user.click(screen.getByRole('radio', { name: label }))
+}
+
+function expectAncestrySelected(label: RegExp) {
+  expect(screen.getByRole('radio', { name: label })).toBeChecked()
 }
 
 describe('Species workflow in App', () => {
@@ -132,7 +161,7 @@ describe('Species workflow in App', () => {
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          species: { speciesId: 'srd-2024:dwarf', choices: {} },
+          species: { ...COMPLETE_DWARF_SELECTION },
         }),
       )
     })
@@ -148,11 +177,9 @@ describe('Species workflow in App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
-    expect(
-      await screen.findByRole('combobox', {
-        name: /choose your draconic ancestor/i,
-      }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('button', {
+      name: /choose your draconic ancestor/i,
+    })).toBeInTheDocument()
     expect(
       await screen.findByText(/complete required choices to confirm/i),
     ).toBeInTheDocument()
@@ -175,11 +202,10 @@ describe('Species workflow in App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
-    expect(
-      await screen.findByRole('combobox', {
-        name: /choose your draconic ancestor/i,
-      }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('button', {
+      name: /choose your draconic ancestor/i,
+    })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Dragonborn', pressed: true }),
     ).toBeInTheDocument()
@@ -188,7 +214,7 @@ describe('Species workflow in App', () => {
     ).toBeInTheDocument()
   })
 
-  it('commits Dragonborn only after a valid ancestry is chosen', async () => {
+  it('commits Dragonborn only after ancestry and languages are chosen', async () => {
     const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
       species: null,
@@ -197,23 +223,24 @@ describe('Species workflow in App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
+    expect(await screen.findByRole('button', {
+      name: /choose your draconic ancestor/i,
+    })).toBeInTheDocument()
+    await selectAncestry(user, /red \(fire\)/i)
     expect(
-      await screen.findByRole('combobox', {
-        name: /choose your draconic ancestor/i,
-      }),
+      screen.getByText(/complete required choices to confirm/i),
     ).toBeInTheDocument()
-    await user.selectOptions(getAncestrySelect(), 'red')
+
+    await selectStandardLanguages(user, [/draconic/i, /common sign language/i])
 
     expectSelectedSpecies('Dragonborn')
-    expect(getAncestrySelect()).toHaveValue('red')
+    await ensureAncestryExpanded(user)
+    expectAncestrySelected(/red \(fire\)/i)
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          species: {
-            speciesId: 'srd-2024:dragonborn',
-            choices: { 'draconic-ancestry': 'red' },
-          },
+          species: { ...COMPLETE_DRAGONBORN_RED_SELECTION },
         }),
       )
     })
@@ -222,15 +249,13 @@ describe('Species workflow in App', () => {
   it('reloads a saved Red Dragonborn ancestry through the catalogue', async () => {
     const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
-      species: {
-        speciesId: 'srd-2024:dragonborn',
-        choices: { 'draconic-ancestry': 'red' },
-      },
+      species: { ...COMPLETE_DRAGONBORN_RED_SELECTION },
     })
     await openSpeciesStep(user)
 
     expectSelectedSpecies('Dragonborn')
-    expect(getAncestrySelect()).toHaveValue('red')
+    await ensureAncestryExpanded(user)
+    expectAncestrySelected(/red \(fire\)/i)
     expect(
       screen.getByText(
         /damage type of your selected ancestor applies to your breath weapon/i,
@@ -241,21 +266,21 @@ describe('Species workflow in App', () => {
   it('updates persisted ancestry when changing Red to Silver', async () => {
     const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
-      species: {
-        speciesId: 'srd-2024:dragonborn',
-        choices: { 'draconic-ancestry': 'red' },
-      },
+      species: { ...COMPLETE_DRAGONBORN_RED_SELECTION },
     })
     await openSpeciesStep(user)
 
-    await user.selectOptions(getAncestrySelect(), 'silver')
+    await selectAncestry(user, /silver \(cold\)/i)
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
         expect.objectContaining({
           species: {
             speciesId: 'srd-2024:dragonborn',
-            choices: { 'draconic-ancestry': 'silver' },
+            choices: {
+              'draconic-ancestry': 'silver',
+              'standard-languages': ['draconic', 'common-sign'],
+            },
           },
         }),
       )
@@ -310,8 +335,9 @@ describe('Species workflow in App', () => {
     const { user } = await renderLoadedApp()
     await openSpeciesStep(user)
 
+    await user.click(screen.getByRole('button', { name: /^traits/i }))
     expect(await screen.findByText(/Stonecunning/i)).toBeInTheDocument()
     expect(screen.getByText('Medium')).toBeInTheDocument()
-    expect(screen.getByText(/30 feet/i)).toBeInTheDocument()
+    expect(screen.getByText(/30 ft\./i)).toBeInTheDocument()
   })
 })

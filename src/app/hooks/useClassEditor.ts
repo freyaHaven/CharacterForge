@@ -35,6 +35,7 @@ import {
   type ClassSelectionDraft,
   type ClassSelectionDrafts,
 } from '../../features/class/classSelectionDraft'
+import { withSyncedHitPointIncreases } from '../../domain/class/hitPointIncreases'
 import {
   getEffectiveClassInstances,
   getUniqueClassIds,
@@ -200,6 +201,7 @@ export function useClassEditor({
     committedInstance?.classId,
     committedInstance?.level,
     committedInstance?.choices,
+    committedInstance?.hitPointIncreases,
   ])
 
   const { classDraftValidation, committedClassValid } = useClassStepValidation(
@@ -268,10 +270,16 @@ export function useClassEditor({
             ? {
                 ...current,
                 targetLevel: instance.level,
-                classes: [instance],
+                classes: [withSyncedHitPointIncreases(instance, true)],
                 startingClassInstanceId: instance.instanceId,
               }
-            : upsertClassInstance(current, instance)
+            : upsertClassInstance(
+                current,
+                withSyncedHitPointIncreases(
+                  instance,
+                  current.startingClassInstanceId === instance.instanceId,
+                ),
+              )
 
         if (buildMode === 'multiclass') {
           next = syncTargetLevelFromInstances(next, classDrafts)
@@ -323,12 +331,18 @@ export function useClassEditor({
         draft,
         character.editionId,
         definition,
-        featCatalog === undefined
-          ? undefined
-          : {
-              featById: new Map(feats.map((feat) => [feat.id, feat])),
-              characterFeatId: character.feat?.featId ?? null,
-            },
+        {
+          ...(featCatalog === undefined
+            ? {}
+            : {
+                featById: new Map(feats.map((feat) => [feat.id, feat])),
+                characterFeatId: character.feat?.featId ?? null,
+              }),
+          isStartingClass:
+            character.startingClassInstanceId === instanceId ||
+            (character.startingClassInstanceId === null &&
+              character.classes.length === 0),
+        },
       )
 
       if (committed !== null) {
@@ -339,6 +353,7 @@ export function useClassEditor({
       character.classes,
       character.editionId,
       character.feat?.featId,
+      character.startingClassInstanceId,
       classCatalog,
       classDrafts,
       commitClassInstance,
@@ -414,7 +429,15 @@ export function useClassEditor({
 
   const setStartingClass = useCallback(
     (instanceId: string) => {
-      setCharacter((current) => setStartingClassInstanceId(current, instanceId))
+      setCharacter((current) => ({
+        ...setStartingClassInstanceId(current, instanceId),
+        classes: current.classes.map((instance) =>
+          withSyncedHitPointIncreases(
+            instance,
+            instance.instanceId === instanceId,
+          ),
+        ),
+      }))
       setSelectedInstanceId(instanceId)
       selectedInstanceIdRef.current = instanceId
 
@@ -475,27 +498,44 @@ export function useClassEditor({
       const draft = classDrafts[instanceId]
 
       if (committed !== undefined) {
-        const updated = { ...committed, level }
         setCharacter((current) => {
+          const updated = withSyncedHitPointIncreases(
+            { ...committed, level },
+            current.startingClassInstanceId === instanceId,
+          )
           const next = upsertClassInstance(current, updated)
           return syncTargetLevelFromInstances(next, classDrafts)
         })
       } else if (draft !== undefined) {
+        const nextDraft = {
+          ...draft,
+          level,
+          hitPointIncreases: withSyncedHitPointIncreases(
+            { level, hitPointIncreases: draft.hitPointIncreases },
+            character.startingClassInstanceId === instanceId,
+          ).hitPointIncreases,
+        }
         setClassDrafts((current) => ({
           ...current,
-          [instanceId]: { ...draft, level },
+          [instanceId]: nextDraft,
         }))
         setCharacter((current) =>
           syncTargetLevelFromInstances(current, {
             ...classDrafts,
-            [instanceId]: { ...draft, level },
+            [instanceId]: nextDraft,
           }),
         )
       }
 
       notifyDraftChange()
     },
-    [character.classes, classDrafts, notifyDraftChange, setCharacter],
+    [
+      character.classes,
+      character.startingClassInstanceId,
+      classDrafts,
+      notifyDraftChange,
+      setCharacter,
+    ],
   )
 
   const toggleMulticlassClass = useCallback(

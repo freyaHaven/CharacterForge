@@ -1,5 +1,15 @@
 import type { SpeciesSelection } from './types'
 
+function isSpeciesChoiceValue(value: unknown): boolean {
+  if (typeof value === 'string') {
+    return true
+  }
+
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+  )
+}
+
 export function isSpeciesSelection(value: unknown): value is SpeciesSelection {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -20,5 +30,5 @@ export function isSpeciesSelection(value: unknown): value is SpeciesSelection {
 
   const choices = candidate.choices as Record<string, unknown>
 
-  return Object.values(choices).every((choice) => typeof choice === 'string')
+  return Object.values(choices).every(isSpeciesChoiceValue)
 }

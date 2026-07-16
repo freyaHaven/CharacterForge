@@ -5,6 +5,10 @@ import type {
   ClassSelection,
   CharacterClassSelection,
 } from '../../domain/class/types'
+import {
+  syncHitPointIncreases,
+  type HitPointIncrease,
+} from '../../domain/class/hitPointIncreases'
 import { pruneClassInstanceChoicesForLevel } from '../../domain/class/pruneClassInstanceChoices'
 import type { EditionId } from '../../domain/types'
 import {
@@ -19,6 +23,7 @@ export type ClassSelectionDraft = {
   classId: string
   level: ClassSelection['level']
   choices: Record<string, ClassChoiceValue>
+  hitPointIncreases?: HitPointIncrease[]
 }
 
 /** Instance-scoped draft stored by stable instance id. */
@@ -27,6 +32,7 @@ export type CharacterClassSelectionDraft = {
   classId: string
   level: ClassLevel
   choices: Record<string, ClassChoiceValue>
+  hitPointIncreases?: HitPointIncrease[]
 }
 
 export type ClassSelectionDrafts = Record<string, CharacterClassSelectionDraft>
@@ -35,24 +41,37 @@ export function createEmptyClassSelectionDrafts(): ClassSelectionDrafts {
   return {}
 }
 
+function defaultHitPointIncreases(
+  level: number,
+  isStartingClass: boolean,
+): HitPointIncrease[] {
+  return syncHitPointIncreases(undefined, level, { isStartingClass })
+}
+
 export function createClassInstanceDraft(
   instanceId: string,
   classId: string,
+  options: { isStartingClass?: boolean } = {},
 ): CharacterClassSelectionDraft {
   return {
     instanceId,
     classId,
     level: 1,
     choices: {},
+    hitPointIncreases: defaultHitPointIncreases(1, options.isStartingClass ?? false),
   }
 }
 
 /** @deprecated Use createClassInstanceDraft with a generated instance id. */
-export function createClassSelectionDraft(classId: string): ClassSelectionDraft {
+export function createClassSelectionDraft(
+  classId: string,
+  options: { isStartingClass?: boolean } = {},
+): ClassSelectionDraft {
   return {
     classId,
     level: 1,
     choices: {},
+    hitPointIncreases: defaultHitPointIncreases(1, options.isStartingClass ?? true),
   }
 }
 
@@ -63,6 +82,9 @@ export function instanceDraftToLegacyDraft(
     classId: draft.classId,
     level: draft.level,
     choices: { ...draft.choices },
+    ...(draft.hitPointIncreases !== undefined
+      ? { hitPointIncreases: draft.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 
@@ -75,6 +97,9 @@ export function legacyDraftToInstanceDraft(
     classId: draft.classId,
     level: draft.level,
     choices: { ...draft.choices },
+    ...(draft.hitPointIncreases !== undefined
+      ? { hitPointIncreases: draft.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 
@@ -86,6 +111,9 @@ export function instanceDraftToClassInstance(
     classId: draft.classId,
     level: draft.level,
     choices: { ...draft.choices },
+    ...(draft.hitPointIncreases !== undefined
+      ? { hitPointIncreases: draft.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 
@@ -97,6 +125,9 @@ export function initializeClassInstanceDraft(
     classId: instance.classId,
     level: instance.level,
     choices: { ...instance.choices },
+    ...(instance.hitPointIncreases !== undefined
+      ? { hitPointIncreases: instance.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 
@@ -109,6 +140,9 @@ export function initializeClassSelectionDraft(
       classId: selection.classId,
       level: selection.level,
       choices: selection.choices,
+      ...(selection.hitPointIncreases !== undefined
+        ? { hitPointIncreases: selection.hitPointIncreases }
+        : {}),
     },
     instanceId,
   )
@@ -154,6 +188,9 @@ export function draftToClassSelection(
     classId: draft.classId,
     level: draft.level,
     choices: { ...draft.choices },
+    ...(draft.hitPointIncreases !== undefined
+      ? { hitPointIncreases: draft.hitPointIncreases.map((entry) => ({ ...entry })) }
+      : {}),
   }
 }
 
@@ -199,6 +236,7 @@ export function updateClassInstanceDraftLevel(
   draft: CharacterClassSelectionDraft,
   level: ClassLevel,
   definition: ClassDefinition,
+  options: { isStartingClass?: boolean } = {},
 ): CharacterClassSelectionDraft {
   const instance = instanceDraftToClassInstance(draft)
   const pruned = pruneClassInstanceChoicesForLevel(instance, definition, level)
@@ -207,6 +245,9 @@ export function updateClassInstanceDraftLevel(
     ...draft,
     level: pruned.level,
     choices: pruned.choices,
+    hitPointIncreases: syncHitPointIncreases(draft.hitPointIncreases, pruned.level, {
+      isStartingClass: options.isStartingClass ?? false,
+    }),
   }
 }
 
@@ -214,6 +255,7 @@ export function updateClassDraftLevel(
   draft: ClassSelectionDraft,
   level: ClassLevel,
   definition: ClassDefinition,
+  options: { isStartingClass?: boolean } = {},
 ): ClassSelectionDraft {
   const instance = legacyDraftToInstanceDraft(draft, '__draft__')
   const pruned = pruneClassInstanceChoicesForLevel(instance, definition, level)
@@ -222,6 +264,44 @@ export function updateClassDraftLevel(
     ...draft,
     level: pruned.level,
     choices: pruned.choices,
+    hitPointIncreases: syncHitPointIncreases(draft.hitPointIncreases, pruned.level, {
+      isStartingClass: options.isStartingClass ?? true,
+    }),
+  }
+}
+
+export function updateClassDraftHitPointIncrease(
+  draft: ClassSelectionDraft,
+  classLevel: number,
+  patch: Partial<Pick<HitPointIncrease, 'method' | 'rolledValue'>>,
+): ClassSelectionDraft {
+  const increases =
+    draft.hitPointIncreases ??
+    syncHitPointIncreases(undefined, draft.level, { isStartingClass: true })
+
+  return {
+    ...draft,
+    hitPointIncreases: increases.map((entry) => {
+      if (entry.classLevel !== classLevel) {
+        return entry
+      }
+
+      const method = patch.method ?? entry.method
+      const next: HitPointIncrease = {
+        classLevel: entry.classLevel,
+        method,
+      }
+
+      if (method === 'roll') {
+        const rolledValue =
+          patch.rolledValue !== undefined ? patch.rolledValue : entry.rolledValue
+        if (rolledValue !== undefined) {
+          next.rolledValue = rolledValue
+        }
+      }
+
+      return next
+    }),
   }
 }
 
@@ -229,12 +309,18 @@ export function tryCommitClassInstanceDraft(
   draft: CharacterClassSelectionDraft,
   editionId: EditionId,
   definition: ClassDefinition | null,
-  options?: ClassValidationOptions,
+  options?: ClassValidationOptions & { isStartingClass?: boolean },
 ): {
   committed: CharacterClassSelection | null
   validation: ClassValidationResult
 } {
-  const instance = instanceDraftToClassInstance(draft)
+  const isStartingClass = options?.isStartingClass ?? false
+  const instance = {
+    ...instanceDraftToClassInstance(draft),
+    hitPointIncreases: syncHitPointIncreases(draft.hitPointIncreases, draft.level, {
+      isStartingClass,
+    }),
+  }
   const validation = validateClassInstance(
     instance,
     editionId,
@@ -258,7 +344,12 @@ export function tryCommitClassDraft(
   committed: ClassSelection | null
   validation: ClassValidationResult
 } {
-  const selection = draftToClassSelection(draft)
+  const selection = {
+    ...draftToClassSelection(draft),
+    hitPointIncreases: syncHitPointIncreases(draft.hitPointIncreases, draft.level, {
+      isStartingClass: true,
+    }),
+  }
   const validation = validateClassSelection(
     selection,
     editionId,

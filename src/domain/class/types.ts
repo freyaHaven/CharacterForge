@@ -2,6 +2,7 @@ import type { AbilityId } from '../abilities/types'
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
 import type { SkillId } from '../skills/types'
+import type { HitPointIncrease } from './hitPointIncreases'
 
 export type ClassLevel = number
 
@@ -150,10 +151,13 @@ export type ClassDefinition = {
 
 export type ClassChoiceValue = string | string[]
 
+export type { HitPointIncrease, HitPointIncreaseMethod } from './hitPointIncreases'
+
 export type ClassSelection = {
   classId: string
   level: ClassLevel
   choices: Record<string, ClassChoiceValue>
+  hitPointIncreases?: HitPointIncrease[]
 }
 
 /** Levels allocated to one class on a character. */
@@ -162,6 +166,7 @@ export type CharacterClassSelection = {
   classId: string
   level: ClassLevel
   choices: Record<string, ClassChoiceValue>
+  hitPointIncreases?: HitPointIncrease[]
 }
 
 /** Campaign / character target level (1–20). */
