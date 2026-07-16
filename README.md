@@ -110,11 +110,9 @@ src/
   content/         Content packs + Content Registry (game definitions only)
     registry/      ContentRegistry — single lookup surface for bundled content
     packs/
-      srd-2024/    Bundled SRD 2024 pack (classes, subclasses, feats, …)
-  data/            Remaining edition content still migrating into packs
-    species/srd-2024/
-    backgrounds/srd-2024/
-  adapters/        ClassCatalog, SpeciesCatalog, localStorage repository
+      srd-2024/    Bundled SRD 2024 pack (classes, subclasses, feats, backgrounds, species)
+      srd-2014/    Source metadata reserved for future 2014 pack content
+  adapters/        Catalog ports (class, species, feat, background), localStorage repository
   features/        React UI (pickers, drafts, icons)
   app/             Wizard shell, hooks, step status, save/finish policy
   assets/classes/  Class emblem PNGs (and future artwork)
@@ -189,8 +187,8 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
-[`src/data/species/attribution.md`](src/data/species/attribution.md) for species
-source attribution.
+[`src/content/ATTRIBUTION.md`](src/content/ATTRIBUTION.md) for source
+attribution.
 
 ## Asset attribution and licensing
 
@@ -198,7 +196,8 @@ source attribution.
 
 Species and class **mechanics** are derived from Wizards of the Coast System
 Reference Documents (SRD 5.2 for 2024 content, SRD 5.1 reserved for 2014).
-Attribution and licence metadata live in `src/data/content/{edition}/source.ts`.
+Attribution and licence metadata live in
+`src/content/packs/{edition}/source.ts`.
 
 ### Class icon PNGs
 
@@ -219,8 +218,8 @@ Icons are decorative; class names in the UI provide accessible labels.
 - **Class content:** Additional 2024 SRD classes (Rogue, Monk, Paladin, and
   others); parallel `srd-2014` definitions where rules differ
 - **Class icons:** Register remaining PNG emblems as artwork is finalized
-- **Species:** 2014 SRD species in `src/data/species/srd-2014/`
-- **Background step:** edition-specific background definitions and picker
+- **Species:** 2014 SRD species in a future `srd-2014` content pack
+- **Background step:** edition-specific picker polish
 - **Equipment step:** starting gear, weapon mastery choices (deferred from
   Fighter level-1 feature text)
 - **Review polish:** richer summaries as more steps ship

@@ -51,6 +51,8 @@ export class ContentRegistry {
   private readonly featsById = new Map<string, FeatDefinition>()
   private readonly classesByEdition = new Map<EditionId, ClassDefinition[]>()
   private readonly featsByEdition = new Map<EditionId, FeatDefinition[]>()
+  private readonly backgroundsByEdition = new Map<EditionId, BackgroundDefinition[]>()
+  private readonly speciesByEdition = new Map<EditionId, SpeciesDefinition[]>()
   private readonly subclassesByClassId = new Map<string, SubclassDefinition[]>()
 
   registerPack(pack: ContentPack): void {
@@ -79,10 +81,17 @@ export class ContentRegistry {
 
     for (const species of pack.species ?? []) {
       this.indexById(this.speciesById, species.id, species, 'species')
+      const editionSpecies = this.speciesByEdition.get(species.editionId) ?? []
+      editionSpecies.push(species)
+      this.speciesByEdition.set(species.editionId, editionSpecies)
     }
 
     for (const background of pack.backgrounds ?? []) {
       this.indexById(this.backgroundsById, background.id, background, 'background')
+      const editionBackgrounds =
+        this.backgroundsByEdition.get(background.editionId) ?? []
+      editionBackgrounds.push(background)
+      this.backgroundsByEdition.set(background.editionId, editionBackgrounds)
     }
 
     for (const feat of pack.feats ?? []) {
@@ -125,8 +134,16 @@ export class ContentRegistry {
     return this.speciesById.get(speciesId) ?? null
   }
 
+  listSpecies(editionId: EditionId): SpeciesDefinition[] {
+    return this.speciesByEdition.get(editionId) ?? []
+  }
+
   getBackground(backgroundId: string): BackgroundDefinition | null {
     return this.backgroundsById.get(backgroundId) ?? null
+  }
+
+  listBackgrounds(editionId: EditionId): BackgroundDefinition[] {
+    return this.backgroundsByEdition.get(editionId) ?? []
   }
 
   getFeat(featId: string): FeatDefinition | null {
