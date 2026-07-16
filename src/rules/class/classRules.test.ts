@@ -1,17 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
 import type { ClassSelection } from '../../domain/class/types'
+import { createAsiChoicesUpToLevel } from '../../domain/class/abilityScoreImprovement'
+import { createWeaponMasteryChoices } from '../../domain/class/weaponMastery'
 import { validateClassSelection } from './classRules'
 
 function createValidFighterSelection(
   overrides: Partial<ClassSelection> = {},
 ): ClassSelection {
+  const level = overrides.level ?? 1
+
   return {
     classId: 'srd-2024:fighter',
     level: 1,
     choices: {
       'fighting-style': 'defense',
       'skill-proficiencies': ['athletics', 'perception'],
+      ...createWeaponMasteryChoices(level),
+      ...createAsiChoicesUpToLevel(level),
     },
     ...overrides,
   }
@@ -49,6 +55,7 @@ describe('validateClassSelection', () => {
       createValidFighterSelection({
         choices: {
           'skill-proficiencies': ['athletics', 'perception'],
+          'weapon-mastery': createWeaponMasteryChoices(1)['weapon-mastery'],
         },
       }),
       'srd-2024',
@@ -67,6 +74,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'archery',
           'skill-proficiencies': ['athletics'],
+          'weapon-mastery': createWeaponMasteryChoices(1)['weapon-mastery'],
         },
       }),
       'srd-2024',
@@ -81,7 +89,25 @@ describe('validateClassSelection', () => {
     })
   })
 
-  it('rejects unknown choice ids', () => {
+  it('requires weapon mastery selections', () => {
+    const result = validateClassSelection(
+      createValidFighterSelection({
+        choices: {
+          'fighting-style': 'defense',
+          'skill-proficiencies': ['athletics', 'perception'],
+        },
+      }),
+      'srd-2024',
+      fighterSrd2024,
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [{ code: 'missing-required-choice', choiceId: 'weapon-mastery' }],
+    })
+  })
+
+  it('rejects an invalid weapon mastery value', () => {
     const result = validateClassSelection(
       createValidFighterSelection({
         choices: {
@@ -96,7 +122,7 @@ describe('validateClassSelection', () => {
 
     expect(result).toEqual({
       ok: false,
-      issues: [{ code: 'unknown-choice', choiceId: 'weapon-mastery' }],
+      issues: [{ code: 'invalid-choice', choiceId: 'weapon-mastery' }],
     })
   })
 
@@ -117,6 +143,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'defense',
           'skill-proficiencies': ['athletics', 'perception'],
+          'weapon-mastery': createWeaponMasteryChoices(3)['weapon-mastery'],
         },
       }),
       'srd-2024',
@@ -135,6 +162,7 @@ describe('validateClassSelection', () => {
         choices: {
           'fighting-style': 'defense',
           'skill-proficiencies': ['athletics', 'perception'],
+          'weapon-mastery': createWeaponMasteryChoices(1)['weapon-mastery'],
           'fighter-subclass': 'champion',
         },
       }),
@@ -156,6 +184,8 @@ describe('validateClassSelection', () => {
           choices: {
             'fighting-style': 'defense',
             'skill-proficiencies': ['athletics', 'perception'],
+            ...createWeaponMasteryChoices(5),
+            ...createAsiChoicesUpToLevel(5),
             'fighter-subclass': 'champion',
           },
         }),

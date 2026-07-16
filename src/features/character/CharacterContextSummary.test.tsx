@@ -51,6 +51,17 @@ describe('CharacterContextSummary', () => {
     expect(screen.queryByTestId('character-context-summary')).not.toBeInTheDocument()
   })
 
+  it('does not render on the review step', () => {
+    renderSummary({
+      activeStepId: 'review',
+      character: {
+        ...withSingleClassInstance(createTestFighterClassInstance()),
+      },
+    })
+
+    expect(screen.queryByTestId('character-context-summary')).not.toBeInTheDocument()
+  })
+
   it('does not render when no character information is available yet', () => {
     renderSummary({
       activeStepId: 'species',

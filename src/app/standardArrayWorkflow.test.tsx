@@ -7,7 +7,7 @@ import App from './App'
 import {
   getAbilityFieldNumberInput,
   getAbilityFieldSelect,
-  getCreationMethodSelect,
+  selectCreationMethod,
 } from '../test/abilityScoreTestUtils'
 import { goToAbilityScoresStep } from '../test/wizardTestUtils'
 import {
@@ -41,7 +41,15 @@ async function renderLoadedApp() {
 }
 
 async function switchToStandardArray(user: ReturnType<typeof userEvent.setup>) {
-  await user.selectOptions(getCreationMethodSelect(screen), 'standard-array')
+  await selectCreationMethod(user, screen, 'standard-array')
+}
+
+async function expectNoAutosaveAfter(ms = 400) {
+  const callsBefore = saveMock.mock.calls.length
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+  expect(saveMock.mock.calls.length).toBe(callsBefore)
 }
 
 describe('Standard Array workflow in App', () => {
@@ -53,17 +61,17 @@ describe('Standard Array workflow in App', () => {
     saveMock.mockResolvedValue(undefined)
   })
 
-  it('disables save while the standard array draft is incomplete', async () => {
+  it('does not autosave while the standard array draft is incomplete', async () => {
     const { user } = await renderLoadedApp()
     await switchToStandardArray(user)
 
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
     expect(
-      screen.getByText(/complete the standard array assignment before saving/i),
-    ).toBeInTheDocument()
+      screen.queryByRole('button', { name: /save draft/i }),
+    ).not.toBeInTheDocument()
+    await expectNoAutosaveAfter()
   })
 
-  it('enables save when all six values are assigned exactly once', async () => {
+  it('autosaves when all six values are assigned exactly once', async () => {
     const { user } = await renderLoadedApp()
     await switchToStandardArray(user)
 
@@ -71,7 +79,14 @@ describe('Standard Array workflow in App', () => {
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
 
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          abilityScores: DEFAULT_STANDARD_ARRAY_ASSIGNMENT,
+          creationMethod: 'standard-array',
+        }),
+      )
+    })
   })
 
   it('does not overwrite numeric scores when switching from manual to standard array', async () => {
@@ -84,7 +99,7 @@ describe('Standard Array workflow in App', () => {
     expect(getAbilityFieldSelect(screen, 'Strength')).toHaveDisplayValue(
       STANDARD_ARRAY_UNASSIGNED_LABEL,
     )
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
   })
 
@@ -94,7 +109,7 @@ describe('Standard Array workflow in App', () => {
 
     await user.selectOptions(getAbilityFieldSelect(screen, 'Strength'), '15')
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
 
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
     expect(getAbilityFieldNumberInput(screen, 'Dexterity')).toHaveValue(10)
@@ -107,19 +122,15 @@ describe('Standard Array workflow in App', () => {
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
-      expect(saveMock).toHaveBeenCalledTimes(1)
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          abilityScores: DEFAULT_STANDARD_ARRAY_ASSIGNMENT,
+          creationMethod: 'standard-array',
+        }),
+      )
     })
-
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        abilityScores: DEFAULT_STANDARD_ARRAY_ASSIGNMENT,
-        creationMethod: 'standard-array',
-      }),
-    )
-    expect(screen.getByText(/character saved/i)).toBeInTheDocument()
   })
 
   it('clears every draft ability to null', async () => {
@@ -145,18 +156,21 @@ describe('Standard Array workflow in App', () => {
     }
   })
 
-  it('keeps save disabled after clearing a completed assignment', async () => {
+  it('stops autosaving after clearing a completed assignment', async () => {
     const { user } = await renderLoadedApp()
     await switchToStandardArray(user)
 
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalled()
+    })
 
     await user.click(screen.getByRole('button', { name: /clear assignments/i }))
+    saveMock.mockClear()
+    await expectNoAutosaveAfter()
 
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
     expect(screen.getByText(/remaining scores:/i)).toHaveTextContent(
       '15, 14, 13, 12, 10, 8',
     )
@@ -166,8 +180,9 @@ describe('Standard Array workflow in App', () => {
     const { user } = await renderLoadedApp()
     await switchToStandardArray(user)
 
+    await user.selectOptions(getAbilityFieldSelect(screen, 'Strength'), '15')
     await user.click(screen.getByRole('button', { name: /clear assignments/i }))
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
 
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
   })

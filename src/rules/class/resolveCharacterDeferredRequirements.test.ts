@@ -58,32 +58,37 @@ describe('resolveDeferredRequirementsForInstances', () => {
       getDefinition,
     )
 
-    const abilityScoreImprovement = resolved.find(
-      (entry) => entry.requirementId === 'ability-score-improvement-4',
+    const startingEquipment = resolved.find(
+      (entry) => entry.requirementId === 'starting-equipment',
     )
 
-    expect(abilityScoreImprovement).toEqual(
+    expect(startingEquipment).toEqual(
       expect.objectContaining({
-        requirementId: 'ability-score-improvement-4',
+        requirementId: 'starting-equipment',
         sourceInstanceId: 'fighter-1',
         sourceClassId: 'srd-2024:fighter',
         sourceClassLevel: 4,
-        destinationStep: 'ability-scores',
+        destinationStep: 'equipment',
       }),
     )
+    expect(
+      resolved.some(
+        (entry) => entry.requirementId === 'ability-score-improvement-4',
+      ),
+    ).toBe(false)
   })
 
   it('keeps duplicate raw requirement ids distinct across instances', () => {
     const resolved = resolveDeferredRequirementsForInstances(
       [
         {
-          instanceId: 'fighter-1',
-          classId: 'srd-2024:fighter',
+          instanceId: 'rogue-1',
+          classId: 'srd-2024:rogue',
           level: 4,
           choices: {},
         },
         {
-          instanceId: 'rogue-1',
+          instanceId: 'rogue-2',
           classId: 'srd-2024:rogue',
           level: 4,
           choices: {},
@@ -92,33 +97,33 @@ describe('resolveDeferredRequirementsForInstances', () => {
       getDefinition,
     )
 
-    const fighterAsi = resolved.find(
-      (entry) =>
-        entry.sourceInstanceId === 'fighter-1' &&
-        entry.requirementId === 'ability-score-improvement-4',
-    )
-    const rogueAsi = resolved.find(
+    const firstAsi = resolved.find(
       (entry) =>
         entry.sourceInstanceId === 'rogue-1' &&
         entry.requirementId === 'ability-score-improvement-4',
     )
+    const secondAsi = resolved.find(
+      (entry) =>
+        entry.sourceInstanceId === 'rogue-2' &&
+        entry.requirementId === 'ability-score-improvement-4',
+    )
 
-    expect(fighterAsi).toBeDefined()
-    expect(rogueAsi).toBeDefined()
+    expect(firstAsi).toBeDefined()
+    expect(secondAsi).toBeDefined()
     expect(
       createDeferredRequirementKey(
-        fighterAsi!.sourceInstanceId,
-        fighterAsi!.requirementId,
+        firstAsi!.sourceInstanceId,
+        firstAsi!.requirementId,
       ),
     ).not.toBe(
       createDeferredRequirementKey(
-        rogueAsi!.sourceInstanceId,
-        rogueAsi!.requirementId,
+        secondAsi!.sourceInstanceId,
+        secondAsi!.requirementId,
       ),
     )
   })
 
-  it('collapses weapon mastery tiers independently per instance', () => {
+  it('does not defer fighter weapon mastery or ASI after they move to the class step', () => {
     const resolved = resolveDeferredRequirementsForInstances(
       [
         {
@@ -127,35 +132,21 @@ describe('resolveDeferredRequirementsForInstances', () => {
           level: 16,
           choices: {},
         },
-        {
-          instanceId: 'fighter-2',
-          classId: 'srd-2024:fighter',
-          level: 10,
-          choices: {},
-        },
       ],
       getDefinition,
     )
 
-    const fighterOneMastery = resolved.filter(
-      (requirement) =>
-        requirement.sourceInstanceId === 'fighter-1' &&
-        requirement.label === 'Weapon Mastery',
-    )
-    const fighterTwoMastery = resolved.filter(
-      (requirement) =>
-        requirement.sourceInstanceId === 'fighter-2' &&
-        requirement.label === 'Weapon Mastery',
-    )
-
-    expect(fighterOneMastery).toHaveLength(1)
-    expect(fighterOneMastery[0]?.description).toBe(
-      'Choose 6 Weapon Masteries in Equipment',
-    )
-    expect(fighterTwoMastery).toHaveLength(1)
-    expect(fighterTwoMastery[0]?.description).toBe(
-      'Choose 5 Weapon Masteries in Equipment',
-    )
+    expect(
+      resolved.filter((requirement) => requirement.label === 'Weapon Mastery'),
+    ).toEqual([])
+    expect(
+      resolved.filter(
+        (requirement) => requirement.label === 'Ability Score Improvement',
+      ),
+    ).toEqual([])
+    expect(resolved.map((entry) => entry.requirementId)).toEqual([
+      'starting-equipment',
+    ])
   })
 
   it('orders requirements by class array order, level, and definition order', () => {
@@ -203,7 +194,6 @@ describe('resolveDeferredRequirementsForInstances', () => {
 
     expect(resolved.map((entry) => entry.description)).toEqual([
       'Choose starting equipment in Equipment',
-      'Choose 3 Weapon Masteries in Equipment',
     ])
   })
 })

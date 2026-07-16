@@ -202,6 +202,8 @@ describe('SpeciesPicker', () => {
 
     const detail = document.querySelector('.species-picker__detail')
     expect(detail).not.toBeNull()
+    expect(detail?.querySelector('.species-picker__identity-row')).not.toBeNull()
+    expect(detail?.querySelector('.species-picker__detail-icon')).not.toBeNull()
     expect(detail?.querySelector('.species-picker__metadata')).not.toBeNull()
     expect(detail?.querySelectorAll('.species-picker__metadata-item')).toHaveLength(
       2,

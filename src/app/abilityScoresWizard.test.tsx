@@ -8,7 +8,8 @@ import type { Character } from '../domain/types'
 import { createDefaultCharacter } from '../domain/character/defaults'
 import {
   getAbilityFieldNumberInput,
-  getCreationMethodSelect,
+  getCreationMethodRadio,
+  selectCreationMethod,
 } from '../test/abilityScoreTestUtils'
 import {
   getWizardStepButton,
@@ -92,7 +93,7 @@ describe('Ability Scores wizard integration', () => {
     await goToAbilityScoresStep(user, screen)
 
     expect(
-      screen.getAllByRole('combobox', { name: /ability score method/i }),
+      screen.getAllByRole('radio', { name: /^Manual/i }),
     ).toHaveLength(1)
   })
 
@@ -100,36 +101,36 @@ describe('Ability Scores wizard integration', () => {
     const { user } = await renderApp()
     await goToAbilityScoresStep(user, screen)
 
-    expect(getCreationMethodSelect(screen)).toBeInTheDocument()
+    expect(getCreationMethodRadio(screen, 'manual')).toBeChecked()
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toBeInTheDocument()
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'standard-array')
+    await selectCreationMethod(user, screen, 'standard-array')
     expect(
       screen.getByRole('button', { name: /apply default standard array/i }),
     ).toBeInTheDocument()
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'point-buy')
+    await selectCreationMethod(user, screen, 'point-buy')
     expect(screen.getByText(/points spent:/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Increase Strength' })).toBeInTheDocument()
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'rolled')
+    await selectCreationMethod(user, screen, 'rolled')
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeInTheDocument()
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toBeInTheDocument()
   })
 
   it('reports ability scores as not started before interaction on a fresh character', async () => {
     const { user } = await renderApp()
 
-    expect(getWizardStepButton(screen, 'Ability Scores')).toHaveAccessibleName(
+    expect(getWizardStepButton(screen, 'Abilities')).toHaveAccessibleName(
       /not started/i,
     )
 
     await goToAbilityScoresStep(user, screen)
-    await user.selectOptions(getCreationMethodSelect(screen), 'standard-array')
+    await selectCreationMethod(user, screen, 'standard-array')
 
-    expect(getWizardStepButton(screen, 'Ability Scores')).toHaveAccessibleName(
+    expect(getWizardStepButton(screen, 'Abilities')).toHaveAccessibleName(
       /needs attention/i,
     )
   })
@@ -142,7 +143,7 @@ describe('Ability Scores wizard integration', () => {
       }),
     )
 
-    expect(getWizardStepButton(screen, 'Ability Scores')).toHaveAccessibleName(
+    expect(getWizardStepButton(screen, 'Abilities')).toHaveAccessibleName(
       /not started/i,
     )
   })
@@ -151,12 +152,12 @@ describe('Ability Scores wizard integration', () => {
     const { user } = await renderApp()
     await goToAbilityScoresStep(user, screen)
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'standard-array')
+    await selectCreationMethod(user, screen, 'standard-array')
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
 
-    expect(getWizardStepButton(screen, 'Ability Scores')).toHaveAccessibleName(
+    expect(getWizardStepButton(screen, 'Abilities')).toHaveAccessibleName(
       /complete/i,
     )
   })
@@ -164,7 +165,7 @@ describe('Ability Scores wizard integration', () => {
   it('preserves in-progress standard array drafts when navigating away and back', async () => {
     const { user } = await renderApp()
     await goToAbilityScoresStep(user, screen)
-    await user.selectOptions(getCreationMethodSelect(screen), 'standard-array')
+    await selectCreationMethod(user, screen, 'standard-array')
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
@@ -173,9 +174,9 @@ describe('Ability Scores wizard integration', () => {
     await goToAbilityScoresStep(user, screen)
 
     expect(
-      screen.getByRole('button', { name: /save draft/i }),
-    ).toBeEnabled()
-    expect(getWizardStepButton(screen, 'Ability Scores')).toHaveAccessibleName(
+      screen.getByRole('button', { name: /export character/i }),
+    ).toBeInTheDocument()
+    expect(getWizardStepButton(screen, 'Abilities')).toHaveAccessibleName(
       /complete/i,
     )
   })
@@ -183,11 +184,10 @@ describe('Ability Scores wizard integration', () => {
   it('saves the current valid numeric scores from the wizard step', async () => {
     const { user } = await renderApp()
     await goToAbilityScoresStep(user, screen)
-    await user.selectOptions(getCreationMethodSelect(screen), 'standard-array')
+    await selectCreationMethod(user, screen, 'standard-array')
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(

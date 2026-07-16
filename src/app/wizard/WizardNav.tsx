@@ -10,7 +10,37 @@ type WizardNavProps = {
   stepContext: WizardStepContext
   stepStatuses: Record<WizardStepId, StepStatus>
   onStepChange: (stepId: WizardStepId) => void
-  onGoHome?: () => void
+}
+
+/** Two-line nav labels that should never collapse onto one line. */
+const WIZARD_NAV_LABEL_LINES: Partial<
+  Record<WizardStepId, readonly [string, string]>
+> = {
+  'character-details': ['Character', 'Details'],
+}
+
+function WizardNavLabel({
+  stepId,
+  label,
+}: {
+  stepId: WizardStepId
+  label: string
+}) {
+  const lines = WIZARD_NAV_LABEL_LINES[stepId]
+
+  if (lines === undefined) {
+    return <span className="wizard-nav__label">{label}</span>
+  }
+
+  return (
+    <span className="wizard-nav__label wizard-nav__label--stacked">
+      {lines.map((line) => (
+        <span key={line} className="wizard-nav__label-line">
+          {line}
+        </span>
+      ))}
+    </span>
+  )
 }
 
 export function WizardNav({
@@ -18,28 +48,12 @@ export function WizardNav({
   stepContext,
   stepStatuses,
   onStepChange,
-  onGoHome,
 }: WizardNavProps) {
   const visibleSteps = getVisibleWizardSteps(stepContext)
 
   return (
     <nav aria-label="Character creation steps" className="wizard-nav">
       <ol className="wizard-nav__list">
-        {onGoHome !== undefined ? (
-          <li className="wizard-nav__item wizard-nav__item--home">
-            <button
-              type="button"
-              className="wizard-nav__step wizard-nav__home"
-              aria-label="Return to home"
-              onClick={onGoHome}
-            >
-              <span className="wizard-nav__indicator" aria-hidden="true">
-                ⌂
-              </span>
-              <span className="wizard-nav__label">Home</span>
-            </button>
-          </li>
-        ) : null}
         {visibleSteps.map((step, index) => {
           const status = stepStatuses[step.id]
           const isActive = step.id === activeStepId
@@ -79,7 +93,7 @@ export function WizardNav({
                 >
                   {getStepStatusIndicator(status, stepNumber)}
                 </span>
-                <span className="wizard-nav__label">{step.label}</span>
+                <WizardNavLabel stepId={step.id} label={step.label} />
               </button>
             </li>
           )

@@ -122,24 +122,27 @@ describe('Species workflow in App', () => {
     ).toBeInTheDocument()
   })
 
-  it('saves only the stable species selection for Dwarf', async () => {
+  it('autosaves the stable species selection for Dwarf', async () => {
     const { user } = await renderLoadedApp()
 
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
+    await user.type(screen.getByRole('textbox', { name: /character name/i }), 'a')
 
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        species: { speciesId: 'srd-2024:dwarf', choices: {} },
-      }),
-    )
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          species: { speciesId: 'srd-2024:dwarf', choices: {} },
+        }),
+      )
+    })
   })
 
-  it('keeps an incomplete Dragonborn selection draft-only and blocks saving', async () => {
+  it('keeps an incomplete Dragonborn selection draft-only and blocks autosaving', async () => {
     const { user } = await renderLoadedApp({
       ...createStoredCharacter(),
       species: null,
     })
     await openSpeciesStep(user)
+    saveMock.mockClear()
 
     await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
 
@@ -152,9 +155,14 @@ describe('Species workflow in App', () => {
       await screen.findByText(/complete required choices to confirm/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /save draft/i }),
-    ).toBeDisabled()
-    expect(saveMock).not.toHaveBeenCalled()
+      screen.queryByRole('button', { name: /save draft/i }),
+    ).not.toBeInTheDocument()
+
+    const callsBefore = saveMock.mock.calls.length
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 400)
+    })
+    expect(saveMock.mock.calls.length).toBe(callsBefore)
   })
 
   it('shows the ancestry selector after one Dragonborn click in a fresh app on srd-2024', async () => {
@@ -197,16 +205,16 @@ describe('Species workflow in App', () => {
     expectSelectedSpecies('Dragonborn')
     expect(getAncestrySelect()).toHaveValue('red')
 
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
-
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        species: {
-          speciesId: 'srd-2024:dragonborn',
-          choices: { 'draconic-ancestry': 'red' },
-        },
-      }),
-    )
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          species: {
+            speciesId: 'srd-2024:dragonborn',
+            choices: { 'draconic-ancestry': 'red' },
+          },
+        }),
+      )
+    })
   })
 
   it('reloads a saved Red Dragonborn ancestry through the catalogue', async () => {
@@ -239,16 +247,17 @@ describe('Species workflow in App', () => {
     await openSpeciesStep(user)
 
     await user.selectOptions(getAncestrySelect(), 'silver')
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        species: {
-          speciesId: 'srd-2024:dragonborn',
-          choices: { 'draconic-ancestry': 'silver' },
-        },
-      }),
-    )
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          species: {
+            speciesId: 'srd-2024:dragonborn',
+            choices: { 'draconic-ancestry': 'silver' },
+          },
+        }),
+      )
+    })
   })
 
   it('prompts before clearing species when changing edition', async () => {

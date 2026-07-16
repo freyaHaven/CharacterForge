@@ -10,6 +10,7 @@ import type { EditionId } from '../../domain/types'
 import {
   validateClassInstance,
   validateClassSelection,
+  type ClassValidationOptions,
   type ClassValidationResult,
 } from '../../rules/class/classRules'
 
@@ -228,12 +229,18 @@ export function tryCommitClassInstanceDraft(
   draft: CharacterClassSelectionDraft,
   editionId: EditionId,
   definition: ClassDefinition | null,
+  options?: ClassValidationOptions,
 ): {
   committed: CharacterClassSelection | null
   validation: ClassValidationResult
 } {
   const instance = instanceDraftToClassInstance(draft)
-  const validation = validateClassInstance(instance, editionId, definition)
+  const validation = validateClassInstance(
+    instance,
+    editionId,
+    definition,
+    options,
+  )
 
   if (!validation.ok) {
     return { committed: null, validation: toLegacyValidation(validation) }
@@ -246,12 +253,18 @@ export function tryCommitClassDraft(
   draft: ClassSelectionDraft,
   editionId: EditionId,
   definition: ClassDefinition | null,
+  options?: ClassValidationOptions,
 ): {
   committed: ClassSelection | null
   validation: ClassValidationResult
 } {
   const selection = draftToClassSelection(draft)
-  const validation = validateClassSelection(selection, editionId, definition)
+  const validation = validateClassSelection(
+    selection,
+    editionId,
+    definition,
+    options,
+  )
 
   if (!validation.ok) {
     return { committed: null, validation }

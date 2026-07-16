@@ -8,12 +8,12 @@ describe('WIZARD_STEPS', () => {
 
     expect(ids).toEqual([
       'basics',
-      'species',
-      'character-details',
-      'ability-scores',
       'class',
       'background',
+      'species',
+      'ability-scores',
       'equipment',
+      'character-details',
       'feats',
       'spells',
       'review',
@@ -27,7 +27,7 @@ describe('WIZARD_STEPS', () => {
     expect(uniqueIds.size).toBe(ids.length)
   })
 
-  it('marks Basics, Species, Class, and Ability Scores as required', () => {
+  it('marks Basics, Species, Class, and Abilities as required', () => {
     const requiredById = Object.fromEntries(
       WIZARD_STEPS.map((step) => [step.id, step.required]),
     ) as Record<WizardStepId, boolean>
@@ -51,8 +51,9 @@ describe('WIZARD_STEPS', () => {
     expect(requiredById.review).toBe(false)
   })
 
-  it('places Review last', () => {
+  it('places Overview last', () => {
     expect(WIZARD_STEPS.at(-1)?.id).toBe('review')
+    expect(WIZARD_STEPS.at(-1)?.label).toBe('Overview')
   })
 })
 

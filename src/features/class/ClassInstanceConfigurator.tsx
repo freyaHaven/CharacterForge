@@ -5,6 +5,11 @@ import type {
   ClassDefinition,
   ClassSelection,
 } from '../../domain/class/types'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
+import {
+  collectAsiFeatIds,
+  isAbilityScoreImprovementChoiceId,
+} from '../../domain/class/abilityScoreImprovement'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { validateClassSelection } from '../../rules/class/classRules'
@@ -17,6 +22,7 @@ import {
   type FeatureChoiceExpansionState,
 } from '../choices/featureChoiceExpansionState'
 import {
+  findMultiSelectChoiceForFeature,
   findSingleSelectChoiceForFeature,
   getChoicesNotLinkedToFeatures,
 } from '../choices/linkFeatureToChoice'
@@ -24,10 +30,15 @@ import {
   ClassDeferredRequirementsPanel,
   ClassSelectionSummary,
 } from './ClassSelectionSummary'
+import { AsiChoiceField } from './AsiChoiceField'
 import { ClassMultiSelectChoiceField } from './ClassMultiSelectChoiceField'
 import { LevelStepper } from './LevelStepper'
 import { formatClassValidationIssue } from './formatClassValidation'
 import type { ClassSelectionDraft } from './classSelectionDraft'
+import {
+  collectWeaponMasterySelections,
+  isWeaponMasteryChoiceId,
+} from '../../domain/class/weaponMastery'
 
 export type ClassInstanceConfiguratorProps = {
   editionId: EditionId
@@ -39,6 +50,8 @@ export type ClassInstanceConfiguratorProps = {
   maxInstanceLevel: number
   draft: ClassSelectionDraft | null
   committedSelection: ClassSelection | null
+  featCatalog: FeatCatalog
+  characterFeatId?: string | null
   levelLabel?: string
   showRemoveButton?: boolean
   onLevelChange: (level: number) => void
@@ -56,6 +69,8 @@ export function ClassInstanceConfigurator({
   maxInstanceLevel,
   draft,
   committedSelection,
+  featCatalog,
+  characterFeatId = null,
   levelLabel = 'Levels in this class',
   showRemoveButton = false,
   onLevelChange,
@@ -162,18 +177,66 @@ export function ClassInstanceConfigurator({
                   </h5>
                   <div className="class-picker__feature-cards">
                     {levelEntry.features.map((feature) => {
-                      const linkedChoice = findSingleSelectChoiceForFeature(
+                      const linkedSingleSelect = findSingleSelectChoiceForFeature(
+                        feature.id,
+                        availableChoices,
+                      )
+                      const linkedMultiSelect = findMultiSelectChoiceForFeature(
                         feature.id,
                         availableChoices,
                       )
 
-                      if (linkedChoice !== null) {
-                        const issue = choiceIssueById.get(linkedChoice.id)
+                      if (linkedSingleSelect !== null) {
+                        const issue = choiceIssueById.get(linkedSingleSelect.id)
                         const errorId =
                           issue === undefined
                             ? undefined
-                            : `class-choice-error-${linkedChoice.id}`
-                        const choiceValue = activeChoices[linkedChoice.id]
+                            : `class-choice-error-${linkedSingleSelect.id}`
+                        const choiceValue = activeChoices[linkedSingleSelect.id]
+
+                        if (
+                          isAbilityScoreImprovementChoiceId(linkedSingleSelect.id)
+                        ) {
+                          return (
+                            <div
+                              key={feature.id}
+                              className="class-picker__choice"
+                            >
+                              <h6>{feature.name}</h6>
+                              <AsiChoiceField
+                                choiceId={linkedSingleSelect.id}
+                                value={
+                                  typeof choiceValue === 'string'
+                                    ? choiceValue
+                                    : undefined
+                                }
+                                editionId={editionId}
+                                featCatalog={featCatalog}
+                                takenFeatIds={[
+                                  ...collectAsiFeatIds(
+                                    activeChoices,
+                                    linkedSingleSelect.id,
+                                  ),
+                                  ...(characterFeatId !== null
+                                    ? [characterFeatId]
+                                    : []),
+                                ]}
+                                errorId={errorId}
+                                onChange={onChoiceChange}
+                              />
+                              {issue !== undefined && errorId !== undefined ? (
+                                <p
+                                  id={errorId}
+                                  className="class-picker__choice-error"
+                                  role="alert"
+                                >
+                                  {formatClassValidationIssue(issue)}
+                                </p>
+                              ) : null}
+                            </div>
+                          )
+                        }
+
                         const selectedOptionId =
                           typeof choiceValue === 'string' ? choiceValue : null
                         const hasSelection =
@@ -189,17 +252,17 @@ export function ClassInstanceConfigurator({
                               id={`class-feature-${feature.id}`}
                               title={feature.name}
                               description={feature.description}
-                              options={linkedChoice.options}
+                              options={linkedSingleSelect.options}
                               selectedOptionId={selectedOptionId}
-                              name={`class-choice-${linkedChoice.id}`}
+                              name={`class-choice-${linkedSingleSelect.id}`}
                               describedBy={errorId}
                               expanded={getFeatureChoiceExpanded(
                                 choiceExpansionState,
                                 activeInstanceId === null
-                                  ? linkedChoice.id
+                                  ? linkedSingleSelect.id
                                   : createClassChoiceStateKey(
                                       activeInstanceId,
-                                      linkedChoice.id,
+                                      linkedSingleSelect.id,
                                     ),
                                 hasSelection,
                               )}
@@ -208,18 +271,58 @@ export function ClassInstanceConfigurator({
                                   setFeatureChoiceExpanded(
                                     current,
                                     activeInstanceId === null
-                                      ? linkedChoice.id
+                                      ? linkedSingleSelect.id
                                       : createClassChoiceStateKey(
                                           activeInstanceId,
-                                          linkedChoice.id,
+                                          linkedSingleSelect.id,
                                         ),
                                     expanded,
                                   ),
                                 )
                               }}
                               onSelect={(optionId) => {
-                                onChoiceChange(linkedChoice.id, optionId)
+                                onChoiceChange(linkedSingleSelect.id, optionId)
                               }}
+                            />
+                            {issue !== undefined && errorId !== undefined ? (
+                              <p
+                                id={errorId}
+                                className="class-picker__choice-error"
+                                role="alert"
+                              >
+                                {formatClassValidationIssue(issue)}
+                              </p>
+                            ) : null}
+                          </div>
+                        )
+                      }
+
+                      if (linkedMultiSelect !== null) {
+                        const issue = choiceIssueById.get(linkedMultiSelect.id)
+                        const errorId =
+                          issue === undefined
+                            ? undefined
+                            : `class-choice-error-${linkedMultiSelect.id}`
+
+                        return (
+                          <div
+                            key={feature.id}
+                            className="class-picker__choice"
+                          >
+                            <ClassMultiSelectChoiceField
+                              choice={linkedMultiSelect}
+                              value={activeChoices[linkedMultiSelect.id]}
+                              errorId={errorId}
+                              legend={feature.name}
+                              excludedOptionIds={
+                                isWeaponMasteryChoiceId(linkedMultiSelect.id)
+                                  ? collectWeaponMasterySelections(
+                                      activeChoices,
+                                      linkedMultiSelect.id,
+                                    )
+                                  : []
+                              }
+                              onChange={onChoiceChange}
                             />
                             {issue !== undefined && errorId !== undefined ? (
                               <p
@@ -270,6 +373,14 @@ export function ClassInstanceConfigurator({
                       value={activeChoices[choice.id]}
                       errorId={errorId}
                       legend={choice.prompt}
+                      excludedOptionIds={
+                        isWeaponMasteryChoiceId(choice.id)
+                          ? collectWeaponMasterySelections(
+                              activeChoices,
+                              choice.id,
+                            )
+                          : []
+                      }
                       onChange={onChoiceChange}
                     />
                     {issue !== undefined && errorId !== undefined ? (

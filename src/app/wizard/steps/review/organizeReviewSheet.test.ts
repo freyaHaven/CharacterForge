@@ -52,12 +52,25 @@ describe('organizeReviewSheet', () => {
         ancestryLabel: null,
       },
       classDisplay: {
+        entries: [
+          {
+            classId: 'srd-2024:fighter',
+            className: 'Fighter',
+            level: 1,
+            subclassName: null,
+          },
+        ],
         className: 'Fighter',
+        subclassName: null,
         level: 1,
+        characterLevel: 1,
         choiceLines: [
           {
             prompt: 'Choose a Fighting Style',
             summary: 'Defense',
+            heading: 'Defense',
+            description:
+              'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
           },
           {
             prompt: 'Choose two skill proficiencies',
@@ -72,17 +85,21 @@ describe('organizeReviewSheet', () => {
 
     expect(sheet.features).toEqual([
       {
-        label: 'Choose a Fighting Style',
+        label: 'Defense',
         value: 'Defense',
+        description:
+          'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
+        entries: undefined,
       },
     ])
     expect(sheet.skillsAndSaves).toEqual([
       {
         label: 'Choose two skill proficiencies',
         value: 'Athletics, Perception',
+        description: undefined,
+        entries: undefined,
       },
     ])
-    expect(sheet.abilityScoreNotes).toEqual(['Method: Manual'])
     expect(sheet.backgroundLines).toEqual([])
     expect(sheet.sectionVisibility).toEqual({
       skills: true,
@@ -91,6 +108,233 @@ describe('organizeReviewSheet', () => {
       spells: false,
       background: false,
     })
+  })
+
+  it('omits name-only subclass choices from Features once shown in the header', () => {
+    const sheet = organizeReviewSheet({
+      summaries: {
+        basics: [],
+        species: [],
+        'character-details': [],
+        class: [
+          'Class: Fighter',
+          'Level: 3',
+          'Choose a Fighting Style: Defense',
+          'Choose a Fighter Subclass: Champion',
+        ],
+        'ability-scores': [],
+        background: [],
+        equipment: [],
+        feats: [],
+        spells: [],
+      },
+      stepStatuses: createStatuses({
+        class: { completion: 'complete', hasValidationErrors: false },
+      }),
+      speciesDisplay: {
+        speciesName: 'Dwarf',
+        ancestryLabel: null,
+      },
+      classDisplay: {
+        entries: [
+          {
+            classId: 'srd-2024:fighter',
+            className: 'Fighter',
+            level: 3,
+            subclassName: 'Champion',
+          },
+        ],
+        className: 'Fighter',
+        subclassName: 'Champion',
+        level: 3,
+        characterLevel: 3,
+        choiceLines: [
+          {
+            prompt: 'Choose a Fighting Style',
+            summary: 'Defense',
+            heading: 'Defense',
+            description:
+              'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
+          },
+          {
+            prompt: 'Choose a Fighter Subclass',
+            summary: 'Champion',
+          },
+        ],
+      },
+      unresolvedDeferredRequirements: [],
+      hasSpellcastingCapability: false,
+      spellLines: [],
+    })
+
+    expect(sheet.features).toEqual([
+      {
+        label: 'Defense',
+        value: 'Defense',
+        description:
+          'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
+        entries: undefined,
+      },
+    ])
+    expect(
+      sheet.features.some((feature) => /\bsubclass\b/i.test(feature.label)),
+    ).toBe(false)
+  })
+
+  it('renders selected subclass features as nested entries', () => {
+    const sheet = organizeReviewSheet({
+      summaries: {
+        basics: [],
+        species: [],
+        'character-details': [],
+        class: [],
+        'ability-scores': [],
+        background: [],
+        equipment: [],
+        feats: [],
+        spells: [],
+      },
+      stepStatuses: createStatuses({
+        class: { completion: 'complete', hasValidationErrors: false },
+      }),
+      speciesDisplay: {
+        speciesName: 'Dwarf',
+        ancestryLabel: null,
+      },
+      classDisplay: {
+        entries: [
+          {
+            classId: 'srd-2024:fighter',
+            className: 'Fighter',
+            level: 3,
+            subclassName: 'Champion',
+          },
+        ],
+        className: 'Fighter',
+        subclassName: 'Champion',
+        level: 3,
+        characterLevel: 3,
+        choiceLines: [
+          {
+            prompt: 'Choose a Fighter Subclass',
+            summary: 'Champion',
+            heading: 'Champion',
+            entries: [
+              {
+                label: 'Improved Critical',
+                description:
+                  'Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.',
+              },
+              {
+                label: 'Remarkable Athlete',
+                description:
+                  'Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks.',
+              },
+            ],
+          },
+        ],
+      },
+      unresolvedDeferredRequirements: [],
+      hasSpellcastingCapability: false,
+      spellLines: [],
+    })
+
+    expect(sheet.features).toEqual([
+      {
+        label: 'Champion',
+        value: 'Champion',
+        description: undefined,
+        entries: [
+          {
+            label: 'Improved Critical',
+            description:
+              'Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.',
+          },
+          {
+            label: 'Remarkable Athlete',
+            description:
+              'Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks.',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('renders weapon mastery as nested feature entries', () => {
+    const sheet = organizeReviewSheet({
+      summaries: {
+        basics: [],
+        species: [],
+        'character-details': [],
+        class: [],
+        'ability-scores': [],
+        background: [],
+        equipment: [],
+        feats: [],
+        spells: [],
+      },
+      stepStatuses: createStatuses(),
+      speciesDisplay: {
+        speciesName: null,
+        ancestryLabel: null,
+      },
+      classDisplay: {
+        entries: [
+          {
+            classId: 'srd-2024:fighter',
+            className: 'Fighter',
+            level: 1,
+            subclassName: null,
+          },
+        ],
+        className: 'Fighter',
+        subclassName: null,
+        level: 1,
+        characterLevel: 1,
+        choiceLines: [
+          {
+            prompt: 'Choose 3 weapon masteries',
+            summary: 'Greatsword (Graze), Javelin (Slow)',
+            heading: 'Weapon Mastery',
+            entries: [
+              {
+                label: 'Greatsword (Graze)',
+                description:
+                  'If your attack roll with a Greatsword misses a creature, you can deal damage to that creature equal to the ability modifier you used to make the attack roll. This damage is the same type dealt by the Greatsword, and the damage can be increased only by increasing the ability modifier.',
+              },
+              {
+                label: 'Javelin (Slow)',
+                description:
+                  'If you hit a creature with a Javelin and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn’t exceed 10 feet.',
+              },
+            ],
+          },
+        ],
+      },
+      unresolvedDeferredRequirements: [],
+      hasSpellcastingCapability: false,
+      spellLines: [],
+    })
+
+    expect(sheet.features).toEqual([
+      {
+        label: 'Weapon Mastery',
+        value: 'Greatsword (Graze), Javelin (Slow)',
+        description: undefined,
+        entries: [
+          {
+            label: 'Greatsword (Graze)',
+            description:
+              'If your attack roll with a Greatsword misses a creature, you can deal damage to that creature equal to the ability modifier you used to make the attack roll. This damage is the same type dealt by the Greatsword, and the damage can be increased only by increasing the ability modifier.',
+          },
+          {
+            label: 'Javelin (Slow)',
+            description:
+              'If you hit a creature with a Javelin and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn’t exceed 10 feet.',
+          },
+        ],
+      },
+    ])
   })
 
   it('shows optional sections only when they contain meaningful data', () => {
@@ -112,8 +356,11 @@ describe('organizeReviewSheet', () => {
         ancestryLabel: 'Red (Fire)',
       },
       classDisplay: {
+        entries: [],
         className: null,
+        subclassName: null,
         level: null,
+        characterLevel: null,
         choiceLines: [],
       },
       unresolvedDeferredRequirements: [],

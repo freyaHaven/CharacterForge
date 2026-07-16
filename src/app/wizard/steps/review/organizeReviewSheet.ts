@@ -11,9 +11,16 @@ export type ReviewStatItem = {
   value: string
 }
 
+export type ReviewFeatureEntry = {
+  label: string
+  description: string
+}
+
 export type ReviewFeatureItem = {
   label: string
   value: string
+  description?: string
+  entries?: ReviewFeatureEntry[]
 }
 
 export type ReviewSectionVisibility = {
@@ -25,7 +32,7 @@ export type ReviewSectionVisibility = {
 }
 
 export type ReviewSheetContent = {
-  abilityScoreNotes: string[]
+  headerStats: ReviewStatItem[]
   coreStats: ReviewStatItem[]
   skillsAndSaves: ReviewFeatureItem[]
   equipmentLines: string[]
@@ -38,6 +45,7 @@ export type ReviewSheetContent = {
 }
 
 const SKILL_PROMPT_PATTERN = /\bskill\b|\bsaving throw\b/i
+const SUBCLASS_PROMPT_PATTERN = /\bsubclass\b/i
 
 function parseLabeledLine(line: string): ReviewFeatureItem | null {
   const separatorIndex = line.indexOf(': ')
@@ -49,6 +57,16 @@ function parseLabeledLine(line: string): ReviewFeatureItem | null {
     label: line.slice(0, separatorIndex),
     value: line.slice(separatorIndex + 2),
   }
+}
+
+function isSubclassChoiceLine(choiceLine: {
+  prompt: string
+  entries?: ReviewFeatureEntry[]
+}): boolean {
+  return (
+    SUBCLASS_PROMPT_PATTERN.test(choiceLine.prompt) &&
+    (choiceLine.entries === undefined || choiceLine.entries.length === 0)
+  )
 }
 
 function isMetaClassLine(line: string): boolean {
@@ -80,10 +98,6 @@ function hasMeaningfulLines(lines: string[]): boolean {
   return lines.some((line) => !isPlaceholderLine(line))
 }
 
-function buildAbilityScoreNotes(summaryLines: string[]): string[] {
-  return summaryLines.filter((line) => !/^(STR|DEX|CON|INT|WIS|CHA) \d+/.test(line))
-}
-
 function buildSkillsAndFeatures(
   classDisplay: ClassReviewDisplay,
   classSummaryLines: string[],
@@ -101,9 +115,15 @@ function buildSkillsAndFeatures(
           .map((item) => ({ prompt: item.label, summary: item.value }))
 
   for (const choiceLine of choiceLines) {
-    const item = {
-      label: choiceLine.prompt,
+    if (isSubclassChoiceLine(choiceLine)) {
+      continue
+    }
+
+    const item: ReviewFeatureItem = {
+      label: choiceLine.heading ?? choiceLine.prompt,
       value: choiceLine.summary,
+      description: choiceLine.description,
+      entries: choiceLine.entries,
     }
 
     if (SKILL_PROMPT_PATTERN.test(choiceLine.prompt)) {
@@ -188,11 +208,12 @@ export function organizeReviewSheet(input: {
   }
 
   return {
-    abilityScoreNotes: buildAbilityScoreNotes(input.summaries['ability-scores']),
-    coreStats: [
+    headerStats: [
       { label: 'Hit Points', value: '—' },
       { label: 'Armor Class', value: '—' },
       { label: 'Initiative', value: '—' },
+    ],
+    coreStats: [
       { label: 'Speed', value: '—' },
       { label: 'Proficiency', value: '—' },
     ],

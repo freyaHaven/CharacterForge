@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { downloadCharacterFile } from '../../adapters/characterFile'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import { createCharacterId } from '../../domain/character/createCharacterId'
@@ -34,6 +34,7 @@ import { useReviewBackgroundDisplay } from '../useReviewBackgroundDisplay'
 import { useReviewFeatDisplay } from '../useReviewFeatDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
 import { useReviewSpellcasting } from '../useReviewSpellcasting'
+import { useReviewSheetModels } from '../useReviewSheetModels'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
 import { getAllStepStatuses } from '../wizard/stepStatus'
 import type { WizardStepId } from '../wizard/types'
@@ -75,6 +76,7 @@ export function useCharacterEditor({
   )
   const [basicsTouched, setBasicsTouched] = useState(false)
   const [detailsTouched, setDetailsTouched] = useState(false)
+  const hasCompletedInitialLoadRef = useRef(false)
 
   const prefersReducedMotion = usePrefersReducedMotion()
 
@@ -99,6 +101,7 @@ export function useCharacterEditor({
     character,
     setCharacter,
     classCatalog,
+    featCatalog,
     onDraftChange: clearSaveMessage,
   })
 
@@ -225,8 +228,9 @@ export function useCharacterEditor({
   const classReviewDisplay = useReviewClassDisplay(
     classCatalog,
     character.editionId,
-    classEditor.committedSelection,
-    classEditor.classDraft,
+    character.classes,
+    classEditor.classDrafts,
+    character.targetLevel,
   )
 
   const backgroundReviewDisplay = useReviewBackgroundDisplay(
@@ -247,6 +251,14 @@ export function useCharacterEditor({
   const reviewableStepIds = getReviewableStepIds(wizardStepContext)
 
   const spellcastingReview = useReviewSpellcasting(classCatalog, character)
+
+  const reviewSheetModels = useReviewSheetModels(
+    character,
+    speciesCatalog,
+    classCatalog,
+    backgroundCatalog,
+    featCatalog,
+  )
 
   const unresolvedDeferredRequirements = useDeferredCharacterRequirements(
     classCatalog,
@@ -304,33 +316,6 @@ export function useCharacterEditor({
   })
   const finishBlockedMessage = formatFinishBlockedMessage(finishPolicy)
 
-  const handleSaveDraft = useCallback(async () => {
-    if (!canSaveCharacterState) {
-      setSaveMessage(saveBlockedMessage)
-      return
-    }
-
-    const characterToSave = buildCharacterForSave({
-      character,
-      standardArrayDraft: abilityScores.standardArrayDraft,
-      pointBuyDraft: abilityScores.pointBuyDraft,
-      rolledDraft: abilityScores.rolledDraft,
-    })
-
-    await repository.save(characterToSave)
-    setCharacter(characterToSave)
-    setSaveMessage('Character saved.')
-    setFinishMessage(null)
-  }, [
-    abilityScores.pointBuyDraft,
-    abilityScores.rolledDraft,
-    abilityScores.standardArrayDraft,
-    canSaveCharacterState,
-    character,
-    repository,
-    saveBlockedMessage,
-  ])
-
   const handleFinish = useCallback(async () => {
     if (!finishPolicy.canFinish) {
       setFinishMessage(finishBlockedMessage)
@@ -363,6 +348,67 @@ export function useCharacterEditor({
     character,
     finishBlockedMessage,
     finishPolicy.canFinish,
+    repository,
+  ])
+
+  useEffect(() => {
+    if (isLoading) {
+      hasCompletedInitialLoadRef.current = false
+      return
+    }
+
+    if (!hasCompletedInitialLoadRef.current) {
+      hasCompletedInitialLoadRef.current = true
+      return
+    }
+
+    if (!canSaveCharacterState) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const characterToSave = buildCharacterForSave({
+        character,
+        standardArrayDraft: abilityScores.standardArrayDraft,
+        pointBuyDraft: abilityScores.pointBuyDraft,
+        rolledDraft: abilityScores.rolledDraft,
+      })
+
+      void Promise.resolve(repository.save(characterToSave)).then(() => {
+        setCharacter((current) => {
+          if (
+            current.abilityScores.strength ===
+              characterToSave.abilityScores.strength &&
+            current.abilityScores.dexterity ===
+              characterToSave.abilityScores.dexterity &&
+            current.abilityScores.constitution ===
+              characterToSave.abilityScores.constitution &&
+            current.abilityScores.intelligence ===
+              characterToSave.abilityScores.intelligence &&
+            current.abilityScores.wisdom ===
+              characterToSave.abilityScores.wisdom &&
+            current.abilityScores.charisma ===
+              characterToSave.abilityScores.charisma
+          ) {
+            return current
+          }
+
+          return characterToSave
+        })
+        setSaveMessage(null)
+      })
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [
+    abilityScores.pointBuyDraft,
+    abilityScores.rolledDraft,
+    abilityScores.standardArrayDraft,
+    canSaveCharacterState,
+    character,
+    isLoading,
     repository,
   ])
 
@@ -458,6 +504,7 @@ export function useCharacterEditor({
     characterDetailsReviewSections,
     speciesReviewDisplay,
     classReviewDisplay,
+    reviewSheetModels,
     spellcastingReview,
     unresolvedDeferredRequirements,
     finishPolicy,
@@ -479,7 +526,6 @@ export function useCharacterEditor({
     featCatalog,
     editionChange,
     speciesCatalog,
-    handleSaveDraft,
     handleFinish,
     handleExportCharacter,
     startNewCharacter,

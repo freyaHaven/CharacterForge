@@ -41,6 +41,7 @@ export type {
   ClassChoiceValue,
   ClassDefinition,
   ClassFeature,
+  ClassOptionFeature,
   ClassLevelFeatures,
   ClassLevel,
   CharacterClassSelection,

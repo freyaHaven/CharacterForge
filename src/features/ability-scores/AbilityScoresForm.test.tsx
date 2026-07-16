@@ -73,12 +73,24 @@ describe('AbilityScoresForm standard array guidance', () => {
     render(
       <AbilityScoresForm
         {...defaultProps}
+        standardArrayDraft={{
+          ...createEmptyStandardArrayDraft(),
+          strength: 15,
+        }}
         onClearStandardArray={onClearStandardArray}
       />,
     )
 
     await user.click(screen.getByRole('button', { name: /clear assignments/i }))
     expect(onClearStandardArray).toHaveBeenCalled()
+  })
+
+  it('hides clear assignments when nothing is assigned', () => {
+    render(<AbilityScoresForm {...defaultProps} />)
+
+    expect(
+      screen.queryByRole('button', { name: /clear assignments/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows the beginner explanation for standard array', () => {

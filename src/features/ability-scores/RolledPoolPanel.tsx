@@ -2,15 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   DEFAULT_ROLLING_FORMULA_ID,
   ROLLED_ABILITY_SCORE_COUNT,
-  ROLLED_MAX_TOTAL,
-  ROLLED_MIN_TOTAL,
   generateAbilityScorePool,
   getRollingFormula,
   type GeneratedAbilityScoreResult,
 } from '../../rules/rolled'
 import {
   createRolledDraftFromGeneratedResults,
-  createRolledDraftFromManualTotals,
   shouldConfirmReroll,
   type RolledDraft,
 } from './rolledDraft'
@@ -33,8 +30,6 @@ type PlaybackSession = {
   skipCurrent: boolean
 }
 
-const EMPTY_MANUAL_TOTALS = ['', '', '', '', '', ''] as const
-
 export function RolledPoolPanel({
   draft,
   prefersReducedMotion,
@@ -42,8 +37,6 @@ export function RolledPoolPanel({
   onPoolReady,
 }: RolledPoolPanelProps) {
   const [playback, setPlayback] = useState<PlaybackSession | null>(null)
-  const [manualTotals, setManualTotals] = useState<string[]>([...EMPTY_MANUAL_TOTALS])
-  const [manualError, setManualError] = useState<string | null>(null)
   const skipAllRef = useRef(false)
 
   const formula = getRollingFormula(DEFAULT_ROLLING_FORMULA_ID)
@@ -60,7 +53,6 @@ export function RolledPoolPanel({
       skipAll: prefersReducedMotion,
       skipCurrent: prefersReducedMotion,
     })
-    setManualError(null)
   }
 
   function handleRollDice() {
@@ -138,39 +130,6 @@ export function RolledPoolPanel({
     })
   }
 
-  function handleUseManualTotals() {
-    const parsedTotals = manualTotals.map((value) => Number.parseInt(value, 10))
-
-    if (parsedTotals.some((value) => Number.isNaN(value))) {
-      setManualError('Enter a number for each of the six results.')
-      return
-    }
-
-    const nextDraft = createRolledDraftFromManualTotals(parsedTotals)
-
-    if ('error' in nextDraft) {
-      setManualError(
-        nextDraft.error === 'invalid-count'
-          ? 'Enter exactly six manual results.'
-          : `Each manual result must be between ${ROLLED_MIN_TOTAL} and ${ROLLED_MAX_TOTAL}.`,
-      )
-      return
-    }
-
-    if (
-      draft !== null &&
-      shouldConfirmReroll(draft.assignments) &&
-      !window.confirm(
-        'Replacing the pool will clear your current assignments. Continue?',
-      )
-    ) {
-      return
-    }
-
-    setManualError(null)
-    onPoolReady(nextDraft)
-  }
-
   const currentRoll =
     playback === null ? null : playback.rolls[playback.currentIndex] ?? null
   const isAnimating = playback !== null && currentRoll !== null
@@ -234,37 +193,6 @@ export function RolledPoolPanel({
           onComplete={handleRollComplete}
         />
       ) : null}
-
-      <div className="rolled-manual-entry">
-        <p className="rolled-manual-entry__title">Enter rolls manually</p>
-        <div className="rolled-manual-entry__inputs">
-          {manualTotals.map((value, index) => (
-            <label key={`manual-${index}`} className="rolled-manual-entry__field">
-              <span>Result {index + 1}</span>
-              <input
-                type="number"
-                min={ROLLED_MIN_TOTAL}
-                max={ROLLED_MAX_TOTAL}
-                value={value}
-                onChange={(event) => {
-                  const nextTotals = [...manualTotals]
-                  nextTotals[index] = event.target.value
-                  setManualTotals(nextTotals)
-                  setManualError(null)
-                }}
-              />
-            </label>
-          ))}
-        </div>
-        {manualError !== null ? (
-          <p className="validation-message" role="alert">
-            {manualError}
-          </p>
-        ) : null}
-        <button type="button" onClick={handleUseManualTotals} disabled={isAnimating}>
-          Use these rolls
-        </button>
-      </div>
     </div>
   )
 }

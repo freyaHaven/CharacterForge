@@ -13,13 +13,21 @@ const MESSAGE_BY_CODE: Record<
       ? 'Choose a Fighting Style.'
       : issue.choiceId === 'skill-proficiencies'
         ? 'Choose two skill proficiencies.'
-        : `Choose an option for ${issue.choiceId ?? 'a required class choice'}.`,
+        : issue.choiceId?.startsWith('weapon-mastery')
+          ? 'Choose your Weapon Masteries.'
+          : issue.choiceId?.startsWith('ability-score-improvement-')
+            ? 'Complete your Ability Score Improvement.'
+            : `Choose an option for ${issue.choiceId ?? 'a required class choice'}.`,
   'invalid-choice': (issue) =>
-    `The selected option for ${issue.choiceId ?? 'a class choice'} is invalid.`,
+    issue.choiceId?.startsWith('ability-score-improvement-')
+      ? 'The Ability Score Improvement selection is invalid.'
+      : `The selected option for ${issue.choiceId ?? 'a class choice'} is invalid.`,
   'invalid-multi-select-count': (issue) =>
     issue.choiceId === 'skill-proficiencies'
       ? 'Choose exactly two skill proficiencies.'
-      : `Choose the required number of options for ${issue.choiceId ?? 'a class choice'}.`,
+      : issue.choiceId?.startsWith('weapon-mastery')
+        ? 'Choose the required number of Weapon Masteries.'
+        : `Choose the required number of options for ${issue.choiceId ?? 'a class choice'}.`,
   'unknown-choice': (issue) =>
     `Remove the unknown choice ${issue.choiceId ?? 'entry'}.`,
   'duplicate-instance-id': () => 'Each class instance must have a unique instance id.',

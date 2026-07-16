@@ -64,11 +64,21 @@ export type ClassChoiceEffect =
   | { kind: 'fighting-style'; styleId: string }
   | { kind: 'skill-proficiency'; skillId: SkillId }
 
+/** Feature granted by selecting a subclass (or similar) choice option. */
+export type ClassOptionFeature = {
+  id: string
+  name: string
+  description: string
+  level: ClassLevel
+}
+
 export type ClassChoiceOption = {
   id: string
   label: string
   description?: string
   effects?: ClassChoiceEffect[]
+  /** Features granted by this option (e.g. Champion subclass features). */
+  features?: ClassOptionFeature[]
 }
 
 export type ClassChoice =

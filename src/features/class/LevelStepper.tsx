@@ -11,6 +11,7 @@ export type LevelStepperProps = {
   max?: number
   disabled?: boolean
   label?: string
+  compact?: boolean
 }
 
 function clampLevel(level: number, min: number, max: number): number {
@@ -38,6 +39,7 @@ export function LevelStepper({
   max = MAX_CLASS_LEVEL,
   disabled = false,
   label = 'Starting level',
+  compact = false,
 }: LevelStepperProps) {
   const inputId = useId()
   const [inputValue, setInputValue] = useState(String(value))
@@ -79,7 +81,13 @@ export function LevelStepper({
   const canIncrement = !disabled && value < max
 
   return (
-    <div className="level-stepper field">
+    <div
+      className={
+        compact
+          ? 'level-stepper level-stepper--compact field'
+          : 'level-stepper field'
+      }
+    >
       <label className="level-stepper__label" htmlFor={inputId}>
         {label}
       </label>

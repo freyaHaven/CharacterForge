@@ -1,4 +1,7 @@
 import { within, type Screen } from '@testing-library/react'
+import type { UserEvent } from '@testing-library/user-event'
+import type { CharacterCreationMethod } from '../domain/types'
+import { CREATION_METHOD_OPTIONS } from '../features/creation-method/creationMethodOptions'
 
 const ABILITY_LABELS = [
   'Strength',
@@ -20,8 +23,26 @@ const ABILITY_KEYS: Record<(typeof ABILITY_LABELS)[number], string> = {
 
 export type AbilityLabel = (typeof ABILITY_LABELS)[number]
 
-export function getCreationMethodSelect(screen: Screen): HTMLElement {
-  return screen.getByRole('combobox', { name: /ability score method/i })
+function getCreationMethodLabel(method: CharacterCreationMethod): string {
+  const option = CREATION_METHOD_OPTIONS.find((entry) => entry.id === method)
+  return option?.label ?? method
+}
+
+export function getCreationMethodRadio(
+  screen: Screen,
+  method: CharacterCreationMethod,
+): HTMLElement {
+  return screen.getByRole('radio', {
+    name: new RegExp(`^${getCreationMethodLabel(method)}`, 'i'),
+  })
+}
+
+export async function selectCreationMethod(
+  user: UserEvent,
+  screen: Screen,
+  method: CharacterCreationMethod,
+): Promise<void> {
+  await user.click(getCreationMethodRadio(screen, method))
 }
 
 function getAbilityCard(screen: Screen, ability: AbilityLabel): HTMLElement {

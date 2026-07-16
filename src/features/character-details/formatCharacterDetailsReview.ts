@@ -1,7 +1,5 @@
-import { getAlignmentLabel } from '../../domain/character/alignment'
 import type { CharacterDetails } from '../../domain/character/details'
 import { getGenderLabel } from '../../domain/character/gender'
-import { getPronounLabel } from '../../domain/character/pronouns'
 
 export type CharacterDetailsReviewSections = {
   identity: string[]
@@ -24,10 +22,6 @@ export function formatCharacterDetailsReviewSections(
 ): CharacterDetailsReviewSections {
   const identity: string[] = []
 
-  if (details.age.trim().length > 0) {
-    identity.push(`Age: ${details.age.trim()}`)
-  }
-
   if (details.height.trim().length > 0) {
     identity.push(`Height: ${details.height.trim()}`)
   }
@@ -38,10 +32,6 @@ export function formatCharacterDetailsReviewSections(
 
   if (details.gender !== null) {
     identity.push(`Gender: ${getGenderLabel(details.gender)}`)
-  }
-
-  if (details.pronouns !== null) {
-    identity.push(`Pronouns: ${getPronounLabel(details.pronouns)}`)
   }
 
   if (details.eyeColour.trim().length > 0) {
@@ -57,10 +47,6 @@ export function formatCharacterDetailsReviewSections(
   }
 
   const personality: string[] = []
-
-  if (details.alignment !== null) {
-    personality.push(`Alignment: ${getAlignmentLabel(details.alignment)}`)
-  }
 
   if (details.personalityTraits.trim().length > 0) {
     personality.push(`Personality Traits: ${details.personalityTraits.trim()}`)

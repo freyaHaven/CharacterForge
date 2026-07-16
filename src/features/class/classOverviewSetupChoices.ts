@@ -1,13 +1,16 @@
 import type { ClassChoice, ClassDefinition } from '../../domain/class/types'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
+import { withLevelAdjustedChoiceLimits } from '../../domain/class/weaponMastery'
 import { getChoicesNotLinkedToFeatures } from '../choices/linkFeatureToChoice'
 
 export function getOverviewSetupChoices(
   definition: ClassDefinition,
   level: number,
 ): Extract<ClassChoice, { type: 'multi-select' }>[] {
-  const availableChoices = getChoicesAvailableAtLevel(definition, level)
+  const availableChoices = getChoicesAvailableAtLevel(definition, level).map(
+    (choice) => withLevelAdjustedChoiceLimits(choice, level),
+  )
   const featureIds = getClassFeatureProgressionUpToLevel(definition, level).flatMap(
     (entry) => entry.features.map((feature) => feature.id),
   )

@@ -9,11 +9,16 @@ describe('choiceAvailability', () => {
   it('returns only choices at or below the selected level', () => {
     expect(
       getChoicesAvailableAtLevel(fighterSrd2024, 1).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies'])
+    ).toEqual(['fighting-style', 'skill-proficiencies', 'weapon-mastery'])
 
     expect(
       getChoicesAvailableAtLevel(fighterSrd2024, 3).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies', 'fighter-subclass'])
+    ).toEqual([
+      'fighting-style',
+      'skill-proficiencies',
+      'weapon-mastery',
+      'fighter-subclass',
+    ])
   })
 
   it('prunes choices that are no longer available while preserving others', () => {
@@ -21,6 +26,7 @@ describe('choiceAvailability', () => {
       {
         'fighting-style': 'archery',
         'skill-proficiencies': ['athletics', 'perception'],
+        'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
         'fighter-subclass': 'champion',
       },
       getChoicesAvailableAtLevel(fighterSrd2024, 1),
@@ -29,6 +35,7 @@ describe('choiceAvailability', () => {
     expect(pruned).toEqual({
       'fighting-style': 'archery',
       'skill-proficiencies': ['athletics', 'perception'],
+      'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
     })
   })
 })

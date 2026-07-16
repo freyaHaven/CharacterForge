@@ -11,14 +11,22 @@ export function findSingleSelectChoiceForFeature(
   return choice?.type === 'single-select' ? choice : null
 }
 
+export function findMultiSelectChoiceForFeature(
+  featureId: string,
+  choices: readonly ClassChoice[],
+): Extract<ClassChoice, { type: 'multi-select' }> | null {
+  const choice = choices.find(
+    (entry) => entry.id === featureId && entry.type === 'multi-select',
+  )
+
+  return choice?.type === 'multi-select' ? choice : null
+}
+
 export function getChoicesNotLinkedToFeatures(
   choices: readonly ClassChoice[],
   featureIds: readonly string[],
 ): ClassChoice[] {
   const featureIdSet = new Set(featureIds)
 
-  return choices.filter(
-    (choice) =>
-      choice.type !== 'single-select' || !featureIdSet.has(choice.id),
-  )
+  return choices.filter((choice) => !featureIdSet.has(choice.id))
 }

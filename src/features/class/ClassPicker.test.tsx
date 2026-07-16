@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { useEffect, useMemo, useState } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
+import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
 import { useClassEditor } from '../../app/hooks/useClassEditor'
 import { clearClassEditorWorkflow } from '../../app/session/classEditorWorkflowStorage'
 import { createDefaultCharacter } from '../../domain/character/defaults'
@@ -34,6 +35,7 @@ function ClassPickerHarness({
   initialInstanceId: _initialInstanceId = null,
 }: ClassPickerHarnessProps) {
   const catalog = useMemo(() => createBundledClassCatalog(), [])
+  const featCatalog = useMemo(() => createBundledFeatCatalog(), [])
   const [character, setCharacter] = useState<Character>(() => ({
     ...createDefaultCharacter(),
     ...initialCharacter,
@@ -66,6 +68,8 @@ function ClassPickerHarness({
       activeInstanceId={editor.activeInstanceId}
       draft={editor.classDraft}
       catalog={catalog}
+      featCatalog={featCatalog}
+      characterFeatId={null}
       onBuildModeChange={editor.setBuildMode}
       onReturnToClassPathIntro={editor.returnToClassPathIntro}
       onSwitchToMulticlass={editor.switchToMulticlass}
@@ -149,17 +153,13 @@ async function selectMulticlassMode(user: ReturnType<typeof userEvent.setup>) {
 }
 
 async function setClassLevel(level: number) {
-  const input = screen.getByRole('spinbutton', { name: /levels in this class/i })
+  const input = screen.getByRole('spinbutton', { name: /^level$/i })
   fireEvent.change(input, { target: { value: String(level) } })
   fireEvent.blur(input)
 
   await waitFor(() => {
     expect(input).toHaveValue(level)
   })
-}
-
-function getSummaryStatus() {
-  return document.querySelector('.class-picker__summary-status')
 }
 
 function getOverviewColumn() {
@@ -169,6 +169,67 @@ function getOverviewColumn() {
 function getProgressionColumn() {
   return document.querySelector('.class-picker__progression-column') as HTMLElement
 }
+
+function getFeatureAccordionButton(name: RegExp | string) {
+  return within(getProgressionColumn()).getByRole('button', { name })
+}
+
+function expectFeatureIncomplete(name: RegExp | string) {
+  const button = getFeatureAccordionButton(name)
+  expect(
+    button.querySelector('.class-picker__feature-accordion-warning'),
+  ).not.toBeNull()
+}
+
+function expectFeatureComplete(name: RegExp | string) {
+  const button = getFeatureAccordionButton(name)
+  expect(button).toHaveTextContent(/Complete/i)
+  expect(
+    button.querySelector('.class-picker__feature-accordion-warning'),
+  ).toBeNull()
+}
+
+async function expandFeatureAccordion(
+  user: ReturnType<typeof userEvent.setup>,
+  name: RegExp | string,
+) {
+  const button = getFeatureAccordionButton(name)
+
+  if (button.getAttribute('aria-expanded') !== 'true') {
+    await user.click(button)
+  }
+
+  return button
+}
+
+async function completeLevel1FighterChoices(
+  user: ReturnType<typeof userEvent.setup>,
+  {
+    fightingStyle = /Defense/i,
+    skills = ['Athletics', 'Perception'] as const,
+    weapons = ['Longsword', 'Shortbow', 'Battleaxe'] as const,
+  }: {
+    fightingStyle?: RegExp | string
+    skills?: readonly [string, string]
+    weapons?: readonly [string, string, string]
+  } = {},
+) {
+  await expandFeatureAccordion(user, /Fighting Style/i)
+  await user.click(screen.getByRole('radio', { name: fightingStyle }))
+  await expandFeatureAccordion(user, /Core Fighter Traits/i)
+  await user.click(screen.getByRole('checkbox', { name: new RegExp(`^${skills[0]}\\b`) }))
+  await user.click(screen.getByRole('checkbox', { name: new RegExp(`^${skills[1]}\\b`) }))
+  await expandFeatureAccordion(user, /^Weapon Mastery(?! \(Additional\))/i)
+  await user.click(screen.getByRole('checkbox', { name: new RegExp(`^${weapons[0]}\\b`) }))
+  await user.click(screen.getByRole('checkbox', { name: new RegExp(`^${weapons[1]}\\b`) }))
+  await user.click(screen.getByRole('checkbox', { name: new RegExp(`^${weapons[2]}\\b`) }))
+}
+
+const LEVEL_1_FIGHTER_CHOICES = {
+  'fighting-style': 'defense',
+  'skill-proficiencies': ['athletics', 'perception'],
+  'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
+} as const
 
 describe('ClassPicker', () => {
   beforeEach(() => {
@@ -203,27 +264,34 @@ describe('ClassPicker', () => {
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
-    expect(
-      screen.getByRole('button', { name: /Fighting Style/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /Fighting Style/i }),
-    ).toHaveAttribute('aria-expanded', 'true')
+    const fightingStyle = getFeatureAccordionButton(/Fighting Style/i)
+    expect(fightingStyle).toBeInTheDocument()
+    expect(fightingStyle).toHaveAttribute('aria-expanded', 'false')
+    expect(fightingStyle).toHaveTextContent(/1 choice/i)
+    expect(fightingStyle).toHaveTextContent(/1st level/i)
+
+    await expandFeatureAccordion(user, /Fighting Style/i)
     expect(screen.getByRole('radio', { name: /Defense/i })).toBeInTheDocument()
 
-    const overviewColumn = getOverviewColumn()
+    const coreTraits = getFeatureAccordionButton(/Core Fighter Traits/i)
+    expect(coreTraits).toHaveTextContent(/2 choices/i)
+    await expandFeatureAccordion(user, /Core Fighter Traits/i)
+
+    const progressionColumn = getProgressionColumn()
     expect(
-      within(overviewColumn).getByRole('group', { name: /skill proficiencies/i }),
+      within(progressionColumn).getByRole('group', {
+        name: /choose two skill proficiencies/i,
+      }),
     ).toBeInTheDocument()
     expect(
-      within(overviewColumn).getByText(/choose 2 from:/i),
-    ).toBeInTheDocument()
-    expect(getProgressionColumn()).not.toHaveTextContent(
-      /choose two skill proficiencies/i,
-    )
-    expect(getSummaryStatus()).toHaveTextContent(
+      within(getOverviewColumn()).queryByRole('checkbox', { name: /Athletics/ }),
+    ).not.toBeInTheDocument()
+    expect(getOverviewColumn()).not.toHaveTextContent(
       /Complete required choices to confirm/i,
     )
+    expect(getOverviewColumn()).not.toHaveTextContent(/Current Choices/i)
+    expectFeatureIncomplete(/Fighting Style/i)
+    expectFeatureIncomplete(/^Weapon Mastery(?! \(Additional\))/i)
   })
 
   it('does not show choices after focus alone', async () => {
@@ -239,27 +307,25 @@ describe('ClassPicker', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('commits when fighting style and exactly two skills are chosen', async () => {
+  it('commits when fighting style, skills, and weapon mastery are chosen', async () => {
     const user = userEvent.setup()
     render(<ClassPickerHarness />)
     await waitForClassesLoaded()
 
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
-    await user.click(screen.getByRole('radio', { name: /Archery/i }))
-    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
-    await user.click(screen.getByRole('checkbox', { name: 'Survival' }))
+    await completeLevel1FighterChoices(user, {
+      fightingStyle: /Archery/i,
+      skills: ['Athletics', 'Survival'],
+    })
 
-    expect(screen.getByText('Selected: Archery')).toBeInTheDocument()
-    expect(
-      document.querySelector('.feature-choice-card__selection-description'),
-    ).toHaveTextContent(
-      /\+2 bonus to attack rolls you make with Ranged weapons/i,
-    )
-    expect(getSummaryStatus()).toHaveTextContent('Class selection complete')
-    expect(getSummaryStatus()).not.toHaveTextContent(
-      /Complete required choices to confirm/i,
-    )
+    expect(screen.getByRole('radio', { name: /Archery/i })).toBeChecked()
+    expectFeatureComplete(/Fighting Style/i)
+    expectFeatureComplete(/Core Fighter Traits/i)
+    expectFeatureComplete(/^Weapon Mastery(?! \(Additional\))/i)
+    expect(getOverviewColumn()).not.toHaveTextContent(/Current Choices/i)
+    expect(getOverviewColumn()).toHaveTextContent(/Fighter/i)
+    expect(screen.getByRole('spinbutton', { name: /^level$/i })).toHaveValue(1)
   })
 
   it('prevents selecting more than two skills and allows deselection', async () => {
@@ -269,16 +335,17 @@ describe('ClassPicker', () => {
 
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await expandFeatureAccordion(user, /Core Fighter Traits/i)
 
-    const overviewColumn = getOverviewColumn()
-    const athletics = within(overviewColumn).getByRole('checkbox', {
-      name: 'Athletics',
+    const progressionColumn = getProgressionColumn()
+    const athletics = within(progressionColumn).getByRole('checkbox', {
+      name: /Athletics/,
     })
-    const perception = within(overviewColumn).getByRole('checkbox', {
-      name: 'Perception',
+    const perception = within(progressionColumn).getByRole('checkbox', {
+      name: /Perception/,
     })
-    const history = within(overviewColumn).getByRole('checkbox', {
-      name: 'History',
+    const history = within(progressionColumn).getByRole('checkbox', {
+      name: /History/,
     })
 
     await user.click(athletics)
@@ -287,7 +354,8 @@ describe('ClassPicker', () => {
 
     await user.click(athletics)
     expect(history).not.toBeDisabled()
-    expect(within(overviewColumn).getByText(/selected 1 of 2/i)).toBeInTheDocument()
+    expect(athletics).not.toBeChecked()
+    expect(perception).toBeChecked()
   })
 
   it('returns to draft-only when a committed skill is deselected', async () => {
@@ -300,8 +368,7 @@ describe('ClassPicker', () => {
             classId: 'srd-2024:fighter',
             level: 1,
             choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
+              ...LEVEL_1_FIGHTER_CHOICES,
             },
           },
         ]}
@@ -311,15 +378,14 @@ describe('ClassPicker', () => {
     )
     await waitForClassesLoaded()
 
-    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
+    await expandFeatureAccordion(user, /Core Fighter Traits/i)
+    await user.click(screen.getByRole('checkbox', { name: /Athletics/ }))
 
-    expect(screen.getByText('Selected: Defense')).toBeInTheDocument()
-    expect(getSummaryStatus()).toHaveTextContent(
-      /Complete required choices to confirm/i,
-    )
+    expect(getOverviewColumn()).not.toHaveTextContent(/Current Choices/i)
+    expectFeatureIncomplete(/Core Fighter Traits/i)
   })
 
-  it('shows level 1 features including weapon mastery guidance', async () => {
+  it('shows feature accordions for level 1 including weapon mastery', async () => {
     const user = userEvent.setup()
     render(<ClassPickerHarness />)
     await waitForClassesLoaded()
@@ -327,45 +393,115 @@ describe('ClassPicker', () => {
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
-    expect(screen.getByText('Weapon Mastery')).toBeInTheDocument()
+    expect(getFeatureAccordionButton(/^Weapon Mastery(?! \(Additional\))/i)).toHaveTextContent(
+      /3 choices/i,
+    )
+    expectFeatureIncomplete(/^Weapon Mastery(?! \(Additional\))/i)
+    expect(getFeatureAccordionButton(/Second Wind/i)).toBeInTheDocument()
     expect(
       document.querySelector('.class-picker__feature-level-title'),
-    ).toHaveTextContent('Level 1')
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('heading', { name: 'Level 3', level: 5 }),
     ).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Second Wind/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Weapon Mastery/i })).not.toBeInTheDocument()
-    expect(screen.getByText(/equipment step/i)).toBeInTheDocument()
-    expect(screen.getByText(/three kinds of Simple or Martial weapons/i)).toBeInTheDocument()
+
+    await expandFeatureAccordion(user, /^Weapon Mastery(?! \(Additional\))/i)
+    expect(screen.queryByText(/equipment step/i)).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/three kinds of Simple or Martial weapons/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /Longsword \(Sap\)/ }),
+    ).toBeInTheDocument()
   })
 
-  it('shows level 3 features and requires martial archetype before commit', async () => {
+  it('hides already selected weapons from additional weapon mastery', async () => {
     const user = userEvent.setup()
     render(<ClassPickerHarness />)
     await waitForClassesLoaded()
 
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
-    await user.click(screen.getByRole('radio', { name: /Defense/i }))
-    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
-    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+    await completeLevel1FighterChoices(user)
+
+    const baseMastery = getFeatureAccordionButton(
+      /^Weapon Mastery(?! \(Additional\))/i,
+    )
+    if (baseMastery.getAttribute('aria-expanded') === 'true') {
+      await user.click(baseMastery)
+    }
+
+    await setClassLevel(4)
+
+    const additionalPanel = await expandFeatureAccordion(
+      user,
+      /Weapon Mastery \(Additional\)/i,
+    )
+    const panelId = additionalPanel.getAttribute('aria-controls')
+    expect(panelId).toBeTruthy()
+    const panel = document.getElementById(panelId!)
+    expect(panel).not.toBeNull()
+
+    expect(
+      within(panel as HTMLElement).queryByRole('checkbox', {
+        name: /^Longsword\b/,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(panel as HTMLElement).queryByRole('checkbox', {
+        name: /^Shortbow\b/,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(panel as HTMLElement).queryByRole('checkbox', {
+        name: /^Battleaxe\b/,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(panel as HTMLElement).getByRole('checkbox', {
+        name: /^Greatsword\b/,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows subclass features under Champion when selected', async () => {
+    const user = userEvent.setup()
+    render(<ClassPickerHarness />)
+    await waitForClassesLoaded()
+
+    await selectSingleClassMode(user)
+    await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await completeLevel1FighterChoices(user)
 
     await waitFor(() => {
-      expect(getSummaryStatus()).toHaveTextContent('Class selection complete')
+      expectFeatureComplete(/Fighting Style/i)
     })
 
     await setClassLevel(3)
 
-    expect(
-      screen.getByRole('heading', { name: 'Level 3', level: 5 }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /Fighter Subclass/i }),
-    ).toHaveAttribute('aria-expanded', 'true')
-    expect(getSummaryStatus()).toHaveTextContent(
-      /Complete required choices to confirm/i,
-    )
+    const subclassAccordion = getFeatureAccordionButton(/Fighter Subclass/i)
+    expect(subclassAccordion).toBeInTheDocument()
+    expect(subclassAccordion).toHaveAttribute('aria-expanded', 'false')
+    await expandFeatureAccordion(user, /Fighter Subclass/i)
+    expectFeatureIncomplete(/Fighter Subclass/i)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('radio', { name: /Champion/i }),
+      ).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('radio', { name: /Champion/i }))
+
+    await waitFor(() => {
+      expectFeatureComplete(/Fighter Subclass/i)
+      expect(screen.getByText('Improved Critical')).toBeInTheDocument()
+      expect(screen.getByText('Remarkable Athlete')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          /score a Critical Hit on a roll of 19 or 20 on the d20/i,
+        ),
+      ).toBeInTheDocument()
+    })
   })
 
   it('shows level 5 features after completing level 3 choices', async () => {
@@ -375,33 +511,31 @@ describe('ClassPicker', () => {
 
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
-    await user.click(screen.getByRole('radio', { name: /Defense/i }))
-    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
-    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+    await completeLevel1FighterChoices(user)
     await setClassLevel(3)
+    await expandFeatureAccordion(user, /Fighter Subclass/i)
     await waitFor(() => {
       expect(
         screen.getByRole('radio', { name: /Champion/i }),
       ).toBeInTheDocument()
     })
-    await user.click(
-      screen.getByRole('radio', { name: /Champion/i }),
-    )
+    await user.click(screen.getByRole('radio', { name: /Champion/i }))
 
     await waitFor(() => {
-      expect(getSummaryStatus()).toHaveTextContent('Class selection complete')
+      expectFeatureComplete(/Fighter Subclass/i)
     })
 
     await setClassLevel(5)
 
-    expect(screen.getByText('Extra Attack')).toBeInTheDocument()
+    expect(getFeatureAccordionButton(/Extra Attack/i)).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Level 5', level: 5 }),
-    ).toBeInTheDocument()
+      screen.queryByRole('heading', { name: 'Level 5', level: 5 }),
+    ).not.toBeInTheDocument()
     expect(document.querySelector('.class-picker__summary-subtitle')).toHaveTextContent(
-      'Level 5 · Champion',
+      'Champion',
     )
-    expect(getSummaryStatus()).toHaveTextContent('Class selection complete')
+    expect(screen.getByRole('spinbutton', { name: /^level$/i })).toHaveValue(5)
+    expectFeatureComplete(/Fighting Style/i)
   })
 
   it('preserves feature choice expansion state across level changes', async () => {
@@ -411,32 +545,33 @@ describe('ClassPicker', () => {
 
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await expandFeatureAccordion(user, /Fighting Style/i)
     await user.click(screen.getByRole('radio', { name: /Defense/i }))
-    await user.click(screen.getByRole('button', { name: /Fighting Style/i }))
 
     expect(
-      screen.getByRole('button', { name: /Fighting Style/i }),
+      getFeatureAccordionButton(/Fighting Style/i),
     ).toHaveAttribute('aria-expanded', 'true')
 
     await setClassLevel(3)
 
     expect(
-      screen.getByRole('button', { name: /Fighting Style/i }),
+      getFeatureAccordionButton(/Fighting Style/i),
     ).toHaveAttribute('aria-expanded', 'true')
     expect(
-      screen.getByRole('button', { name: /Fighter Subclass/i }),
-    ).toHaveAttribute('aria-expanded', 'true')
+      getFeatureAccordionButton(/Fighter Subclass/i),
+    ).toHaveAttribute('aria-expanded', 'false')
 
+    await expandFeatureAccordion(user, /Fighter Subclass/i)
     await user.click(
       screen.getByRole('radio', { name: /Champion/i }),
     )
     await setClassLevel(1)
 
     expect(
-      screen.queryByRole('button', { name: /Fighter Subclass/i }),
+      screen.queryByRole('button', { name: /Fighter Subclass|Champion/i }),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Fighting Style/i }),
+      getFeatureAccordionButton(/Fighting Style/i),
     ).toHaveAttribute('aria-expanded', 'true')
   })
 
@@ -451,7 +586,7 @@ describe('ClassPicker', () => {
 
     expect(screen.getByRole('button', { name: 'Fighter' })).toBeInTheDocument()
     expect(
-      screen.queryByRole('heading', { name: 'Class Progression', level: 3 }),
+      screen.queryByRole('heading', { name: 'Class Features', level: 3 }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('radio', { name: /single class/i }),
@@ -466,18 +601,16 @@ describe('ClassPicker', () => {
       screen.getByRole('heading', { name: 'Class Overview', level: 3 }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Class Progression', level: 3 }),
+      screen.getByRole('heading', { name: 'Class Features', level: 3 }),
     ).toBeInTheDocument()
     expect(screen.getByText('Fighter', { selector: '.class-picker__overview-class-name' })).toBeInTheDocument()
-    expect(document.querySelector('.class-picker__summary-subtitle')).toHaveTextContent(
-      'Level 1',
-    )
+    expect(screen.getByRole('spinbutton', { name: /^level$/i })).toHaveValue(1)
     expect(
-      within(overviewColumn).getByRole('checkbox', { name: 'Athletics' }),
-    ).toBeInTheDocument()
-    expect(
-      within(progressionColumn).queryByRole('checkbox', { name: 'Athletics' }),
+      within(overviewColumn).queryByRole('checkbox', { name: /Athletics/ }),
     ).not.toBeInTheDocument()
+    expect(
+      within(progressionColumn).getByRole('button', { name: /Core Fighter Traits/i }),
+    ).toBeInTheDocument()
     expect(
       overviewColumn.querySelectorAll('.class-picker__overview-chip').length,
     ).toBeGreaterThan(0)
@@ -521,8 +654,7 @@ describe('ClassPicker', () => {
             classId: 'srd-2024:fighter',
             level: 1,
             choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
+              ...LEVEL_1_FIGHTER_CHOICES,
             },
           },
           {
@@ -608,8 +740,7 @@ describe('ClassPicker', () => {
             classId: 'srd-2024:fighter',
             level: 3,
             choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
+              ...LEVEL_1_FIGHTER_CHOICES,
             },
           },
           {
@@ -646,8 +777,7 @@ describe('ClassPicker', () => {
             classId: 'srd-2024:fighter',
             level: 3,
             choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
+              ...LEVEL_1_FIGHTER_CHOICES,
             },
           },
         ]}
@@ -710,9 +840,11 @@ describe('ClassPicker', () => {
 
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
+    await expandFeatureAccordion(user, /Fighting Style/i)
     await user.click(screen.getByRole('radio', { name: /Defense/i }))
-    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
-    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+    await expandFeatureAccordion(user, /Core Fighter Traits/i)
+    await user.click(screen.getByRole('checkbox', { name: /Athletics/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Perception/ }))
 
     await user.click(screen.getByRole('button', { name: /^change$/i }))
     await selectMulticlassMode(user)
@@ -734,8 +866,7 @@ describe('ClassPicker', () => {
             classId: 'srd-2024:fighter',
             level: 1,
             choices: {
-              'fighting-style': 'defense',
-              'skill-proficiencies': ['athletics', 'perception'],
+              ...LEVEL_1_FIGHTER_CHOICES,
             },
           },
           {

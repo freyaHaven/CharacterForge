@@ -9,10 +9,12 @@ describe('buildCharacterContextDisplay', () => {
   it('formats identity and build lines for a complete single-class selection', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Elara',
+      speciesId: 'srd-2024:human',
       speciesName: 'Human',
       targetLevel: 1,
       classEntries: [
         {
+          classId: 'srd-2024:fighter',
           className: 'Fighter',
           level: 1,
           subclassLabel: 'Champion',
@@ -22,8 +24,10 @@ describe('buildCharacterContextDisplay', () => {
       activeStepId: 'class',
     })
 
+    expect(display.speciesId).toBe('srd-2024:human')
     expect(display.identityLine).toBe('Elara · Human')
     expect(display.buildLine).toBe('Fighter 1 · Champion')
+    expect(display.classEntries[0]?.classId).toBe('srd-2024:fighter')
     expect(display.guidanceLine).toBe(
       'Primary abilities: Strength, Dexterity',
     )
@@ -32,6 +36,7 @@ describe('buildCharacterContextDisplay', () => {
   it('omits class and guidance lines when no class is selected', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Elara',
+      speciesId: 'srd-2024:human',
       speciesName: 'Human',
       targetLevel: 1,
       classEntries: [],
@@ -47,6 +52,7 @@ describe('buildCharacterContextDisplay', () => {
   it('shows only the character name when species is not selected yet', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Freya',
+      speciesId: null,
       speciesName: null,
       targetLevel: 1,
       classEntries: [],
@@ -62,6 +68,7 @@ describe('buildCharacterContextDisplay', () => {
   it('returns no lines when nothing has been entered yet', () => {
     const display = buildCharacterContextDisplay({
       characterName: '   ',
+      speciesId: null,
       speciesName: null,
       targetLevel: 1,
       classEntries: [],
@@ -78,10 +85,12 @@ describe('buildCharacterContextDisplay', () => {
   it('omits subclass when none is selected', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Elara',
+      speciesId: 'srd-2024:human',
       speciesName: 'Human',
       targetLevel: 1,
       classEntries: [
         {
+          classId: 'srd-2024:fighter',
           className: 'Fighter',
           level: 1,
           subclassLabel: null,
@@ -97,11 +106,22 @@ describe('buildCharacterContextDisplay', () => {
   it('formats multiclass allocations on separate lines', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Elara',
+      speciesId: 'srd-2024:human',
       speciesName: 'Human',
       targetLevel: 5,
       classEntries: [
-        { className: 'Fighter', level: 3, subclassLabel: 'Champion' },
-        { className: 'Rogue', level: 2, subclassLabel: null },
+        {
+          classId: 'srd-2024:fighter',
+          className: 'Fighter',
+          level: 3,
+          subclassLabel: 'Champion',
+        },
+        {
+          classId: 'srd-2024:rogue',
+          className: 'Rogue',
+          level: 2,
+          subclassLabel: null,
+        },
       ],
       primaryAbilities: ['strength', 'dexterity'],
       activeStepId: 'review',
@@ -118,10 +138,12 @@ describe('buildCharacterContextDisplay', () => {
   it('uses prioritise wording on the ability scores step', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Elara',
+      speciesId: 'srd-2024:human',
       speciesName: 'Human',
       targetLevel: 1,
       classEntries: [
         {
+          classId: 'srd-2024:fighter',
           className: 'Fighter',
           level: 1,
           subclassLabel: null,
@@ -139,9 +161,17 @@ describe('buildCharacterContextDisplay', () => {
   it('uses singular prioritise wording for one primary ability', () => {
     const display = buildCharacterContextDisplay({
       characterName: 'Elara',
+      speciesId: 'srd-2024:human',
       speciesName: 'Human',
       targetLevel: 1,
-      classEntries: [{ className: 'Wizard', level: 1, subclassLabel: null }],
+      classEntries: [
+        {
+          classId: 'srd-2024:wizard',
+          className: 'Wizard',
+          level: 1,
+          subclassLabel: null,
+        },
+      ],
       primaryAbilities: ['intelligence'],
       activeStepId: 'ability-scores',
     })

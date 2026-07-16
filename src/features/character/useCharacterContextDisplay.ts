@@ -26,6 +26,7 @@ function createFallbackDisplay(
 ): CharacterContextDisplay {
   const fallbackInput: CharacterContextDisplayInput = {
     characterName: input.character.name,
+    speciesId: null,
     speciesName: null,
     targetLevel: input.character.targetLevel,
     classEntries: [],

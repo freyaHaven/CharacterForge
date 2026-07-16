@@ -9,7 +9,7 @@ export function AbilityScoresStep(props: AbilityScoresStepProps) {
       aria-labelledby="wizard-step-ability-scores-heading"
       className="wizard-step-panel"
     >
-      <h2 id="wizard-step-ability-scores-heading">Ability Scores</h2>
+      <h2 id="wizard-step-ability-scores-heading">Abilities</h2>
       <AbilityScoresForm {...props} />
     </section>
   )

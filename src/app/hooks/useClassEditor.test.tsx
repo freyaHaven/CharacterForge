@@ -31,8 +31,9 @@ function useClassEditorWithReview(character: Character) {
   const classReviewDisplay = useReviewClassDisplay(
     classCatalog,
     currentCharacter.editionId,
-    classEditor.committedSelection,
-    classEditor.classDraft,
+    currentCharacter.classes,
+    classEditor.classDrafts,
+    currentCharacter.targetLevel,
   )
 
   return { classEditor, classReviewDisplay }
@@ -77,8 +78,9 @@ describe('useClassEditor', () => {
       useReviewClassDisplay(
         classCatalog,
         character.editionId,
-        classEditor.committedSelection,
-        classEditor.classDraft,
+        character.classes,
+        classEditor.classDrafts,
+        character.targetLevel,
       )
     })
 

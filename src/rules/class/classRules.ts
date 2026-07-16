@@ -5,7 +5,19 @@ import type {
   ClassDefinition,
   ClassSelection,
 } from '../../domain/class/types'
+import {
+  collectAsiFeatIds,
+  isAbilityScoreImprovementChoiceId,
+  validateAsiEncodedValue,
+  type AsiFeatValidationContext,
+} from '../../domain/class/abilityScoreImprovement'
+import { withLevelAdjustedChoiceLimits } from '../../domain/class/weaponMastery'
+import {
+  collectWeaponMasterySelections,
+  isWeaponMasteryChoiceId,
+} from '../../domain/class/weaponMastery'
 import type { EditionId } from '../../domain/types'
+import type { FeatDefinition } from '../../domain/feat/types'
 
 export type ClassValidationIssueCode =
   | 'class-not-found'
@@ -41,10 +53,55 @@ export type ClassInstanceValidationResult =
   | { ok: true }
   | { ok: false; errors: ClassInstanceValidationError[] }
 
+export type ClassValidationOptions = {
+  featById?: ReadonlyMap<string, FeatDefinition>
+  /** Character-level feat id, if any (not written by ASI). */
+  characterFeatId?: string | null
+}
+
 function validateChoiceValue(
   choice: ClassChoice,
   value: ClassChoiceValue | undefined,
+  allChoices: Record<string, ClassChoiceValue>,
+  options?: ClassValidationOptions,
 ): ClassValidationIssue[] {
+  if (isAbilityScoreImprovementChoiceId(choice.id)) {
+    if (value === undefined) {
+      return choice.required
+        ? [{ code: 'missing-required-choice', choiceId: choice.id }]
+        : []
+    }
+
+    if (typeof value !== 'string') {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const takenFeatIds = [
+      ...collectAsiFeatIds(allChoices, choice.id),
+      ...(options?.characterFeatId ? [options.characterFeatId] : []),
+    ]
+
+    const featContext: AsiFeatValidationContext | undefined =
+      options?.featById !== undefined
+        ? {
+            featById: options.featById,
+            takenFeatIds,
+          }
+        : undefined
+
+    const result = validateAsiEncodedValue(value, featContext)
+
+    if (result.ok) {
+      return []
+    }
+
+    if (result.reason === 'incomplete' || result.reason === 'missing') {
+      return [{ code: 'missing-required-choice', choiceId: choice.id }]
+    }
+
+    return [{ code: 'invalid-choice', choiceId: choice.id }]
+  }
+
   if (value === undefined) {
     if (choice.required) {
       return [{ code: 'missing-required-choice', choiceId: choice.id }]
@@ -97,12 +154,24 @@ function formatValidationMessage(issue: ClassValidationIssue): string {
       if (issue.choiceId === 'skill-proficiencies') {
         return 'Choose two skill proficiencies.'
       }
+      if (isWeaponMasteryChoiceId(issue.choiceId ?? '')) {
+        return 'Choose your Weapon Masteries.'
+      }
+      if (isAbilityScoreImprovementChoiceId(issue.choiceId ?? '')) {
+        return 'Complete your Ability Score Improvement.'
+      }
       return `Choose an option for ${issue.choiceId ?? 'a required class choice'}.`
     case 'invalid-choice':
+      if (isAbilityScoreImprovementChoiceId(issue.choiceId ?? '')) {
+        return 'The Ability Score Improvement selection is invalid.'
+      }
       return `The selected option for ${issue.choiceId ?? 'a class choice'} is invalid.`
     case 'invalid-multi-select-count':
       if (issue.choiceId === 'skill-proficiencies') {
         return 'Choose exactly two skill proficiencies.'
+      }
+      if (isWeaponMasteryChoiceId(issue.choiceId ?? '')) {
+        return 'Choose the required number of Weapon Masteries.'
       }
       return `Choose the required number of options for ${issue.choiceId ?? 'a class choice'}.`
     case 'unknown-choice':
@@ -135,6 +204,7 @@ export function validateClassInstance(
   instance: CharacterClassSelection,
   editionId: EditionId,
   definition: ClassDefinition | null,
+  options?: ClassValidationOptions,
 ): ClassInstanceValidationResult {
   if (definition === null) {
     return {
@@ -162,17 +232,57 @@ export function validateClassInstance(
   }
 
   const issues: ClassValidationIssue[] = []
-  const availableChoices = definition.choices.filter(
-    (choice) => choice.level <= instance.level,
-  )
+  const availableChoices = definition.choices
+    .filter((choice) => choice.level <= instance.level)
+    .map((choice) => withLevelAdjustedChoiceLimits(choice, instance.level))
   const availableChoiceIds = new Set(
     availableChoices.map((choice) => choice.id),
   )
 
   for (const choice of availableChoices) {
     issues.push(
-      ...validateChoiceValue(choice, instance.choices[choice.id]),
+      ...validateChoiceValue(
+        choice,
+        instance.choices[choice.id],
+        instance.choices,
+        options,
+      ),
     )
+  }
+
+  const masterySelections = collectWeaponMasterySelections(instance.choices)
+  if (new Set(masterySelections).size !== masterySelections.length) {
+    const firstDuplicateChoice = availableChoices.find(
+      (choice) =>
+        isWeaponMasteryChoiceId(choice.id) &&
+        Array.isArray(instance.choices[choice.id]) &&
+        (instance.choices[choice.id] as string[]).some(
+          (weaponId, index, all) => all.indexOf(weaponId) !== index,
+        ),
+    )
+
+    // Prefer flagging a cross-choice duplicate on an additional mastery row.
+    const conflictingChoice =
+      availableChoices.find((choice) => {
+        if (!isWeaponMasteryChoiceId(choice.id) || choice.id === 'weapon-mastery') {
+          return false
+        }
+
+        const value = instance.choices[choice.id]
+        if (!Array.isArray(value)) {
+          return false
+        }
+
+        const others = collectWeaponMasterySelections(
+          instance.choices,
+          choice.id,
+        )
+        return value.some((weaponId) => others.includes(weaponId))
+      }) ?? firstDuplicateChoice
+
+    if (conflictingChoice !== undefined) {
+      issues.push({ code: 'invalid-choice', choiceId: conflictingChoice.id })
+    }
   }
 
   for (const choiceId of Object.keys(instance.choices)) {
@@ -192,6 +302,7 @@ export function validateClassSelection(
   selection: ClassSelection,
   editionId: EditionId,
   definition: ClassDefinition | null,
+  options?: ClassValidationOptions,
 ): ClassValidationResult {
   const instance: CharacterClassSelection = {
     instanceId: '__legacy__',
@@ -199,7 +310,7 @@ export function validateClassSelection(
     level: selection.level,
     choices: selection.choices,
   }
-  const result = validateClassInstance(instance, editionId, definition)
+  const result = validateClassInstance(instance, editionId, definition, options)
 
   if (result.ok) {
     return { ok: true }

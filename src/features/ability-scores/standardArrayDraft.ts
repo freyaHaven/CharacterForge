@@ -108,6 +108,12 @@ export function isStandardArrayDraftComplete(
   return ABILITY_KEYS.every((ability) => draft[ability] !== null)
 }
 
+export function hasStandardArrayAssignments(
+  draft: StandardArrayDraftScores,
+): boolean {
+  return ABILITY_KEYS.some((ability) => draft[ability] !== null)
+}
+
 export function validateStandardArrayDraft(
   draft: StandardArrayDraftScores,
 ): StandardArrayDraftValidationResult {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -246,8 +246,6 @@ describe('Background workflow', () => {
       expectSelectedBackground('Soldier')
     })
 
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
-
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -268,13 +266,20 @@ describe('Background workflow', () => {
       }),
     )
 
-    await goToWizardStep(user, screen, 'Review')
+    await goToWizardStep(user, screen, 'Overview')
 
-    expect(screen.getByText('Background: Soldier')).toBeInTheDocument()
-    expect(screen.getByText(/Ability Score Bonuses:/i)).toBeInTheDocument()
-    expect(screen.getByText(/Strength \+2/i)).toBeInTheDocument()
-    expect(screen.getByText(/Equipment:/i)).toBeInTheDocument()
-    expect(screen.getByText(/Spear, Shortbow/i)).toBeInTheDocument()
+    const backgroundGroup = screen
+      .getByRole('heading', { name: 'Background · Soldier', level: 4 })
+      .closest('.character-sheet__feature-group') as HTMLElement
+    expect(within(backgroundGroup).getByText(/Ability Scores/i)).toBeInTheDocument()
+    expect(within(backgroundGroup).getByText(/Strength \+2/i)).toBeInTheDocument()
+    expect(within(backgroundGroup).getByText('Athletics, Intimidation')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Feats · Savage Attacker', level: 4 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/roll the weapon’s damage dice twice/i),
+    ).toBeInTheDocument()
   })
 
   it('prompts to clear background when changing edition', async () => {

@@ -11,16 +11,14 @@ describe('formatCharacterDetailsReviewSections', () => {
       ...createDefaultCharacterDetails(),
       age: '27',
       gender: 'female',
+      pronouns: 'she-her',
       alignment: 'chaotic-good',
       flaws: 'Hot-headed',
       backstoryNotes: 'Left home at sixteen.',
     })
 
-    expect(sections.identity).toEqual(['Age: 27', 'Gender: Female'])
-    expect(sections.personality).toEqual([
-      'Alignment: Chaotic Good',
-      'Flaws: Hot-headed',
-    ])
+    expect(sections.identity).toEqual(['Gender: Female'])
+    expect(sections.personality).toEqual(['Flaws: Hot-headed'])
     expect(sections.backstoryNotes).toBe('Left home at sixteen.')
     expect(hasCharacterDetailsReviewContent(sections)).toBe(true)
   })

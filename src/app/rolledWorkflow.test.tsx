@@ -7,7 +7,7 @@ import App from './App'
 import {
   getAbilityFieldNumberInput,
   getAbilityFieldSelect,
-  getCreationMethodSelect,
+  selectCreationMethod,
 } from '../test/abilityScoreTestUtils'
 import { goToAbilityScoresStep } from '../test/wizardTestUtils'
 import {
@@ -41,20 +41,17 @@ async function renderLoadedApp(randomSource = createSeededRandomSource(5)) {
 }
 
 async function switchToRolled(user: ReturnType<typeof userEvent.setup>) {
-  await user.selectOptions(getCreationMethodSelect(screen), 'rolled')
+  await selectCreationMethod(user, screen, 'rolled')
 }
 
-async function useManualRolls(
-  user: ReturnType<typeof userEvent.setup>,
-  totals: number[],
-) {
-  for (const [index, total] of totals.entries()) {
-    const input = screen.getByRole('spinbutton', { name: `Result ${index + 1}` })
-    await user.clear(input)
-    await user.type(input, String(total))
-  }
+async function rollPoolAndSkip(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /roll dice/i }))
+  await user.click(screen.getByRole('button', { name: /skip all animations/i }))
 
-  await user.click(screen.getByRole('button', { name: /use these rolls/i }))
+  await waitFor(() => {
+    expect(screen.getByText(/Rolled results/i)).toBeInTheDocument()
+    expect(getAbilityFieldSelect(screen, 'Strength')).not.toBeDisabled()
+  })
 }
 
 async function assignDefaultRolledPool(user: ReturnType<typeof userEvent.setup>) {
@@ -82,17 +79,26 @@ describe('Rolled workflow in App', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('disables save until a rolled pool exists and all six results are assigned', async () => {
+  it('does not autosave until a rolled pool exists and all six results are assigned', async () => {
     const { user } = await renderLoadedApp()
     await switchToRolled(user)
 
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
+    expect(
+      screen.queryByRole('button', { name: /save draft/i }),
+    ).not.toBeInTheDocument()
+    expect(getAbilityFieldSelect(screen, 'Strength')).toBeDisabled()
 
-    await useManualRolls(user, [15, 14, 13, 12, 10, 8])
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
+    await rollPoolAndSkip(user)
+    const callsAfterRoll = saveMock.mock.calls.length
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 400)
+    })
+    expect(saveMock.mock.calls.length).toBe(callsAfterRoll)
 
     await assignDefaultRolledPool(user)
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
+    await waitFor(() => {
+      expect(saveMock.mock.calls.length).toBeGreaterThan(callsAfterRoll)
+    })
   })
 
   it('does not overwrite numeric scores when switching to rolled before completion', async () => {
@@ -101,59 +107,56 @@ describe('Rolled workflow in App', () => {
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
 
     await switchToRolled(user)
-    await useManualRolls(user, [15, 14, 13, 12, 10, 8])
+    await rollPoolAndSkip(user)
     await user.selectOptions(getAbilityFieldSelect(screen, 'Strength'), 'rolled-0')
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
 
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
     expect(getAbilityFieldNumberInput(screen, 'Dexterity')).toHaveValue(10)
   })
 
-  it('shows manual results clearly in the pool preview', async () => {
+  it('shows generated results in the pool preview', async () => {
     const { user } = await renderLoadedApp()
     await switchToRolled(user)
 
-    await useManualRolls(user, [15, 14, 13, 12, 10, 8])
+    await rollPoolAndSkip(user)
 
     expect(screen.getByText('Rolled results')).toBeInTheDocument()
     const poolPreview = screen.getByText('Rolled results').closest('.rolled-pool-preview')
-    expect(poolPreview).toHaveTextContent('Manual result: 15')
-    expect(poolPreview).toHaveTextContent('Manual result: 8')
+    expect(poolPreview).toHaveTextContent(/total 14/i)
+    expect(poolPreview).toHaveTextContent(/total 9/i)
   })
 
   it('saves numeric scores from a completed rolled assignment', async () => {
     const { user } = await renderLoadedApp()
     await switchToRolled(user)
 
-    await useManualRolls(user, [15, 14, 13, 12, 10, 8])
+    await rollPoolAndSkip(user)
     await assignDefaultRolledPool(user)
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
-      expect(saveMock).toHaveBeenCalledTimes(1)
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          creationMethod: 'rolled',
+          abilityScores: {
+            strength: 14,
+            dexterity: 12,
+            constitution: 16,
+            intelligence: 9,
+            wisdom: 16,
+            charisma: 9,
+          },
+        }),
+      )
     })
-
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        creationMethod: 'rolled',
-        abilityScores: {
-          strength: 15,
-          dexterity: 14,
-          constitution: 13,
-          intelligence: 12,
-          wisdom: 10,
-          charisma: 8,
-        },
-      }),
-    )
   })
 
   it('clears assignments with the em dash option', async () => {
     const { user } = await renderLoadedApp()
     await switchToRolled(user)
 
-    await useManualRolls(user, [15, 14, 13, 12, 10, 8])
+    await rollPoolAndSkip(user)
     await user.selectOptions(getAbilityFieldSelect(screen, 'Strength'), 'rolled-0')
     await user.selectOptions(
       getAbilityFieldSelect(screen, 'Strength'),
@@ -163,7 +166,12 @@ describe('Rolled workflow in App', () => {
     expect(getAbilityFieldSelect(screen, 'Strength')).toHaveDisplayValue(
       ROLLED_UNASSIGNED_LABEL,
     )
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
+
+    const callsBefore = saveMock.mock.calls.length
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 400)
+    })
+    expect(saveMock.mock.calls.length).toBe(callsBefore)
   })
 
   it('generates all six rolls before playback and can skip all animations', async () => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { Character } from '../../domain/types'
 import type {
   CharacterClassSelection,
@@ -46,6 +47,7 @@ type UseClassEditorOptions = {
   character: Character
   setCharacter: Dispatch<SetStateAction<Character>>
   classCatalog: ClassCatalog
+  featCatalog?: FeatCatalog
   onDraftChange?: () => void
 }
 
@@ -86,6 +88,7 @@ export function useClassEditor({
   character,
   setCharacter,
   classCatalog,
+  featCatalog,
   onDraftChange,
 }: UseClassEditorOptions) {
   const [classDrafts, setClassDrafts] = useState<ClassSelectionDrafts>(
@@ -204,6 +207,8 @@ export function useClassEditor({
     character.editionId,
     committedSelection,
     classDraft,
+    featCatalog,
+    character.feat?.featId ?? null,
   )
 
   const classDraftIncomplete = isAnyClassDraftIncomplete(
@@ -306,10 +311,20 @@ export function useClassEditor({
       }
 
       const definition = await classCatalog.getClass(draft.classId)
+      const feats =
+        featCatalog !== undefined
+          ? await featCatalog.listFeats(character.editionId)
+          : []
       const { committed } = tryCommitClassInstanceDraft(
         draft,
         character.editionId,
         definition,
+        featCatalog === undefined
+          ? undefined
+          : {
+              featById: new Map(feats.map((feat) => [feat.id, feat])),
+              characterFeatId: character.feat?.featId ?? null,
+            },
       )
 
       if (committed !== null) {
@@ -319,9 +334,11 @@ export function useClassEditor({
     [
       character.classes,
       character.editionId,
+      character.feat?.featId,
       classCatalog,
       classDrafts,
       commitClassInstance,
+      featCatalog,
     ],
   )
 

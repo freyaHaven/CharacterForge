@@ -9,6 +9,7 @@ const completeFighterSelection: ClassSelection = {
   choices: {
     'fighting-style': 'great-weapon-fighting',
     'skill-proficiencies': ['athletics', 'intimidation'],
+    'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
   },
 }
 

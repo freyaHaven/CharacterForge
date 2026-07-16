@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { EditionId } from '../../domain/types'
 import type {
   CharacterClassSelection,
@@ -59,6 +60,8 @@ type ClassPickerProps = {
   activeInstanceId: string | null
   draft: ClassSelectionDraft | null
   catalog: ClassCatalog
+  featCatalog: FeatCatalog
+  characterFeatId?: string | null
   onBuildModeChange: (mode: ClassBuildMode) => void
   onReturnToClassPathIntro: () => void
   onSwitchToMulticlass: () => void
@@ -106,6 +109,8 @@ export function ClassPicker({
   activeInstanceId,
   draft,
   catalog,
+  featCatalog,
+  characterFeatId = null,
   onBuildModeChange,
   onReturnToClassPathIntro,
   onSwitchToMulticlass,
@@ -516,6 +521,8 @@ export function ClassPicker({
                       maxInstanceLevel={maxInstanceLevel}
                       draft={draft}
                       committedSelection={committedSelection}
+                      featCatalog={featCatalog}
+                      characterFeatId={characterFeatId}
                       onLevelChange={(level) => {
                         void handleLevelChange(level)
                       }}
@@ -626,6 +633,8 @@ export function ClassPicker({
                           maxInstanceLevel={MAX_CLASS_LEVEL}
                           draft={draft}
                           committedSelection={committedSelection}
+                          featCatalog={featCatalog}
+                          characterFeatId={characterFeatId}
                           onLevelChange={(level) => {
                             void handleLevelChange(level)
                           }}

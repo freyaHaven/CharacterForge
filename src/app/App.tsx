@@ -15,7 +15,6 @@ import { LandingPage } from './LandingPage'
 import { useCharacterEditor } from './hooks/useCharacterEditor'
 import {
   activateEditorSession,
-  clearEditorSession,
   isEditorSessionActive,
 } from './session/editorSession'
 import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
@@ -30,6 +29,8 @@ import { ReviewStep } from './wizard/steps/ReviewStep'
 import { SpeciesStep } from './wizard/steps/SpeciesStep'
 import { CharacterWizard } from './wizard/CharacterWizard'
 import { WizardEditorActions } from './wizard/WizardEditorActions'
+import { getAlignmentLabel } from '../domain/character/alignment'
+import { getPronounLabel } from '../domain/character/pronouns'
 import './app.css'
 
 const repository = createLocalStorageCharacterRepository()
@@ -91,12 +92,6 @@ export default function App({ randomSource = Math.random }: AppProps) {
     [editor],
   )
 
-  const handleGoHome = useCallback(() => {
-    setImportError(null)
-    clearEditorSession()
-    setAppView('landing')
-  }, [])
-
   if (editor.isLoading) {
     return <p className="status">Loading character...</p>
   }
@@ -114,8 +109,21 @@ export default function App({ randomSource = Math.random }: AppProps) {
   return (
     <main className="app">
       <header className="app-brand">
-        <h1>CharacterForge</h1>
-        <p className="app-brand__tagline">A modern D&amp;D character creator.</p>
+        <div className="app-brand__identity">
+          <h1>CharacterForge</h1>
+          <p className="app-brand__tagline">A modern D&amp;D character creator.</p>
+        </div>
+        {appView === 'editor' ? (
+          <div className="app-brand__actions">
+            <WizardEditorActions
+              importError={importError}
+              onImportFile={(file) => {
+                void handleImportFile(file)
+              }}
+              onExportCharacter={editor.handleExportCharacter}
+            />
+          </div>
+        ) : null}
       </header>
 
       {appView === 'landing' ? (
@@ -135,7 +143,6 @@ export default function App({ randomSource = Math.random }: AppProps) {
             stepContext={editor.wizardStepContext}
             stepStatuses={editor.stepStatuses}
             onStepChange={editor.setActiveStepId}
-            onGoHome={handleGoHome}
             characterContext={
               <CharacterContextSummary
                 character={character}
@@ -144,17 +151,6 @@ export default function App({ randomSource = Math.random }: AppProps) {
                 classCatalog={editor.classCatalog}
                 speciesDraft={species.speciesDraft}
                 classDrafts={classEditor.classDrafts}
-              />
-            }
-            editorActions={
-              <WizardEditorActions
-                canSave={editor.canSaveCharacterState}
-                saveMessage={editor.saveMessage}
-                saveBlockedMessage={editor.saveBlockedMessage}
-                onSaveDraft={() => {
-                  void editor.handleSaveDraft()
-                }}
-                onExportCharacter={editor.handleExportCharacter}
               />
             }
             stepContent={{
@@ -220,6 +216,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   activeInstanceId={classEditor.activeInstanceId}
                   draft={classEditor.classDraft}
                   catalog={editor.classCatalog}
+                  featCatalog={featCatalog}
+                  characterFeatId={character.feat?.featId ?? null}
                   onBuildModeChange={classEditor.setBuildMode}
                   onReturnToClassPathIntro={classEditor.returnToClassPathIntro}
                   onSwitchToMulticlass={classEditor.switchToMulticlass}
@@ -270,13 +268,24 @@ export default function App({ randomSource = Math.random }: AppProps) {
                     character.species?.speciesId ??
                     null
                   }
-                  classId={
-                    classEditor.classDraft?.classId ??
-                    classEditor.committedSelection?.classId ??
-                    null
-                  }
                   speciesDisplay={editor.speciesReviewDisplay}
                   classDisplay={editor.classReviewDisplay}
+                  sheetModels={editor.reviewSheetModels}
+                  pronounsLabel={
+                    character.details.pronouns !== null
+                      ? getPronounLabel(character.details.pronouns)
+                      : null
+                  }
+                  age={
+                    character.details.age.trim().length > 0
+                      ? character.details.age.trim()
+                      : null
+                  }
+                  alignmentLabel={
+                    character.details.alignment !== null
+                      ? getAlignmentLabel(character.details.alignment)
+                      : null
+                  }
                   hasSpellcastingCapability={
                     editor.spellcastingReview.hasSpellcastingCapability
                   }

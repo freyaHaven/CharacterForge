@@ -4,6 +4,7 @@ import type {
   ClassDefinition,
   ClassSelection,
 } from '../../domain/class/types'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import { validateClassSelection } from '../../rules/class/classRules'
 import { ClassOverviewPanel } from './ClassOverviewPanel'
 import { ClassProgressionSection } from './ClassProgressionSection'
@@ -19,6 +20,8 @@ export type SingleClassConfiguratorProps = {
   maxInstanceLevel: number
   draft: ClassSelectionDraft | null
   committedSelection: ClassSelection | null
+  featCatalog: FeatCatalog
+  characterFeatId?: string | null
   onLevelChange: (level: number) => void
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
 }
@@ -33,6 +36,8 @@ export function SingleClassConfigurator({
   maxInstanceLevel,
   draft,
   committedSelection,
+  featCatalog,
+  characterFeatId = null,
   onLevelChange,
   onChoiceChange,
 }: SingleClassConfiguratorProps) {
@@ -60,7 +65,6 @@ export function SingleClassConfigurator({
         draft={draft}
         draftValidation={draftValidation}
         onLevelChange={onLevelChange}
-        onChoiceChange={onChoiceChange}
       />
       <ClassProgressionSection
         editionId={editionId}
@@ -70,6 +74,8 @@ export function SingleClassConfigurator({
         activeLevel={activeLevel}
         activeChoices={activeChoices}
         draft={draft}
+        featCatalog={featCatalog}
+        characterFeatId={characterFeatId}
         onChoiceChange={onChoiceChange}
       />
     </div>

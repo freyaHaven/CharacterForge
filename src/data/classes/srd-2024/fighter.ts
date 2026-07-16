@@ -1,6 +1,12 @@
 import type { ClassDefinition } from '../../../domain/class/types'
+import { createAsiChoiceDefinition } from '../../../domain/class/abilityScoreImprovement'
 import type { SkillId } from '../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../domain/skills/types'
+import { WEAPON_IDS } from '../../../domain/weapons/types'
+import {
+  formatWeaponMasteryDescription,
+  formatWeaponMasteryOptionLabel,
+} from '../../../domain/weapons/mastery'
 import { SRD_2024_SOURCE } from './source'
 
 const FIGHTER_SKILL_OPTIONS = [
@@ -14,6 +20,12 @@ const FIGHTER_SKILL_OPTIONS = [
   'persuasion',
   'survival',
 ] as const satisfies readonly SkillId[]
+
+const WEAPON_MASTERY_OPTIONS = WEAPON_IDS.map((weaponId) => ({
+  id: weaponId,
+  label: formatWeaponMasteryOptionLabel(weaponId),
+  description: formatWeaponMasteryDescription(weaponId),
+}))
 
 export const fighterSrd2024: ClassDefinition = {
   id: 'srd-2024:fighter',
@@ -51,7 +63,7 @@ export const fighterSrd2024: ClassDefinition = {
           id: 'weapon-mastery',
           name: 'Weapon Mastery',
           description:
-            'Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Choose your mastered weapons on the Equipment step. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices. When you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown on the Fighter Features table.',
+            'Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices. When you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown on the Fighter Features table.',
         },
       ],
     },
@@ -100,9 +112,9 @@ export const fighterSrd2024: ClassDefinition = {
         },
         {
           id: 'weapon-mastery-weapons-4',
-          name: 'Weapon Mastery Improvement',
+          name: 'Weapon Mastery (Additional)',
           description:
-            'You can use the mastery properties of four kinds of Simple or Martial weapons of your choice. Choose your mastered weapons on the Equipment step.',
+            'You can use the mastery properties of four kinds of Simple or Martial weapons of your choice.',
         },
       ],
     },
@@ -190,9 +202,9 @@ export const fighterSrd2024: ClassDefinition = {
         },
         {
           id: 'weapon-mastery-weapons-5',
-          name: 'Weapon Mastery Improvement',
+          name: 'Weapon Mastery (Additional)',
           description:
-            'You can use the mastery properties of five kinds of Simple or Martial weapons of your choice. Choose your mastered weapons on the Equipment step.',
+            'You can use the mastery properties of five kinds of Simple or Martial weapons of your choice.',
         },
       ],
     },
@@ -268,9 +280,9 @@ export const fighterSrd2024: ClassDefinition = {
         },
         {
           id: 'weapon-mastery-weapons-6',
-          name: 'Weapon Mastery Improvement',
+          name: 'Weapon Mastery (Additional)',
           description:
-            'You can use the mastery properties of six kinds of Simple or Martial weapons of your choice. Choose your mastered weapons on the Equipment step.',
+            'You can use the mastery properties of six kinds of Simple or Martial weapons of your choice.',
         },
       ],
     },
@@ -382,6 +394,46 @@ export const fighterSrd2024: ClassDefinition = {
       })),
     },
     {
+      id: 'weapon-mastery',
+      level: 1,
+      prompt: 'Choose 3 weapon masteries',
+      type: 'multi-select',
+      required: true,
+      min: 3,
+      max: 3,
+      options: WEAPON_MASTERY_OPTIONS,
+    },
+    {
+      id: 'weapon-mastery-weapons-4',
+      level: 4,
+      prompt: 'Choose 1 additional weapon mastery',
+      type: 'multi-select',
+      required: true,
+      min: 1,
+      max: 1,
+      options: WEAPON_MASTERY_OPTIONS,
+    },
+    {
+      id: 'weapon-mastery-weapons-5',
+      level: 10,
+      prompt: 'Choose 1 additional weapon mastery',
+      type: 'multi-select',
+      required: true,
+      min: 1,
+      max: 1,
+      options: WEAPON_MASTERY_OPTIONS,
+    },
+    {
+      id: 'weapon-mastery-weapons-6',
+      level: 16,
+      prompt: 'Choose 1 additional weapon mastery',
+      type: 'multi-select',
+      required: true,
+      min: 1,
+      max: 1,
+      options: WEAPON_MASTERY_OPTIONS,
+    },
+    {
       id: 'fighter-subclass',
       level: 3,
       prompt: 'Choose a Fighter Subclass',
@@ -393,87 +445,67 @@ export const fighterSrd2024: ClassDefinition = {
           label: 'Champion',
           description:
             'Pursue physical excellence in combat through relentless training and devastating blows.',
+          features: [
+            {
+              id: 'champion-improved-critical',
+              name: 'Improved Critical',
+              level: 3,
+              description:
+                'Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.',
+            },
+            {
+              id: 'champion-remarkable-athlete',
+              name: 'Remarkable Athlete',
+              level: 3,
+              description:
+                'Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks.\nIn addition, immediately after you score a Critical Hit, you can move up to half your Speed without provoking Opportunity Attacks.',
+            },
+            {
+              id: 'champion-additional-fighting-style',
+              name: 'Additional Fighting Style',
+              level: 7,
+              description:
+                'You gain another Fighting Style feat of your choice.',
+            },
+            {
+              id: 'champion-heroic-warrior',
+              name: 'Heroic Warrior',
+              level: 10,
+              description:
+                'The thrill of battle drives you toward victory. During combat, you can give yourself Heroic Inspiration whenever you start your turn without it.',
+            },
+            {
+              id: 'champion-superior-critical',
+              name: 'Superior Critical',
+              level: 15,
+              description:
+                'Your attack rolls with weapons and Unarmed Strikes can now score a Critical Hit on a roll of 18–20 on the d20.',
+            },
+            {
+              id: 'champion-survivor',
+              name: 'Survivor',
+              level: 18,
+              description:
+                'You attain the pinnacle of resilience in battle, giving you these benefits.\nDefy Death. You have Advantage on Death Saving Throws. Moreover, when you roll 18–20 on a Death Saving Throw, you gain the benefit of rolling a 20 on it.\nHeroic Rally. At the start of each of your turns, you regain Hit Points equal to 5 plus your Constitution modifier if you are Bloodied and have at least 1 Hit Point.',
+            },
+          ],
         },
       ],
     },
+    createAsiChoiceDefinition('ability-score-improvement-4', 4),
+    createAsiChoiceDefinition('ability-score-improvement-6', 6),
+    createAsiChoiceDefinition('ability-score-improvement-8', 8),
+    createAsiChoiceDefinition('ability-score-improvement-12', 12),
+    createAsiChoiceDefinition('ability-score-improvement-14', 14),
+    createAsiChoiceDefinition('ability-score-improvement-16', 16),
   ],
   deferredRequirements: [
-    {
-      id: 'weapon-mastery-selection-3',
-      level: 1,
-      destinationStep: 'equipment',
-      label: 'Weapon Mastery',
-      description: 'Choose 3 Weapon Masteries in Equipment',
-    },
     {
       id: 'starting-equipment',
       level: 1,
       destinationStep: 'equipment',
       label: 'Starting Equipment',
       description: 'Choose starting equipment in Equipment',
-    },
-    {
-      id: 'weapon-mastery-selection-4',
-      level: 4,
-      destinationStep: 'equipment',
-      label: 'Weapon Mastery',
-      description: 'Choose 4 Weapon Masteries in Equipment',
-    },
-    {
-      id: 'ability-score-improvement-4',
-      level: 4,
-      destinationStep: 'ability-scores',
-      label: 'Ability Score Improvement',
-      description: 'Resolve the level 4 Ability Score Improvement or feat',
-    },
-    {
-      id: 'ability-score-improvement-6',
-      level: 6,
-      destinationStep: 'ability-scores',
-      label: 'Ability Score Improvement',
-      description: 'Resolve the level 6 Ability Score Improvement or feat',
-    },
-    {
-      id: 'ability-score-improvement-8',
-      level: 8,
-      destinationStep: 'ability-scores',
-      label: 'Ability Score Improvement',
-      description: 'Resolve the level 8 Ability Score Improvement or feat',
-    },
-    {
-      id: 'weapon-mastery-selection-5',
-      level: 10,
-      destinationStep: 'equipment',
-      label: 'Weapon Mastery',
-      description: 'Choose 5 Weapon Masteries in Equipment',
-    },
-    {
-      id: 'ability-score-improvement-12',
-      level: 12,
-      destinationStep: 'ability-scores',
-      label: 'Ability Score Improvement',
-      description: 'Resolve the level 12 Ability Score Improvement or feat',
-    },
-    {
-      id: 'ability-score-improvement-14',
-      level: 14,
-      destinationStep: 'ability-scores',
-      label: 'Ability Score Improvement',
-      description: 'Resolve the level 14 Ability Score Improvement or feat',
-    },
-    {
-      id: 'ability-score-improvement-16',
-      level: 16,
-      destinationStep: 'ability-scores',
-      label: 'Ability Score Improvement',
-      description: 'Resolve the level 16 Ability Score Improvement or feat',
-    },
-    {
-      id: 'weapon-mastery-selection-6',
-      level: 16,
-      destinationStep: 'equipment',
-      label: 'Weapon Mastery',
-      description: 'Choose 6 Weapon Masteries in Equipment',
     },
     {
       id: 'epic-boon-19',

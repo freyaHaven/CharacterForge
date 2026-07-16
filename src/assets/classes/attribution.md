@@ -1,23 +1,27 @@
 # Class icon assets
 
-Transparent PNG class emblems used in the Class picker catalogue and detail
-panels. These are original artwork for CharacterForge, not extracted from
-Wizards of the Coast publications.
+Class artwork lives in two sets under `src/assets/classes/`:
 
-## Currently integrated (PNG)
+- `icon/` — compact glyphs for Class selection cards, headers, summaries, pills, review, and navigation
+- `insignia/` — crests for the detailed Class Overview panel
 
-- Fighter
-- Rogue
-- Artificer
-- Barbarian
+Race artwork lives in `src/assets/races/` (SVG preferred).
 
-## Additional source files (not yet wired)
+All lookups go through `src/assets/iconRegistry.ts` (`getRaceIcon`,
+`getClassIcon`, `getClassInsignia`). Do not import asset files from feature
+components.
 
-JPEG placeholders also live in this folder for future conversion or reference.
-Only entries registered in `src/features/class/classIconRegistry.ts` are shown
-in the app.
+Filename quirks preserved intentionally (do not rename assets):
 
-## Usage
+- `artificier` (icon + insignia) maps from the `artificer` class id
+- `archer` (icon + insignia) maps from `ranger` / `hunter` ids
+- `half_elf` / `half_orc` race files map from hyphenated species suffixes
 
-Icons are decorative. The visible class name provides the accessible label;
-images use empty `alt` text and `aria-hidden`.
+Legacy emblem PNGs/JPEGs in `src/assets/classes/` (outside `icon/` and
+`insignia/`) are retained for reference and are not wired into the UI.
+
+## Accessibility
+
+Icons next to visible class or species names are decorative: empty `alt` and
+`aria-hidden`. Pass an `alt` prop to `SpeciesIcon` / `ClassIcon` /
+`ClassInsignia` when the image is the primary label.

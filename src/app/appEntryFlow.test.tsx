@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -101,6 +101,24 @@ describe('App entry flow', () => {
       screen.getByRole('navigation', { name: /character creation steps/i }),
     ).toBeInTheDocument()
     expect(loadMock).toHaveBeenCalledWith('char-1')
+
+    const brand = document.querySelector('.app-brand')
+    expect(brand).not.toBeNull()
+    expect(
+      within(brand as HTMLElement).getByRole('button', {
+        name: /import character/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(brand as HTMLElement).getByRole('button', {
+        name: /export character/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(brand as HTMLElement).queryByRole('button', {
+        name: /save draft/i,
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it('imports a valid .cforge file into the editor', async () => {
@@ -208,7 +226,7 @@ describe('App entry flow', () => {
     vi.unstubAllGlobals()
   })
 
-  it('returns to the landing page from Home', async () => {
+  it('keeps the editor open without a Home control', async () => {
     const user = userEvent.setup()
     render(<App />)
     await waitForAppReady()
@@ -219,18 +237,44 @@ describe('App entry flow', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: /return to home/i }),
+        screen.getByRole('navigation', { name: /character creation steps/i }),
       ).toBeInTheDocument()
     })
 
-    await user.click(screen.getByRole('button', { name: /return to home/i }))
-
     expect(
-      screen.getByRole('button', { name: /create new character/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole('navigation', { name: /character creation steps/i }),
+      screen.queryByRole('button', { name: /return to home/i }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /import character/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('imports a character from the editor actions', async () => {
+    const user = userEvent.setup()
+    const character = createStoredCharacter({ name: 'Editor Import' })
+    activateEditorSession(character.id)
+    loadMock.mockResolvedValue(character)
+
+    const file = new File(
+      [serializeCharacterFile(createStoredCharacter({ name: 'Swapped In' }))],
+      'swap.cforge',
+      { type: 'application/json' },
+    )
+
+    render(<App />)
+    await waitForAppReady()
+
+    await user.click(screen.getByRole('button', { name: /import character/i }))
+    const input = document.querySelector(
+      '.wizard-editor-actions input[type="file"]',
+    ) as HTMLInputElement
+    await user.upload(input, file)
+
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Swapped In' }),
+      )
+    })
   })
 
   it('still uses local storage only after entering the editor from the landing page', async () => {

@@ -20,7 +20,7 @@ export type StepStatus = {
 
 export type WizardStepVisibility =
   | { kind: 'always' }
-  | { kind: 'conditional'; when: 'feats' | 'spells' }
+  | { kind: 'conditional'; when: 'character-details' | 'feats' | 'spells' }
 
 export type WizardStepDefinition = {
   id: WizardStepId

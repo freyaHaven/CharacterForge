@@ -7,9 +7,17 @@ export type WizardStepContext = {
 }
 
 /**
+ * Character Details stays in the step catalog but is hidden from the wizard nav
+ * until it is incorporated into another flow.
+ */
+export function hasCharacterDetailsStep(_context: WizardStepContext): boolean {
+  return false
+}
+
+/**
  * Reserved for future entitlement-driven visibility (background origin feat
- * grants, class ASI feat slots). Manual optional selection currently keeps the
- * Feats step always visible.
+ * grants, class ASI feat slots). Feats stays in the catalog but is hidden from
+ * the wizard nav until it is incorporated into another flow.
  */
 export function hasFeatChoices(_context: WizardStepContext): boolean {
   return false
@@ -27,8 +35,11 @@ export function isWizardStepVisible(
     return true
   }
 
+  if (step.visibility.when === 'character-details') {
+    return hasCharacterDetailsStep(context)
+  }
+
   if (step.visibility.when === 'feats') {
-    // Entitlement gating lands later; keep the branch for the visibility API.
     return hasFeatChoices(context)
   }
 

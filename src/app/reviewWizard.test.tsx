@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -75,7 +75,7 @@ async function renderApp(character: Character | null = null) {
 }
 
 async function openReviewStep(user: ReturnType<typeof userEvent.setup>) {
-  await goToWizardStep(user, screen, 'Review')
+  await goToWizardStep(user, screen, 'Overview')
 }
 
 async function completeRequiredSteps(
@@ -111,10 +111,7 @@ async function completeRequiredSteps(
 
   if (useStandardArray) {
     await goToAbilityScoresStep(user, screen)
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: /ability score method/i }),
-      'standard-array',
-    )
+    await user.click(screen.getByRole('radio', { name: /^Standard Array/i }))
     await user.click(
       screen.getByRole('button', { name: /apply default standard array/i }),
     )
@@ -145,22 +142,27 @@ describe('Review wizard integration', () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByText('Edition: D&D 5e 2024')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Aldric', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('Level 1')).toBeInTheDocument()
+    expect(screen.queryByTestId('character-context-summary')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Primary abilities:/i)).not.toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Ability Scores', level: 3 }),
+      screen.getByRole('heading', { name: 'Ability Scores', level: 4 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Statistics', level: 3 }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Features', level: 3 }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('Choose 3 Weapon Masteries in Equipment'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Defense')).toBeInTheDocument()
+    expect(screen.getByText('Weapon Mastery')).toBeInTheDocument()
   })
 
   it('navigates to the selected step from an edit action', async () => {
     const { user } = await renderApp(createStoredCharacter())
     await openReviewStep(user)
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[1]!)
+    await user.click(screen.getByRole('button', { name: 'Edit class' }))
 
     expect(getWizardStepButton(screen, 'Class')).toHaveAttribute(
       'aria-current',
@@ -203,7 +205,7 @@ describe('Review wizard integration', () => {
     expect(screen.queryByText('Character complete.')).not.toBeInTheDocument()
   })
 
-  it('shows Dragonborn ancestry in the background section', async () => {
+  it('shows Dragonborn ancestry on the Species card', async () => {
     const { user } = await renderApp(
       createStoredCharacter({
         species: {
@@ -214,7 +216,17 @@ describe('Review wizard integration', () => {
     )
     await openReviewStep(user)
 
-    expect(screen.getByText('Ancestry: Red (Fire)')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Species · Dragonborn', level: 4 }),
+      ).toBeInTheDocument()
+    })
+
+    const speciesGroup = screen
+      .getByRole('heading', { name: 'Species · Dragonborn', level: 4 })
+      .closest('.character-sheet__feature-group') as HTMLElement
+    expect(within(speciesGroup).getByText('Ancestry')).toBeInTheDocument()
+    expect(within(speciesGroup).getByText('Red (Fire)')).toBeInTheDocument()
   })
 
   it('uses the computed warning state for incomplete species drafts', async () => {
@@ -236,16 +248,13 @@ describe('Review wizard integration', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('keeps save draft separate from finish character', async () => {
+  it('autosaves without requiring finish character', async () => {
     const { user } = await renderApp(null)
     await completeRequiredSteps(user)
-
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalled()
     })
-    expect(screen.getByText(/character saved/i)).toBeInTheDocument()
     expect(screen.queryByText('Character complete.')).not.toBeInTheDocument()
   })
 })

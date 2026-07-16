@@ -7,15 +7,8 @@ import App from './App'
 import { createDefaultCharacter } from '../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../domain/character/details'
 import type { Character } from '../domain/types'
-import { BACKSTORY_NOTES_PLACEHOLDER } from '../features/character-details/characterDetailsConstants'
 import {
-  CHARACTER_DETAILS_AGE_GUIDANCE_ID,
-  CHARACTER_DETAILS_HEIGHT_GUIDANCE_ID,
-} from '../features/character-details/characterDetailsA11y'
-import {
-  getWizardStepButton,
   goToAbilityScoresStep,
-  goToSpeciesStep,
   goToWizardStep,
 } from '../test/wizardTestUtils'
 import { getAbilityFieldNumberInput } from '../test/abilityScoreTestUtils'
@@ -91,12 +84,6 @@ async function renderLoadedApp(character = createStoredCharacter()) {
   return { user, character }
 }
 
-async function goToCharacterDetailsStep(
-  user: ReturnType<typeof userEvent.setup>,
-) {
-  await goToWizardStep(user, screen, 'Character Details')
-}
-
 describe('Character Details workflow', () => {
   beforeEach(() => {
     clearEditorSession()
@@ -105,109 +92,28 @@ describe('Character Details workflow', () => {
     saveMock.mockResolvedValue(undefined)
   })
 
-  it('renders the roleplay-focused layout and backstory placeholder', async () => {
-    const { user } = await renderLoadedApp()
-    await goToCharacterDetailsStep(user)
+  it('hides Character Details from wizard navigation for now', async () => {
+    await renderLoadedApp()
 
     expect(
-      screen.getByRole('heading', { name: 'Character Details', level: 2 }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Identity', level: 3 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Personality', level: 3 })).toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { name: 'Backstory & Notes', level: 3 }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'Age' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Female' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'They/Them' })).toBeInTheDocument()
-    expect(
-      screen.getByPlaceholderText(BACKSTORY_NOTES_PLACEHOLDER),
-    ).toBeInTheDocument()
-  })
-
-  it('shows species guidance beneath age and height without overwriting values', async () => {
-    const { user } = await renderLoadedApp()
-    await goToCharacterDetailsStep(user)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/dwarves mature at the same rate as humans/i),
-      ).toBeInTheDocument()
-    })
-
-    const ageField = screen.getByRole('textbox', { name: 'Age' })
-    expect(ageField).toHaveAttribute(
-      'aria-describedby',
-      CHARACTER_DETAILS_AGE_GUIDANCE_ID,
-    )
-    await user.type(ageField, '35')
-
-    await goToSpeciesStep(user, screen)
-    await user.click(screen.getByRole('button', { name: 'Dragonborn' }))
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: /choose your draconic ancestor/i }),
-      'red',
-    )
-
-    await goToCharacterDetailsStep(user)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/dragonborn reach adulthood by age 15/i),
-      ).toBeInTheDocument()
-    })
-
-    expect(screen.getByRole('textbox', { name: 'Age' })).toHaveValue('35')
-    expect(screen.getByRole('textbox', { name: 'Height' })).toHaveAttribute(
-      'aria-describedby',
-      CHARACTER_DETAILS_HEIGHT_GUIDANCE_ID,
-    )
-  })
-
-  it('persists edited details when saving a draft', async () => {
-    const { user } = await renderLoadedApp()
-
-    await goToCharacterDetailsStep(user)
-    await user.type(screen.getByRole('textbox', { name: 'Age' }), '42')
-    await user.type(screen.getByRole('textbox', { name: 'Eye Colour' }), 'Green')
-    await user.type(screen.getByRole('textbox', { name: 'Personality Traits' }), 'Bold')
-    await user.click(screen.getByRole('radio', { name: 'Female' }))
-    await user.click(screen.getByRole('radio', { name: /Neutral Good/i }))
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
-
-    await waitFor(() => {
-      expect(saveMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          details: expect.objectContaining({
-            age: '42',
-            eyeColour: 'Green',
-            personalityTraits: 'Bold',
-            gender: 'female',
-            alignment: 'neutral-good',
-          }),
-        }),
-      )
-    })
+      screen.queryByRole('button', { name: /^Character Details,/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows sectioned review content only for populated fields', async () => {
-    const { user } = await renderLoadedApp()
-
-    await goToWizardStep(user, screen, 'Review')
-    expect(
-      screen.queryByRole('heading', { name: 'Character Details', level: 3 }),
-    ).not.toBeInTheDocument()
-
-    await goToCharacterDetailsStep(user)
-    await user.type(screen.getByRole('textbox', { name: 'Age' }), '50')
-    await user.type(screen.getByRole('textbox', { name: 'Hair Colour' }), 'Red')
-    await user.type(screen.getByRole('textbox', { name: 'Flaws' }), 'Stubborn')
-    await user.type(
-      screen.getByPlaceholderText(BACKSTORY_NOTES_PLACEHOLDER),
-      'A short note.',
+    const { user } = await renderLoadedApp(
+      createStoredCharacter({
+        details: {
+          ...createDefaultCharacterDetails(),
+          age: '50',
+          hairColour: 'Red',
+          flaws: 'Stubborn',
+          backstoryNotes: 'A short note.',
+        },
+      }),
     )
 
-    await goToWizardStep(user, screen, 'Review')
+    await goToWizardStep(user, screen, 'Overview')
 
     expect(
       screen.getByRole('heading', { name: 'Character Details', level: 3 }),
@@ -217,7 +123,8 @@ describe('Character Details workflow', () => {
     expect(
       screen.getByRole('heading', { name: 'Backstory & Notes', level: 4 }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Age: 50')).toBeInTheDocument()
+    expect(screen.getByText(/Age 50/)).toBeInTheDocument()
+    expect(screen.queryByText('Age: 50')).not.toBeInTheDocument()
     expect(screen.getByText('Hair Colour: Red')).toBeInTheDocument()
     expect(screen.getByText('Flaws: Stubborn')).toBeInTheDocument()
     expect(screen.getByText('A short note.')).toBeInTheDocument()
@@ -232,15 +139,16 @@ describe('Character Details workflow', () => {
       }),
     )
 
-    await goToCharacterDetailsStep(user)
-    expect(getWizardStepButton(screen, 'Character Details')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Character Details,/i }),
+    ).not.toBeInTheDocument()
 
     await goToAbilityScoresStep(user, screen)
     fireEvent.change(getAbilityFieldNumberInput(screen, 'Strength'), {
       target: { value: '11' },
     })
 
-    await goToWizardStep(user, screen, 'Review')
+    await goToWizardStep(user, screen, 'Overview')
 
     // Deferred class decisions may still block finish; Character Details must not.
     expect(

@@ -230,42 +230,39 @@ export function SpeciesPicker({
 
             {activeDefinition !== null ? (
               <article className="species-picker__detail">
-                <header className="species-picker__detail-header">
-                  <div className="species-picker__detail-title-row">
-                    <span className="species-picker__detail-icon">
-                      <SpeciesIcon speciesId={activeDefinition.id} />
-                    </span>
-                    <div className="species-picker__detail-text">
-                      <h3>{activeDefinition.name}</h3>
-                      <p className="species-picker__detail-lead">
-                        {activeDefinition.description}
-                      </p>
-                    </div>
+                <div className="species-picker__identity-row">
+                  <span className="species-picker__detail-icon">
+                    <SpeciesIcon speciesId={activeDefinition.id} />
+                  </span>
+                  <div className="species-picker__detail-text">
+                    <h3>{activeDefinition.name}</h3>
+                    <p className="species-picker__detail-lead">
+                      {activeDefinition.description}
+                    </p>
+                    <dl className="species-picker__metadata">
+                      <div className="species-picker__metadata-item">
+                        <span
+                          className="species-picker__metadata-icon"
+                          aria-hidden="true"
+                        >
+                          <SizeStatIcon />
+                        </span>
+                        <dt>Size</dt>
+                        <dd>{formatSize(activeDefinition.size)}</dd>
+                      </div>
+                      <div className="species-picker__metadata-item">
+                        <span
+                          className="species-picker__metadata-icon"
+                          aria-hidden="true"
+                        >
+                          <SpeedStatIcon />
+                        </span>
+                        <dt>Speed</dt>
+                        <dd>{activeDefinition.speed.walk} feet</dd>
+                      </div>
+                    </dl>
                   </div>
-                </header>
-
-                <dl className="species-picker__metadata">
-                  <div className="species-picker__metadata-item">
-                    <span
-                      className="species-picker__metadata-icon"
-                      aria-hidden="true"
-                    >
-                      <SizeStatIcon />
-                    </span>
-                    <dt>Size</dt>
-                    <dd>{formatSize(activeDefinition.size)}</dd>
-                  </div>
-                  <div className="species-picker__metadata-item">
-                    <span
-                      className="species-picker__metadata-icon"
-                      aria-hidden="true"
-                    >
-                      <SpeedStatIcon />
-                    </span>
-                    <dt>Speed</dt>
-                    <dd>{activeDefinition.speed.walk} feet</dd>
-                  </div>
-                </dl>
+                </div>
 
                 {activeDefinition.traits.length > 0 ? (
                   <div className="species-picker__traits">

@@ -3,11 +3,15 @@ import type {
   AbilityScores,
   CharacterCreationMethod,
 } from '../../domain/types'
+import {
+  POINT_BUY_BUDGET,
+  validatePointBuyAssignment,
+} from '../../rules/point-buy'
+import { createEmptyRolledAssignments } from '../../rules/rolled'
 import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
 import { AbilityScoreCard } from './AbilityScoreCard'
 import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
 import { formatPointBuyValidation } from './formatPointBuyValidation'
-import { formatRolledValidation } from './formatRolledValidation'
 import { PointBuyAbilityInputs } from './PointBuyAbilityInputs'
 import {
   type PointBuyDraftScores,
@@ -16,23 +20,18 @@ import { RolledAbilityInputs } from './RolledAbilityInputs'
 import { RolledPoolPanel } from './RolledPoolPanel'
 import {
   type RolledDraft,
-  validateRolledDraft,
 } from './rolledDraft'
 import {
   formatRemainingRolledResults,
   getRemainingRolledResults,
 } from './rolledRemaining'
 import {
-  POINT_BUY_BUDGET,
-  validatePointBuyAssignment,
-} from '../../rules/point-buy'
-import { formatStandardArrayValidation } from './formatStandardArrayValidation'
-import {
   formatRemainingStandardArrayValues,
   getRemainingStandardArrayValues,
 } from './standardArrayRemaining'
 import { StandardArrayAbilityInputs } from './StandardArrayAbilityInputs'
 import {
+  hasStandardArrayAssignments,
   type StandardArrayDraftScores,
   validateStandardArrayDraft,
 } from './standardArrayDraft'
@@ -89,14 +88,14 @@ export function AbilityScoresForm({
     creationMethod === 'standard-array' && standardArrayDraft !== null
       ? validateStandardArrayDraft(standardArrayDraft)
       : null
-  const standardArrayMessages =
-    standardArrayValidation === null
-      ? []
-      : formatStandardArrayValidation(standardArrayValidation)
   const remainingStandardArrayValues =
     standardArrayDraft === null
       ? []
       : getRemainingStandardArrayValues(standardArrayDraft)
+  const showClearStandardArray =
+    creationMethod === 'standard-array' &&
+    standardArrayDraft !== null &&
+    hasStandardArrayAssignments(standardArrayDraft)
   const showApplyDefaultStandardArray =
     creationMethod === 'standard-array' &&
     standardArrayDraft !== null &&
@@ -108,14 +107,6 @@ export function AbilityScoresForm({
       : null
   const pointBuyMessages =
     pointBuyValidation === null ? [] : formatPointBuyValidation(pointBuyValidation)
-  const rolledValidation =
-    creationMethod === 'rolled' && rolledDraft !== null
-      ? validateRolledDraft(rolledDraft)
-      : null
-  const rolledMessages =
-    rolledValidation === null || rolledValidation.valid
-      ? []
-      : formatRolledValidation(rolledValidation)
   const remainingRolledResults =
     rolledDraft === null
       ? []
@@ -124,23 +115,36 @@ export function AbilityScoresForm({
 
   return (
     <section className="ability-scores-form">
-      <label className="field">
-        <span>Ability score method</span>
-        <select
-          value={creationMethod}
-          onChange={(event) =>
-            onCreationMethodChange(
-              event.target.value as CharacterCreationMethod,
-            )
-          }
+      <fieldset className="ability-method">
+        <legend id="ability-method-legend" className="ability-method__legend">
+          Ability score method
+        </legend>
+        <div
+          className="ability-method__options"
+          role="radiogroup"
+          aria-labelledby="ability-method-legend"
         >
           {CREATION_METHOD_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
+            <label key={option.id} className="ability-method__option">
+              <input
+                type="radio"
+                name="ability-score-method"
+                value={option.id}
+                checked={creationMethod === option.id}
+                onChange={() => {
+                  onCreationMethodChange(option.id)
+                }}
+              />
+              <span className="ability-method__option-content">
+                <span className="ability-method__option-title">{option.label}</span>
+                <span className="ability-method__option-description">
+                  {option.description}
+                </span>
+              </span>
+            </label>
           ))}
-        </select>
-      </label>
+        </div>
+      </fieldset>
 
       {creationMethod === 'standard-array' && standardArrayDraft !== null ? (
         <>
@@ -155,21 +159,12 @@ export function AbilityScoresForm({
             </p>
           </div>
 
-          {standardArrayMessages.length > 0 ? (
-            <div className="validation-message" role="alert">
-              <p>Complete the standard array assignment:</p>
-              <ul>
-                {standardArrayMessages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
           <div className="standard-array-actions">
-            <button type="button" onClick={onClearStandardArray}>
-              Clear assignments
-            </button>
+            {showClearStandardArray ? (
+              <button type="button" onClick={onClearStandardArray}>
+                Clear assignments
+              </button>
+            ) : null}
             {showApplyDefaultStandardArray ? (
               <button type="button" onClick={onApplyDefaultStandardArray}>
                 Apply default standard array
@@ -214,14 +209,6 @@ export function AbilityScoresForm({
                 Points spent: {pointBuyValidation?.spent ?? 0} / {POINT_BUY_BUDGET}{' '}
                 · Remaining: {pointBuyValidation?.remaining ?? 0}
               </p>
-
-              {pointBuyValidation?.valid === true &&
-              pointBuyValidation.remaining > 0 ? (
-                <p className="info-message">
-                  You still have {pointBuyValidation.remaining} unspent points.
-                  Saving is allowed.
-                </p>
-              ) : null}
 
               {pointBuyMessages.length > 0 ? (
                 <div className="validation-message" role="alert">
@@ -269,24 +256,13 @@ export function AbilityScoresForm({
             onPoolReady={onRolledPoolReady}
           />
 
-          {rolledMessages.length > 0 ? (
-            <div className="validation-message" role="alert">
-              <p>Complete the rolled assignment:</p>
-              <ul>
-                {rolledMessages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {rolledDraft !== null ? (
-            <RolledAbilityInputs
-              pool={rolledDraft.pool}
-              assignments={rolledDraft.assignments}
-              onAssignmentChange={onRolledAssignmentChange}
-            />
-          ) : null}
+          <RolledAbilityInputs
+            pool={rolledDraft?.pool ?? []}
+            assignments={
+              rolledDraft?.assignments ?? createEmptyRolledAssignments()
+            }
+            onAssignmentChange={onRolledAssignmentChange}
+          />
         </>
       ) : showManualInputs ? (
         <AbilityScoreCardGrid>

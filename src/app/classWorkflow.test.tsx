@@ -90,7 +90,6 @@ function expectSelectedClass(name: string) {
       selector: '.class-picker__overview-class-name',
     }),
   ).toBeInTheDocument()
-  expect(screen.getByText('Class selection complete')).toBeInTheDocument()
 }
 
 describe('Class workflow in App', () => {
@@ -111,11 +110,11 @@ describe('Class workflow in App', () => {
     expect(
       screen.getByRole('button', { name: 'Fighter', pressed: true }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Selected: Defense')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Fighting Style/i }))
     expect(screen.getByRole('radio', { name: /Defense/i })).toBeChecked()
-    expect(screen.getByRole('checkbox', { name: 'Athletics' })).toBeChecked()
-    expect(screen.getByRole('checkbox', { name: 'Perception' })).toBeChecked()
+    await user.click(screen.getByRole('button', { name: /Core Fighter Traits/i }))
+    expect(screen.getByRole('checkbox', { name: /^Athletics\b/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /^Perception\b/ })).toBeChecked()
   })
 
   it('shows compact character context in the sticky wizard header', async () => {
@@ -159,9 +158,16 @@ describe('Class workflow in App', () => {
 
     expect(
       document.querySelector('.class-picker__summary-status'),
-    ).toHaveTextContent(/Complete required choices to confirm/i)
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled()
-    expect(saveMock).not.toHaveBeenCalled()
+    ).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: /save draft/i }),
+    ).not.toBeInTheDocument()
+
+    const callsBefore = saveMock.mock.calls.length
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 400)
+    })
+    expect(saveMock.mock.calls.length).toBe(callsBefore)
   })
 
   it('saves the stable class selection after completing fighter choices', async () => {
@@ -177,24 +183,25 @@ describe('Class workflow in App', () => {
       skills: ['History', 'Insight'],
     })
 
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
-
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        targetLevel: 1,
-        classes: [
-          expect.objectContaining({
-            classId: 'srd-2024:fighter',
-            level: 1,
-            choices: {
-              'fighting-style': 'great-weapon-fighting',
-              'skill-proficiencies': ['history', 'insight'],
-            },
-          }),
-        ],
-        startingClassInstanceId: expect.any(String),
-      }),
-    )
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetLevel: 1,
+          classes: [
+            expect.objectContaining({
+              classId: 'srd-2024:fighter',
+              level: 1,
+              choices: {
+                'fighting-style': 'great-weapon-fighting',
+                'skill-proficiencies': ['history', 'insight'],
+                'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
+              },
+            }),
+          ],
+          startingClassInstanceId: expect.any(String),
+        }),
+      )
+    })
   })
 
   it('saves a multiclass build with derived character level and starting class', async () => {
@@ -230,31 +237,36 @@ describe('Class workflow in App', () => {
     })
 
     await user.click(screen.getByRole('radio', { name: /Defense/i }))
-    await user.click(screen.getByRole('checkbox', { name: 'Athletics' }))
-    await user.click(screen.getByRole('checkbox', { name: 'Perception' }))
+    await user.click(screen.getByRole('checkbox', { name: /^Athletics\b/ }))
+    await user.click(screen.getByRole('checkbox', { name: /^Perception\b/ }))
+    await user.click(
+      screen.getByRole('checkbox', { name: /^Longsword\b/ }),
+    )
+    await user.click(
+      screen.getByRole('checkbox', { name: /^Shortbow\b/ }),
+    )
+    await user.click(
+      screen.getByRole('checkbox', { name: /^Battleaxe\b/ }),
+    )
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetLevel: 2,
+          classes: expect.arrayContaining([
+            expect.objectContaining({
+              classId: 'srd-2024:fighter',
+              level: 1,
+            }),
+            expect.objectContaining({
+              classId: 'srd-2024:barbarian',
+              level: 1,
+            }),
+          ]),
+          startingClassInstanceId: expect.any(String),
+        }),
+      )
     })
-
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
-
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        targetLevel: 2,
-        classes: expect.arrayContaining([
-          expect.objectContaining({
-            classId: 'srd-2024:fighter',
-            level: 1,
-          }),
-          expect.objectContaining({
-            classId: 'srd-2024:barbarian',
-            level: 1,
-          }),
-        ]),
-        startingClassInstanceId: expect.any(String),
-      }),
-    )
   })
 
   it('prompts before clearing species and class when both are incompatible', async () => {

@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createBundledBackgroundCatalog } from '../../../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../../../adapters/bundledClassCatalog'
+import { createBundledFeatCatalog } from '../../../adapters/bundledFeatCatalog'
 import type { ClassBuildMode } from '../../../features/class/classBuildMode'
 import { createEmptyClassSelectionDrafts } from '../../../features/class/classSelectionDraft'
 import { BackgroundStep } from './BackgroundStep'
@@ -22,6 +23,8 @@ function renderClassStep(buildMode: ClassBuildMode | null = 'single-class') {
       activeInstanceId={null}
       draft={null}
       catalog={createBundledClassCatalog()}
+      featCatalog={createBundledFeatCatalog()}
+      characterFeatId={null}
       onBuildModeChange={() => {}}
       onReturnToClassPathIntro={() => {}}
       onSwitchToMulticlass={() => {}}

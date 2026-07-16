@@ -21,9 +21,33 @@ export function FeatureList({ items }: { items: ReviewFeatureItem[] }) {
   return (
     <ul className="review-feature-list">
       {items.map((item) => (
-        <li key={`${item.label}-${item.value}`} className="review-feature-list__item">
+        <li
+          key={`${item.label}-${item.value}`}
+          className="review-feature-list__item"
+        >
           <span className="review-feature-list__label">{item.label}</span>
-          <span className="review-feature-list__value">{item.value}</span>
+          {item.description !== undefined && item.description.length > 0 ? (
+            <p className="review-feature-list__description">{item.description}</p>
+          ) : null}
+          {item.entries !== undefined && item.entries.length > 0 ? (
+            <ul className="review-feature-list__entries">
+              {item.entries.map((entry) => (
+                <li
+                  key={entry.label}
+                  className="review-feature-list__entry"
+                >
+                  <span className="review-feature-list__entry-label">
+                    {entry.label}
+                  </span>
+                  <p className="review-feature-list__entry-description">
+                    {entry.description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : item.description === undefined || item.description.length === 0 ? (
+            <span className="review-feature-list__value">{item.value}</span>
+          ) : null}
         </li>
       ))}
     </ul>

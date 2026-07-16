@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
+import { createWeaponMasteryChoices } from '../../domain/class/weaponMastery'
 import {
   createClassSelectionDraft,
   draftToClassSelection,
@@ -23,9 +24,13 @@ describe('classSelectionDraft', () => {
   it('commits when all required choices are valid', () => {
     const draft = createClassSelectionDraft('srd-2024:fighter')
     const withChoices = updateClassDraftChoice(
-      updateClassDraftChoice(draft, 'fighting-style', 'defense'),
-      'skill-proficiencies',
-      ['athletics', 'perception'],
+      updateClassDraftChoice(
+        updateClassDraftChoice(draft, 'fighting-style', 'defense'),
+        'skill-proficiencies',
+        ['athletics', 'perception'],
+      ),
+      'weapon-mastery',
+      createWeaponMasteryChoices(1)['weapon-mastery'],
     )
 
     expect(tryCommitClassDraft(withChoices, 'srd-2024', fighterSrd2024)).toEqual({
@@ -35,6 +40,7 @@ describe('classSelectionDraft', () => {
         choices: {
           'fighting-style': 'defense',
           'skill-proficiencies': ['athletics', 'perception'],
+          ...createWeaponMasteryChoices(1),
         },
       },
       validation: { ok: true },
@@ -100,6 +106,7 @@ describe('classSelectionDraft', () => {
         choices: {
           'fighting-style': 'archery',
           'skill-proficiencies': ['athletics', 'perception'],
+          ...createWeaponMasteryChoices(1),
           'fighter-subclass': 'champion',
         },
       },
@@ -113,6 +120,7 @@ describe('classSelectionDraft', () => {
       choices: {
         'fighting-style': 'archery',
         'skill-proficiencies': ['athletics', 'perception'],
+        ...createWeaponMasteryChoices(1),
       },
     })
   })
@@ -125,6 +133,7 @@ describe('classSelectionDraft', () => {
         choices: {
           'fighting-style': 'archery',
           'skill-proficiencies': ['athletics', 'perception'],
+          ...createWeaponMasteryChoices(1),
           'fighter-subclass': 'champion',
         },
       },
@@ -141,12 +150,16 @@ describe('classSelectionDraft', () => {
   it('keeps a raised level draft uncommitted until new required choices are complete', () => {
     const completeLevelOne = updateClassDraftChoice(
       updateClassDraftChoice(
-        createClassSelectionDraft('srd-2024:fighter'),
-        'fighting-style',
-        'defense',
+        updateClassDraftChoice(
+          createClassSelectionDraft('srd-2024:fighter'),
+          'fighting-style',
+          'defense',
+        ),
+        'skill-proficiencies',
+        ['athletics', 'perception'],
       ),
-      'skill-proficiencies',
-      ['athletics', 'perception'],
+      'weapon-mastery',
+      createWeaponMasteryChoices(1)['weapon-mastery'],
     )
 
     const raised = updateClassDraftLevel(completeLevelOne, 3, fighterSrd2024)

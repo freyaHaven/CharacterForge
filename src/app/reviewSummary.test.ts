@@ -15,8 +15,11 @@ function createContext(
     speciesDisplay: { speciesName: null, ancestryLabel: null },
     classDraft: null,
     classDisplay: {
+      entries: [],
       className: null,
+      subclassName: null,
       level: null,
+      characterLevel: null,
       choiceLines: [],
     },
     backgroundDraft: null,
@@ -145,8 +148,18 @@ describe('buildReviewSummaries', () => {
     const summaries = buildReviewSummaries(
       createContext({
         classDisplay: {
+          entries: [
+            {
+              classId: 'srd-2024:fighter',
+              className: 'Fighter',
+              level: 3,
+              subclassName: 'Champion',
+            },
+          ],
           className: 'Fighter',
+          subclassName: 'Champion',
           level: 3,
+          characterLevel: 3,
           choiceLines: [
             {
               prompt: 'Choose a Fighting Style',
@@ -155,10 +168,6 @@ describe('buildReviewSummaries', () => {
             {
               prompt: 'Choose two skill proficiencies',
               summary: 'Athletics, Perception',
-            },
-            {
-              prompt: 'Choose a Fighter Subclass',
-              summary: 'Champion',
             },
           ],
         },
@@ -193,7 +202,6 @@ describe('buildReviewSummaries', () => {
       'Level: 3',
       'Choose a Fighting Style: Defense',
       'Choose two skill proficiencies: Athletics, Perception',
-      'Choose a Fighter Subclass: Champion',
       'Class selection complete',
       'Remaining character decisions:',
       '- Choose starting equipment in Equipment',
@@ -231,9 +239,7 @@ describe('buildReviewSummaries', () => {
     )
 
     expect(summaries['character-details']).toEqual([
-      'Age: 42',
       'Eye Colour: Green',
-      'Alignment: Neutral Good',
       'Flaws: Impulsive',
       'Backstory & Notes: Raised in the mountains.',
     ])

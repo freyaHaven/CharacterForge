@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from '../../data/classes/srd-2024/fighter'
+import { createWeaponMasteryChoices } from '../../domain/class/weaponMastery'
 import type { ClassDefinition } from '../../domain/class/types'
 import { validateCharacterClassesWithDefinitions } from './validateCharacterClasses'
 
@@ -55,6 +56,7 @@ describe('validateCharacterClassesWithDefinitions', () => {
             choices: {
               'fighting-style': 'defense',
               'skill-proficiencies': ['athletics', 'perception'],
+              ...createWeaponMasteryChoices(3),
               'fighter-subclass': 'champion',
             },
           },

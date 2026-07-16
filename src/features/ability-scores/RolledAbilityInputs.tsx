@@ -67,6 +67,7 @@ export function RolledAbilityInputs({
   onAssignmentChange,
 }: RolledAbilityInputsProps) {
   const remaining = getRemainingRolledPoolResults(pool, assignments)
+  const isPoolReady = pool.length > 0
 
   return (
     <AbilityScoreCardGrid>
@@ -95,6 +96,7 @@ export function RolledAbilityInputs({
               <select
                 aria-label={`${label} rolled result`}
                 value={assignedRollId ?? UNASSIGNED_VALUE}
+                disabled={!isPoolReady}
                 onChange={(event) => {
                   const value = event.target.value
                   onAssignmentChange(

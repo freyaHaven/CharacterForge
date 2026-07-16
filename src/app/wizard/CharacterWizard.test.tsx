@@ -63,7 +63,10 @@ describe('CharacterWizard', () => {
       expect(getStepButton(step.label)).toBeInTheDocument()
     }
 
-    expect(screen.getByRole('button', { name: /^Feats,/i })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Character Details,/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Feats,/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Spells,/i })).not.toBeInTheDocument()
   })
 
@@ -79,17 +82,17 @@ describe('CharacterWizard', () => {
     const user = userEvent.setup()
     render(<WizardHarness />)
 
-    await user.click(getStepButton('Ability Scores'))
+    await user.click(getStepButton('Abilities'))
 
-    expect(getStepButton('Ability Scores')).toHaveAttribute(
+    expect(getStepButton('Abilities')).toHaveAttribute(
       'aria-current',
       'step',
     )
     expect(
-      screen.getByRole('heading', { name: 'Ability Scores' }),
+      screen.getByRole('heading', { name: 'Abilities' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/ability scores step content will appear here/i),
+      screen.getByText(/abilities step content will appear here/i),
     ).toBeInTheDocument()
   })
 
@@ -147,7 +150,7 @@ describe('CharacterWizard', () => {
 
     expect(getStepButton('Basics')).toHaveAccessibleName(/complete/i)
     expect(getStepButton('Species')).toHaveAccessibleName(/needs attention/i)
-    expect(getStepButton('Ability Scores')).toHaveAccessibleName(/in progress/i)
+    expect(getStepButton('Abilities')).toHaveAccessibleName(/in progress/i)
     expect(getStepButton('Class')).toHaveAccessibleName(/not started/i)
 
     const speciesButton = getStepButton('Species')
@@ -172,10 +175,10 @@ describe('CharacterWizard', () => {
     const basicsIndicator = within(getStepButton('Basics')).getByText('✓', {
       selector: '[aria-hidden="true"]',
     })
-    const speciesIndicator = within(getStepButton('Species')).getByText('2', {
+    const speciesIndicator = within(getStepButton('Species')).getByText('4', {
       selector: '[aria-hidden="true"]',
     })
-    const classIndicator = within(getStepButton('Class')).getByText('5', {
+    const classIndicator = within(getStepButton('Class')).getByText('2', {
       selector: '[aria-hidden="true"]',
     })
 
@@ -238,42 +241,27 @@ describe('CharacterWizard', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders Home before the wizard steps when provided', () => {
-    render(
-      <CharacterWizard
-        activeStepId="basics"
-        stepContext={createDefaultWizardStepContext()}
-        stepStatuses={createStepStatuses()}
-        onStepChange={() => {}}
-        onGoHome={() => {}}
-      />,
-    )
+  it('does not render a Home control in wizard navigation', () => {
+    render(<WizardHarness />)
 
     expect(
-      screen.getByRole('button', { name: /return to home/i }),
-    ).toBeInTheDocument()
+      screen.queryByRole('button', { name: /return to home/i }),
+    ).not.toBeInTheDocument()
   })
 
-  it('renders editor actions in the sticky header when provided', () => {
-    render(
-      <CharacterWizard
-        activeStepId="basics"
-        stepContext={createDefaultWizardStepContext()}
-        stepStatuses={createStepStatuses()}
-        onStepChange={() => {}}
-        editorActions={<button type="button">Save draft</button>}
-      />,
-    )
+  it('keeps step navigation in the sticky header without editor export actions', () => {
+    render(<WizardHarness initialStepId="basics" />)
 
     const stickyHeader = document.querySelector(
       '.character-wizard__sticky-header',
     )
 
+    expect(stickyHeader).not.toBeNull()
     expect(
-      within(stickyHeader as HTMLElement).getByRole('button', {
-        name: /save draft/i,
+      within(stickyHeader as HTMLElement).queryByRole('button', {
+        name: /export character/i,
       }),
-    ).toBeInTheDocument()
+    ).not.toBeInTheDocument()
   })
 
   it('renders step content outside the sticky header region', () => {

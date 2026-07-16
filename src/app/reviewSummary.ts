@@ -38,10 +38,38 @@ export type SpeciesReviewDisplay = {
   ancestryLabel: string | null
 }
 
+export type ClassReviewEntry = {
+  classId: string
+  className: string
+  level: number
+  subclassName: string | null
+}
+
+export type ClassReviewChoiceEntry = {
+  label: string
+  description: string
+}
+
+export type ClassReviewChoiceLine = {
+  /** Used to route skills vs features and for text step summaries. */
+  prompt: string
+  /** Compact summary for text step summaries. */
+  summary: string
+  /** Heading shown under Class Features (defaults to prompt when omitted). */
+  heading?: string
+  /** Body text under the heading (e.g. Fighting Style rules). */
+  description?: string
+  /** Nested selections with their own descriptions (e.g. Weapon Mastery). */
+  entries?: ClassReviewChoiceEntry[]
+}
+
 export type ClassReviewDisplay = {
+  entries: ClassReviewEntry[]
   className: string | null
+  subclassName: string | null
   level: number | null
-  choiceLines: { prompt: string; summary: string }[]
+  characterLevel: number | null
+  choiceLines: ClassReviewChoiceLine[]
 }
 
 export type BackgroundReviewDisplay = {

@@ -34,9 +34,11 @@ export async function resolveCharacterContextDisplay(
           choices: { ...input.speciesDraft.choices },
         }
 
+  let speciesId: string | null = null
   let speciesName: string | null = null
 
   if (activeSpeciesSelection !== null) {
+    speciesId = activeSpeciesSelection.speciesId
     const speciesDefinition = await input.speciesCatalog.getSpecies(
       activeSpeciesSelection.speciesId,
     )
@@ -59,6 +61,7 @@ export async function resolveCharacterContextDisplay(
     }
 
     classEntries.push({
+      classId: definition.id,
       className: definition.name,
       level: instance.level,
       subclassLabel: getSubclassLabelFromDefinition(
@@ -71,6 +74,7 @@ export async function resolveCharacterContextDisplay(
 
   return buildCharacterContextDisplay({
     characterName: input.character.name,
+    speciesId,
     speciesName,
     targetLevel: input.character.targetLevel,
     classEntries,

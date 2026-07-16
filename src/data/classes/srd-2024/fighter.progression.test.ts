@@ -6,6 +6,8 @@ import {
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
 } from '../../../domain/class/featureProgression'
+import { createAsiChoicesUpToLevel } from '../../../domain/class/abilityScoreImprovement'
+import { createWeaponMasteryChoices } from '../../../domain/class/weaponMastery'
 import { validateClassSelection } from '../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../rules/class/deferredRequirements'
 
@@ -64,6 +66,8 @@ function createValidFighterSelection(level: number) {
   const choices: Record<string, string | string[]> = {
     'fighting-style': 'defense',
     'skill-proficiencies': ['athletics', 'perception'],
+    ...createWeaponMasteryChoices(level),
+    ...createAsiChoicesUpToLevel(level),
   }
 
   if (level >= 3) {
@@ -136,13 +140,28 @@ describe('fighterSrd2024 progression', () => {
   it('exposes required class-step choices at the expected levels', () => {
     expect(
       getChoicesAvailableAtLevel(fighterSrd2024, 1).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies'])
+    ).toEqual(['fighting-style', 'skill-proficiencies', 'weapon-mastery'])
     expect(
       getChoicesAvailableAtLevel(fighterSrd2024, 2).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies'])
+    ).toEqual(['fighting-style', 'skill-proficiencies', 'weapon-mastery'])
     expect(
       getChoicesAvailableAtLevel(fighterSrd2024, 3).map((choice) => choice.id),
-    ).toEqual(['fighting-style', 'skill-proficiencies', 'fighter-subclass'])
+    ).toEqual([
+      'fighting-style',
+      'skill-proficiencies',
+      'weapon-mastery',
+      'fighter-subclass',
+    ])
+    expect(
+      getChoicesAvailableAtLevel(fighterSrd2024, 4).map((choice) => choice.id),
+    ).toEqual([
+      'fighting-style',
+      'skill-proficiencies',
+      'weapon-mastery',
+      'weapon-mastery-weapons-4',
+      'fighter-subclass',
+      'ability-score-improvement-4',
+    ])
   })
 
   it.each([1, 2, 3, 4, 10, 17, 20] as const)(
@@ -167,6 +186,7 @@ describe('fighterSrd2024 progression', () => {
           choices: {
             'fighting-style': 'defense',
             'skill-proficiencies': ['athletics', 'perception'],
+            'weapon-mastery': createWeaponMasteryChoices(3)['weapon-mastery'],
           },
         },
         'srd-2024',
@@ -183,6 +203,7 @@ describe('fighterSrd2024 progression', () => {
       {
         'fighting-style': 'archery',
         'skill-proficiencies': ['athletics', 'perception'],
+        ...createWeaponMasteryChoices(1),
         'fighter-subclass': 'champion',
       },
       getChoicesAvailableAtLevel(fighterSrd2024, 1),
@@ -191,6 +212,7 @@ describe('fighterSrd2024 progression', () => {
     expect(pruned).toEqual({
       'fighting-style': 'archery',
       'skill-proficiencies': ['athletics', 'perception'],
+      ...createWeaponMasteryChoices(1),
     })
   })
 
@@ -212,20 +234,13 @@ describe('fighterSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(fighterSrd2024, 1).map(
         (requirement) => requirement.description,
       ),
-    ).toEqual([
-      'Choose starting equipment in Equipment',
-      'Choose 3 Weapon Masteries in Equipment',
-    ])
+    ).toEqual(['Choose starting equipment in Equipment'])
 
     expect(
       resolveDeferredCharacterRequirements(fighterSrd2024, 4).map(
         (requirement) => requirement.description,
       ),
-    ).toEqual([
-      'Choose starting equipment in Equipment',
-      'Resolve the level 4 Ability Score Improvement or feat',
-      'Choose 4 Weapon Masteries in Equipment',
-    ])
+    ).toEqual(['Choose starting equipment in Equipment'])
 
     expect(
       resolveDeferredCharacterRequirements(fighterSrd2024, 19).some(

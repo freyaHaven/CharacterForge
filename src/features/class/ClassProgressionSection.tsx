@@ -1,30 +1,29 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { EditionId } from '../../domain/types'
 import type {
   ClassChoiceValue,
   ClassDefinition,
 } from '../../domain/class/types'
-import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
-import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
+import {
+  collectAsiFeatIds,
+  isAbilityScoreImprovementChoiceId,
+} from '../../domain/class/abilityScoreImprovement'
 import { validateClassSelection } from '../../rules/class/classRules'
-import { createClassChoiceStateKey } from './classChoiceStateKeys'
 import { resolveDeferredRequirementsForInstances } from '../../rules/class/resolveCharacterDeferredRequirements'
-import { FeatureChoiceCard } from '../choices/FeatureChoiceCard'
-import {
-  getFeatureChoiceExpanded,
-  setFeatureChoiceExpanded,
-  type FeatureChoiceExpansionState,
-} from '../choices/featureChoiceExpansionState'
-import {
-  findSingleSelectChoiceForFeature,
-  getChoicesNotLinkedToFeatures,
-} from '../choices/linkFeatureToChoice'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
+import { SingleSelectChoiceOptions } from '../choices/SingleSelectChoiceOptions'
+import { AsiChoiceField } from './AsiChoiceField'
+import { buildClassFeatureAccordionItems } from './buildClassFeatureAccordionItems'
+import { ClassFeatureAccordion } from './ClassFeatureAccordion'
 import { ClassDeferredRequirementsPanel } from './ClassSelectionSummary'
-import { ClassLevelAccordion } from './ClassLevelAccordion'
 import { ClassMultiSelectChoiceField } from './ClassMultiSelectChoiceField'
 import { getOverviewSetupChoices } from './classOverviewSetupChoices'
 import { formatClassValidationIssue } from './formatClassValidation'
 import type { ClassSelectionDraft } from './classSelectionDraft'
+import {
+  collectWeaponMasterySelections,
+  isWeaponMasteryChoiceId,
+} from '../../domain/class/weaponMastery'
 
 export type ClassProgressionSectionProps = {
   editionId: EditionId
@@ -34,6 +33,8 @@ export type ClassProgressionSectionProps = {
   activeLevel: number
   activeChoices: Record<string, ClassChoiceValue>
   draft: ClassSelectionDraft | null
+  featCatalog: FeatCatalog
+  characterFeatId?: string | null
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
 }
 
@@ -45,10 +46,33 @@ export function ClassProgressionSection({
   activeLevel,
   activeChoices,
   draft,
+  featCatalog,
+  characterFeatId = null,
   onChoiceChange,
 }: ClassProgressionSectionProps) {
-  const [choiceExpansionState, setChoiceExpansionState] =
-    useState<FeatureChoiceExpansionState>({})
+  const [featNameById, setFeatNameById] = useState<Map<string, string>>(
+    () => new Map(),
+  )
+  const [featById, setFeatById] = useState<Map<string, import('../../domain/feat/types').FeatDefinition>>(
+    () => new Map(),
+  )
+
+  useEffect(() => {
+    let active = true
+
+    void featCatalog.listFeats(editionId).then((feats) => {
+      if (!active) {
+        return
+      }
+
+      setFeatNameById(new Map(feats.map((feat) => [feat.id, feat.name])))
+      setFeatById(new Map(feats.map((feat) => [feat.id, feat])))
+    })
+
+    return () => {
+      active = false
+    }
+  }, [editionId, featCatalog])
 
   const draftValidation =
     draft === null
@@ -61,6 +85,10 @@ export function ClassProgressionSection({
           },
           editionId,
           activeDefinition,
+          {
+            featById,
+            characterFeatId,
+          },
         )
 
   const overviewSetupChoiceIds = useMemo(
@@ -83,19 +111,12 @@ export function ClassProgressionSection({
     )
   }, [draftValidation])
 
-  const availableChoices = getChoicesAvailableAtLevel(activeDefinition, activeLevel)
-
-  const featureProgression = getClassFeatureProgressionUpToLevel(
+  const featureItems = buildClassFeatureAccordionItems(
     activeDefinition,
     activeLevel,
+    activeChoices,
+    featNameById,
   )
-
-  const unlinkedChoices = getChoicesNotLinkedToFeatures(
-    availableChoices,
-    featureProgression.flatMap((entry) =>
-      entry.features.map((feature) => feature.id),
-    ),
-  ).filter((choice) => !overviewSetupChoiceIds.has(choice.id))
 
   const progressionValidationIssues =
     draftValidation?.ok === false
@@ -127,127 +148,148 @@ export function ClassProgressionSection({
       aria-labelledby="class-progression-heading"
     >
       <h3 id="class-progression-heading" className="class-picker__section-title">
-        Class Progression
+        Class Features
       </h3>
 
       <div className="class-picker__progression-content">
-        {featureProgression.length > 0 ? (
-          <div className="class-picker__features">
-            {featureProgression.map((levelEntry) => (
-              <ClassLevelAccordion key={levelEntry.level} level={levelEntry.level}>
-                <div className="class-picker__feature-cards">
-                  {levelEntry.features.map((feature) => {
-                    const linkedChoice = findSingleSelectChoiceForFeature(
-                      feature.id,
-                      availableChoices,
-                    )
-
-                    if (linkedChoice !== null) {
-                      const issue = choiceIssueById.get(linkedChoice.id)
-                      const errorId =
-                        issue === undefined
-                          ? undefined
-                          : `class-choice-error-${linkedChoice.id}`
-                      const choiceValue = activeChoices[linkedChoice.id]
-                      const selectedOptionId =
-                        typeof choiceValue === 'string' ? choiceValue : null
-                      const hasSelection =
-                        selectedOptionId !== null &&
-                        selectedOptionId.length > 0
-
-                      return (
-                        <div
-                          key={feature.id}
-                          className="class-picker__feature-choice"
-                        >
-                          <FeatureChoiceCard
-                            id={`class-feature-${feature.id}`}
-                            title={feature.name}
-                            description={feature.description}
-                            options={linkedChoice.options}
-                            selectedOptionId={selectedOptionId}
-                            name={`class-choice-${linkedChoice.id}`}
-                            describedBy={errorId}
-                            expanded={getFeatureChoiceExpanded(
-                              choiceExpansionState,
-                              activeInstanceId === null
-                                ? linkedChoice.id
-                                : createClassChoiceStateKey(
-                                    activeInstanceId,
-                                    linkedChoice.id,
-                                  ),
-                              hasSelection,
-                            )}
-                            onExpandedChange={(expanded) => {
-                              setChoiceExpansionState((current) =>
-                                setFeatureChoiceExpanded(
-                                  current,
-                                  activeInstanceId === null
-                                    ? linkedChoice.id
-                                    : createClassChoiceStateKey(
-                                        activeInstanceId,
-                                        linkedChoice.id,
-                                      ),
-                                  expanded,
-                                ),
-                              )
-                            }}
-                            onSelect={(optionId) => {
-                              onChoiceChange(linkedChoice.id, optionId)
-                            }}
-                          />
-                          {issue !== undefined && errorId !== undefined ? (
-                            <p
-                              id={errorId}
-                              className="class-picker__choice-error"
-                              role="alert"
-                            >
-                              {formatClassValidationIssue(issue)}
-                            </p>
-                          ) : null}
-                        </div>
-                      )
-                    }
-
-                    return (
-                      <article
-                        key={feature.id}
-                        className="class-picker__feature-card"
-                      >
-                        <h6>{feature.name}</h6>
-                        <p>{feature.description}</p>
-                      </article>
-                    )
-                  })}
-                </div>
-              </ClassLevelAccordion>
-            ))}
-          </div>
-        ) : null}
-
-        {unlinkedChoices.length > 0 ? (
-          <div className="class-picker__choices">
-            {unlinkedChoices.map((choice) => {
-              if (choice.type !== 'multi-select') {
-                return null
-              }
-
-              const issue = choiceIssueById.get(choice.id)
-              const errorId =
-                issue === undefined
+        {featureItems.length > 0 ? (
+          <div className="class-picker__feature-accordions">
+            {featureItems.map((item) => {
+              const choiceId =
+                item.singleSelectChoice?.id ?? item.multiSelectChoice?.id
+              const issue =
+                choiceId === undefined
                   ? undefined
-                  : `class-choice-error-${choice.id}`
+                  : choiceIssueById.get(choiceId)
+              const errorId =
+                issue === undefined || choiceId === undefined
+                  ? undefined
+                  : `class-choice-error-${choiceId}`
+              const metaParts = [
+                item.summaryLabel ?? item.choiceCountLabel,
+                item.levelLabel,
+              ].filter((part): part is string => part !== null)
+              const isAsiChoice =
+                item.singleSelectChoice !== null &&
+                isAbilityScoreImprovementChoiceId(item.singleSelectChoice.id)
 
               return (
-                <div key={choice.id} className="class-picker__choice">
-                  <ClassMultiSelectChoiceField
-                    choice={choice}
-                    value={activeChoices[choice.id]}
-                    errorId={errorId}
-                    legend={choice.prompt}
-                    onChange={onChoiceChange}
-                  />
-                  {issue !== undefined && errorId !== undefined ? (
+                <ClassFeatureAccordion
+                  key={item.id}
+                  title={item.title}
+                  metaParts={metaParts}
+                  completion={item.completion}
+                  completionLabel={item.completionLabel}
+                  defaultExpanded={false}
+                >
+                  {item.description.trim().length > 0 && !isAsiChoice ? (
+                    <p className="class-picker__feature-accordion-description">
+                      {item.description}
+                    </p>
+                  ) : null}
+
+                  {item.deferredRequirement !== null ? (
+                    <p className="class-picker__feature-accordion-deferred">
+                      {item.deferredRequirement.description}
+                    </p>
+                  ) : null}
+
+                  {isAsiChoice && item.singleSelectChoice !== null ? (
+                    <div className="class-picker__feature-accordion-choices">
+                      <AsiChoiceField
+                        choiceId={item.singleSelectChoice.id}
+                        value={
+                          typeof activeChoices[item.singleSelectChoice.id] ===
+                          'string'
+                            ? (activeChoices[item.singleSelectChoice.id] as string)
+                            : undefined
+                        }
+                        editionId={editionId}
+                        featCatalog={featCatalog}
+                        takenFeatIds={[
+                          ...collectAsiFeatIds(
+                            activeChoices,
+                            item.singleSelectChoice.id,
+                          ),
+                          ...(characterFeatId !== null ? [characterFeatId] : []),
+                        ]}
+                        errorId={errorId}
+                        onChange={onChoiceChange}
+                      />
+                    </div>
+                  ) : null}
+
+                  {item.singleSelectChoice !== null && !isAsiChoice ? (
+                    <div
+                      className="class-picker__feature-accordion-choices"
+                      role="radiogroup"
+                      aria-label={item.singleSelectChoice.prompt}
+                      aria-describedby={errorId}
+                    >
+                      <SingleSelectChoiceOptions
+                        id={`class-feature-${item.singleSelectChoice.id}`}
+                        options={item.singleSelectChoice.options}
+                        selectedOptionId={
+                          typeof activeChoices[item.singleSelectChoice.id] ===
+                          'string'
+                            ? (activeChoices[item.singleSelectChoice.id] as string)
+                            : null
+                        }
+                        name={`class-choice-${item.singleSelectChoice.id}`}
+                        layout={
+                          item.singleSelectChoice.id === 'fighting-style'
+                            ? 'grid-2'
+                            : 'stack'
+                        }
+                        onSelect={(optionId) => {
+                          onChoiceChange(item.singleSelectChoice!.id, optionId)
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                  {item.multiSelectChoice !== null ? (
+                    <div className="class-picker__feature-accordion-choices">
+                      <ClassMultiSelectChoiceField
+                        choice={item.multiSelectChoice}
+                        value={activeChoices[item.multiSelectChoice.id]}
+                        errorId={errorId}
+                        ariaLabel={item.multiSelectChoice.prompt}
+                        excludedOptionIds={
+                          isWeaponMasteryChoiceId(item.multiSelectChoice.id)
+                            ? collectWeaponMasterySelections(
+                                activeChoices,
+                                item.multiSelectChoice.id,
+                              )
+                            : []
+                        }
+                        onChange={onChoiceChange}
+                      />
+                    </div>
+                  ) : null}
+
+                  {item.grantedFeatures.length > 0 ? (
+                    <ul className="class-picker__feature-accordion-grants">
+                      {item.grantedFeatures.map((grant) => (
+                        <li
+                          key={grant.name}
+                          className="class-picker__feature-accordion-grant"
+                        >
+                          <span className="class-picker__feature-accordion-grant-name">
+                            {grant.name}
+                          </span>
+                          <p className="class-picker__feature-accordion-grant-description">
+                            {grant.description}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {issue !== undefined &&
+                  errorId !== undefined &&
+                  issue.code !== 'missing-required-choice' &&
+                  issue.code !== 'invalid-multi-select-count' ? (
                     <p
                       id={errorId}
                       className="class-picker__choice-error"
@@ -256,7 +298,7 @@ export function ClassProgressionSection({
                       {formatClassValidationIssue(issue)}
                     </p>
                   ) : null}
-                </div>
+                </ClassFeatureAccordion>
               )
             })}
           </div>

@@ -1,12 +1,11 @@
-import { useMemo } from 'react'
 import type {
   ClassChoiceValue,
   ClassDefinition,
   ClassSelection,
 } from '../../domain/class/types'
 import type { ClassValidationResult } from '../../rules/class/classRules'
-import { ClassIcon } from './ClassIcon'
-import { ClassMultiSelectChoiceField } from './ClassMultiSelectChoiceField'
+import type { ClassSelectionDraft } from './classSelectionDraft'
+import { ClassInsignia } from './ClassInsignia'
 import { ClassOverviewReferenceChips } from './ClassOverviewReferenceChips'
 import {
   formatAbilityChipLabels,
@@ -14,14 +13,6 @@ import {
   formatHitDie,
   formatWeaponProficiencyChipLabels,
 } from './formatClassDetails'
-import { formatClassCompletionStatus } from './formatClassCompletionStatus'
-import { formatClassValidationIssue } from './formatClassValidation'
-import type { ClassSelectionDraft } from './classSelectionDraft'
-import {
-  formatOverviewSetupChoicePrompt,
-  getOverviewSetupChoiceHeading,
-  getOverviewSetupChoices,
-} from './classOverviewSetupChoices'
 import { LevelStepper } from './LevelStepper'
 
 function getSubclassLabel(
@@ -43,8 +34,8 @@ function getSubclassLabel(
   }
 
   return (
-    subclassChoice.options.find((option) => option.id === selectedValue)?.label ??
-    null
+    subclassChoice.options.find((option) => option.id === selectedValue)
+      ?.label ?? null
   )
 }
 
@@ -57,7 +48,6 @@ export type ClassOverviewPanelProps = {
   draft: ClassSelectionDraft | null
   draftValidation: ClassValidationResult | null
   onLevelChange: (level: number) => void
-  onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
 }
 
 export function ClassOverviewPanel({
@@ -65,30 +55,9 @@ export function ClassOverviewPanel({
   level,
   maxLevel,
   choices,
-  committedSelection,
-  draft,
-  draftValidation,
   onLevelChange,
-  onChoiceChange,
 }: ClassOverviewPanelProps) {
   const subclassLabel = getSubclassLabel(definition, choices)
-  const completionStatus = formatClassCompletionStatus({
-    committedSelection,
-    draft,
-    draftValidation,
-  })
-
-  const setupChoices = getOverviewSetupChoices(definition, level)
-
-  const choiceIssueById = useMemo(() => {
-    const issues = draftValidation?.ok === false ? draftValidation.issues : []
-
-    return new Map(
-      issues
-        .filter((issue) => issue.choiceId !== undefined)
-        .map((issue) => [issue.choiceId as string, issue]),
-    )
-  }, [draftValidation])
 
   return (
     <aside
@@ -102,29 +71,30 @@ export function ClassOverviewPanel({
       <div className="class-picker__overview-card">
         <div className="class-picker__overview-header">
           <span className="class-picker__overview-icon">
-            <ClassIcon classId={definition.id} />
+            <ClassInsignia classId={definition.id} />
           </span>
           <div className="class-picker__overview-heading-text">
-            <p className="class-picker__overview-class-name">{definition.name}</p>
-            <p className="class-picker__summary-subtitle">
-              {subclassLabel !== null ? `Level ${level} · ${subclassLabel}` : `Level ${level}`}
-            </p>
-            <p className="class-picker__summary-status" role="status">
-              {completionStatus}
-            </p>
+            <div className="class-picker__overview-title-row">
+              <p className="class-picker__overview-class-name">
+                {definition.name}
+              </p>
+              <LevelStepper
+                value={level}
+                max={maxLevel}
+                label="Level"
+                compact
+                onChange={onLevelChange}
+              />
+            </div>
+            {subclassLabel !== null ? (
+              <p className="class-picker__summary-subtitle">{subclassLabel}</p>
+            ) : null}
           </div>
         </div>
 
-        <div className="class-picker__overview-level">
-          <LevelStepper
-            value={level}
-            max={maxLevel}
-            label="Levels in this class"
-            onChange={onLevelChange}
-          />
-        </div>
-
-        <p className="class-picker__overview-description">{definition.description}</p>
+        <p className="class-picker__overview-description">
+          {definition.description}
+        </p>
 
         <dl className="class-picker__overview-metadata">
           <div className="class-picker__overview-metadata-group">
@@ -171,49 +141,6 @@ export function ClassOverviewPanel({
               />
             </dd>
           </div>
-
-          {setupChoices.map((choice) => {
-            const headingId = `overview-setup-heading-${choice.id}`
-            const promptId = `overview-setup-prompt-${choice.id}`
-            const issue = choiceIssueById.get(choice.id)
-            const errorId =
-              issue === undefined
-                ? undefined
-                : `class-choice-error-${choice.id}`
-
-            return (
-              <div
-                key={choice.id}
-                className="class-picker__overview-metadata-group"
-              >
-                <dt id={headingId}>{getOverviewSetupChoiceHeading(choice)}</dt>
-                <dd>
-                  <p
-                    id={promptId}
-                    className="class-picker__overview-skill-prompt"
-                  >
-                    {formatOverviewSetupChoicePrompt(choice)}
-                  </p>
-                  <ClassMultiSelectChoiceField
-                    choice={choice}
-                    value={choices[choice.id]}
-                    errorId={errorId}
-                    labelledBy={`${headingId} ${promptId}`}
-                    onChange={onChoiceChange}
-                  />
-                  {issue !== undefined && errorId !== undefined ? (
-                    <p
-                      id={errorId}
-                      className="class-picker__choice-error"
-                      role="alert"
-                    >
-                      {formatClassValidationIssue(issue)}
-                    </p>
-                  ) : null}
-                </dd>
-              </div>
-            )
-          })}
         </dl>
       </div>
     </aside>

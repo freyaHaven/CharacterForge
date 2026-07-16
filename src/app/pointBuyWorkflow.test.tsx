@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import {
   getAbilityFieldNumberInput,
-  getCreationMethodSelect,
+  selectCreationMethod,
 } from '../test/abilityScoreTestUtils'
 import { goToAbilityScoresStep } from '../test/wizardTestUtils'
 import {
@@ -39,7 +39,7 @@ async function renderLoadedApp() {
 }
 
 async function switchToPointBuy(user: ReturnType<typeof userEvent.setup>) {
-  await user.selectOptions(getCreationMethodSelect(screen), 'point-buy')
+  await selectCreationMethod(user, screen, 'point-buy')
 }
 
 async function makeInvalidPointBuyScores() {
@@ -63,7 +63,7 @@ describe('Point Buy workflow in App', () => {
     await switchToPointBuy(user)
 
     expect(screen.getByRole('button', { name: /start point buy/i })).toBeInTheDocument()
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(16)
   })
 
@@ -97,7 +97,7 @@ describe('Point Buy workflow in App', () => {
     await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
     await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
   })
 
@@ -111,7 +111,7 @@ describe('Point Buy workflow in App', () => {
       await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
     }
 
-    await user.selectOptions(getCreationMethodSelect(screen), 'manual')
+    await selectCreationMethod(user, screen, 'manual')
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(15)
   })
 
@@ -134,12 +134,7 @@ describe('Point Buy workflow in App', () => {
     await switchToPointBuy(user)
     await user.click(screen.getByRole('button', { name: /start point buy/i }))
 
-    expect(
-      screen.getByText(/you still have 27 unspent points/i),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /save draft/i })).toBeEnabled()
-
-    await user.click(screen.getByRole('button', { name: /save draft/i }))
+    expect(screen.getByText(/remaining:\s*27/i)).toBeInTheDocument()
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(

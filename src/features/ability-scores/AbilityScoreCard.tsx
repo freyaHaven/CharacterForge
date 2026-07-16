@@ -4,6 +4,7 @@ import {
   formatAbilityScoreDisplay,
   type AbilityScoreKey,
 } from './abilityScoreDisplay'
+import { AbilityStatIcon } from './AbilityUiIcons'
 
 export type AbilityScoreCardProps = {
   abilityKey: AbilityScoreKey
@@ -36,13 +37,16 @@ export function AbilityScoreCard({
       aria-label={`${abbreviation} ${scoreDisplay}, modifier ${modifierDisplay}`}
     >
       <span className="ability-score-card__label">{abbreviation}</span>
-      <span className="ability-score-card__modifier">{modifierDisplay}</span>
+      <span className="ability-score-card__icon" aria-hidden="true">
+        <AbilityStatIcon abilityKey={abilityKey} />
+      </span>
       <span
         className="ability-score-card__score"
         aria-label={variant === 'interactive' ? `${scoreLabel} score` : undefined}
       >
         {scoreDisplay}
       </span>
+      <span className="ability-score-card__modifier">{modifierDisplay}</span>
       {controls !== undefined ? (
         <div className="ability-score-card__controls">{controls}</div>
       ) : null}

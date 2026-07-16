@@ -1,8 +1,10 @@
-import { getClassIconAsset } from './classIconRegistry'
+import { getClassIcon } from '../../assets/iconRegistry'
 
 type ClassIconProps = {
   classId: string
   className?: string
+  /** When set, the image is meaningful and receives this alt text. */
+  alt?: string
 }
 
 function DefaultClassIcon({ className }: { className?: string }) {
@@ -31,16 +33,18 @@ function DefaultClassIcon({ className }: { className?: string }) {
   )
 }
 
-export function ClassIcon({ classId, className }: ClassIconProps) {
-  const iconSrc = getClassIconAsset(classId)
+/** Compact class glyph for headers, summaries, pills, review, and navigation. */
+export function ClassIcon({ classId, className, alt }: ClassIconProps) {
+  const iconSrc = getClassIcon(classId)
+  const isDecorative = alt === undefined
 
   if (iconSrc !== null) {
     return (
       <img
         className={className}
         src={iconSrc}
-        alt=""
-        aria-hidden="true"
+        alt={isDecorative ? '' : alt}
+        aria-hidden={isDecorative ? true : undefined}
         draggable={false}
       />
     )

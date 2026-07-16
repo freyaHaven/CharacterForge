@@ -7,20 +7,24 @@ import {
 import type { WizardStepId } from '../../app/wizard/types'
 
 export type CharacterContextClassEntry = {
+  classId: string
   className: string
   level: number
   subclassLabel: string | null
 }
 
 export type CharacterContextDisplay = {
+  speciesId: string | null
   identityLine: string | null
   buildLine: string | null
   characterLevelLine: string | null
   guidanceLine: string | null
+  classEntries: CharacterContextClassEntry[]
 }
 
 export type CharacterContextDisplayInput = {
   characterName: string
+  speciesId: string | null
   speciesName: string | null
   targetLevel: CharacterLevel
   classEntries: CharacterContextClassEntry[]
@@ -120,10 +124,12 @@ export function buildCharacterContextDisplay(
       : null
 
   return {
+    speciesId: input.speciesId,
     identityLine,
     buildLine,
     characterLevelLine,
     guidanceLine,
+    classEntries: input.classEntries,
   }
 }
 

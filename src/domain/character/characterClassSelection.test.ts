@@ -44,6 +44,7 @@ describe('characterClassSelection helpers', () => {
       choices: {
         'fighting-style': 'defense',
         'skill-proficiencies': ['athletics', 'perception'],
+        'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
       },
     })
   })
