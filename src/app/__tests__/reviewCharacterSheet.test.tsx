@@ -10,9 +10,10 @@ import { createDefaultCharacter } from '../../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../../domain/character/details'
 import type { Character } from '../../domain/types'
 import {
-  activateEditorSession,
   clearEditorSession,
-  waitForAppReady,
+  clearRecentCharacters,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 import { goToWizardStep } from '../../testing/wizardTestUtils'
 
@@ -74,6 +75,7 @@ function createReviewTestCharacter(): Character {
 describe('Overview character sheet content', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)
@@ -81,12 +83,12 @@ describe('Overview character sheet content', () => {
 
   it('renders play-oriented Overview sections for a completed Fighter', async () => {
     const character = createReviewTestCharacter()
-    activateEditorSession(character.id)
+    seedRecentCharacter(character.id)
     loadMock.mockResolvedValue(character)
 
     const user = userEvent.setup()
     render(<App />)
-    await waitForAppReady()
+    await openStoredCharacterEditor(user, character)
     await goToWizardStep(user, screen, 'Overview')
 
     await waitFor(() => {

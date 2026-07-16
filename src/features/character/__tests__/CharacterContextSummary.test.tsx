@@ -9,7 +9,10 @@ import { createDefaultCharacter } from '../../../domain/character/defaults'
 import { withSingleClassInstance } from '../../../domain/character/characterClassSelection'
 import { createTestFighterClassInstance } from '../../../testing/classFixtures'
 import type { Character } from '../../../domain/types'
-import { createClassInstanceDraft, createEmptyClassSelectionDrafts } from '../../class/classSelectionDraft'
+import {
+  createClassInstanceDraft,
+  createEmptyClassSelectionDrafts,
+} from '../../class/classSelectionDraft'
 import { createSpeciesSelectionDraft } from '../../species/speciesSelectionDraft'
 import { CharacterContextSummary } from '../CharacterContextSummary'
 
@@ -33,7 +36,7 @@ function renderSummary(
   render(
     <CharacterContextSummary
       character={character}
-      activeStepId={overrides.activeStepId ?? 'class'}
+      activeStepId={overrides.activeStepId ?? 'background'}
       speciesCatalog={speciesCatalog}
       classCatalog={classCatalog}
       speciesDraft={overrides.speciesDraft ?? null}
@@ -46,7 +49,9 @@ describe('CharacterContextSummary', () => {
   it('does not render on the basics step', () => {
     renderSummary({ activeStepId: 'basics' })
 
-    expect(screen.queryByTestId('character-context-summary')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('character-context-summary'),
+    ).not.toBeInTheDocument()
   })
 
   it('does not render on the review step', () => {
@@ -57,7 +62,9 @@ describe('CharacterContextSummary', () => {
       },
     })
 
-    expect(screen.queryByTestId('character-context-summary')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('character-context-summary'),
+    ).not.toBeInTheDocument()
   })
 
   it('does not render when no character information is available yet', () => {
@@ -69,15 +76,17 @@ describe('CharacterContextSummary', () => {
       }),
     })
 
-    expect(screen.queryByTestId('character-context-summary')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('character-context-summary'),
+    ).not.toBeInTheDocument()
   })
 
-  it('shows only the character name on the species step before a species is selected', async () => {
+  it('shows only the character name on the species step', async () => {
     renderSummary({
       activeStepId: 'species',
       character: createDefaultCharacter({
         name: 'Freya',
-        species: null,
+        species: { speciesId: 'srd-2024:dwarf', choices: {} },
       }),
     })
 
@@ -85,25 +94,30 @@ describe('CharacterContextSummary', () => {
       expect(screen.getByText('Freya')).toBeInTheDocument()
     })
 
+    expect(screen.queryByText(/Dwarf/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/No species selected/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Unnamed character/i)).not.toBeInTheDocument()
   })
 
-  it('renders responsive-safe markup for the sticky context panel', () => {
+  it('renders compact text-only markup without icons', async () => {
     renderSummary({
       character: {
         ...withSingleClassInstance(createTestFighterClassInstance()),
       },
     })
 
-    const summary = screen.getByTestId('character-context-summary')
+    const summary = await waitFor(() =>
+      screen.getByTestId('character-context-summary'),
+    )
     expect(summary.tagName).toBe('ASIDE')
     expect(summary).toHaveAttribute('aria-label', 'Character context')
+    expect(summary.querySelector('.character-context__icons')).toBeNull()
     expect(summary.querySelector('.character-context__lines')).not.toBeNull()
-    expect(summary.querySelectorAll('.character-context__line').length).toBeGreaterThan(0)
+    expect(
+      summary.querySelectorAll('.character-context__line').length,
+    ).toBeGreaterThan(0)
   })
 
-  it('shows name, species, class, level, and primary abilities when available', async () => {
+  it('shows name, species, and class without guidance on non-ability steps', async () => {
     renderSummary({
       character: {
         ...withSingleClassInstance(
@@ -120,13 +134,29 @@ describe('CharacterContextSummary', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Elara · Dwarf')).toBeInTheDocument()
+      expect(screen.getByText('Elara • Dwarf')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Fighter 3 · Champion')).toBeInTheDocument()
-    expect(
-      screen.getByText('Primary abilities: Strength, Dexterity'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Fighter 3')).toBeInTheDocument()
+    expect(screen.queryByText(/Champion/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Primary abilities:/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Character level:/i)).not.toBeInTheDocument()
+  })
+
+  it('omits the class build line on the class step', async () => {
+    renderSummary({
+      activeStepId: 'class',
+      character: {
+        ...withSingleClassInstance(createTestFighterClassInstance()),
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Elara • Dwarf')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('Fighter 1')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Prioritise:/i)).not.toBeInTheDocument()
   })
 
   it('shows only identity information before a class is committed', async () => {
@@ -138,16 +168,14 @@ describe('CharacterContextSummary', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Elara · Dwarf')).toBeInTheDocument()
+      expect(screen.getByText('Elara • Dwarf')).toBeInTheDocument()
     })
 
     expect(screen.queryByText(/No class selected/i)).not.toBeInTheDocument()
-    expect(
-      screen.queryByText(/Primary abilities:/i),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/Prioritise:/i)).not.toBeInTheDocument()
   })
 
-  it('previews an uncommitted class draft for primary ability guidance', async () => {
+  it('previews an uncommitted class draft on non-class steps', async () => {
     renderSummary({
       classDrafts: {
         'draft-instance-1': createClassInstanceDraft(
@@ -161,12 +189,10 @@ describe('CharacterContextSummary', () => {
       expect(screen.getByText('Fighter 1')).toBeInTheDocument()
     })
 
-    expect(
-      screen.getByText('Primary abilities: Strength, Dexterity'),
-    ).toBeInTheDocument()
+    expect(screen.queryByText(/Prioritise:/i)).not.toBeInTheDocument()
   })
 
-  it('uses prioritise wording on the ability scores step', async () => {
+  it('shows prioritise guidance on the ability scores step', async () => {
     renderSummary({
       activeStepId: 'ability-scores',
       character: {
@@ -176,9 +202,12 @@ describe('CharacterContextSummary', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Prioritise: Strength or Dexterity'),
+        screen.getByText('Prioritise: Strength • Dexterity'),
       ).toBeInTheDocument()
     })
+
+    expect(screen.getByText('Elara • Dwarf')).toBeInTheDocument()
+    expect(screen.getByText('Fighter 1')).toBeInTheDocument()
   })
 
   it('prefers a species draft over the committed species selection', async () => {
@@ -191,7 +220,7 @@ describe('CharacterContextSummary', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Elara · Dragonborn')).toBeInTheDocument()
+      expect(screen.getByText('Elara • Dragonborn')).toBeInTheDocument()
     })
   })
 })

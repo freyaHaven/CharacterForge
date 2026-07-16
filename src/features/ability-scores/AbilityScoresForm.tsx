@@ -1,34 +1,35 @@
-import { CREATION_METHOD_OPTIONS } from '../creation-method/creationMethodOptions'
+import { useMemo } from 'react'
+import { getBundledContentRegistry } from '../../content/registry/bundledContent'
+import { computeAbilityScoreBonuses } from '../../domain/background/computeAbilityScoreBonuses'
+import type { BackgroundSelection } from '../../domain/background/types'
 import type {
   AbilityScores,
   CharacterCreationMethod,
 } from '../../domain/types'
 import {
   POINT_BUY_BUDGET,
+  POINT_BUY_MIN_SCORE,
   validatePointBuyAssignment,
 } from '../../rules/point-buy'
 import { createEmptyRolledAssignments } from '../../rules/rolled'
-import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
-import { AbilityScoreCard } from './AbilityScoreCard'
-import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
-import { formatPointBuyValidation } from './formatPointBuyValidation'
-import { PointBuyAbilityInputs } from './PointBuyAbilityInputs'
+import { SingleSelectCardGrid } from '../choices/SingleSelectCardGrid'
+import type { AbilityScoreBonusMap } from './resolveAbilityScoreBreakdown'
+import { buildAbilityScoreBreakdown } from './resolveAbilityScoreBreakdown'
+import { AbilityScoreBreakdown } from './AbilityScoreBreakdown'
 import {
-  type PointBuyDraftScores,
-} from './pointBuyDraft'
+  ABILITY_SCORE_METHOD_UI_OPTIONS,
+  isManualOrRolledMethod,
+  toAbilityScoreMethodUiId,
+  toCreationMethodFromUiId,
+  type AbilityScoreMethodUiId,
+} from './abilityScoreMethodOptions'
+import { formatPointBuyValidation } from './formatPointBuyValidation'
+import { ManualAbilityInputs } from './ManualAbilityInputs'
+import { PointBuyAbilityInputs } from './PointBuyAbilityInputs'
+import { type PointBuyDraftScores } from './pointBuyDraft'
 import { RolledAbilityInputs } from './RolledAbilityInputs'
 import { RolledPoolPanel } from './RolledPoolPanel'
-import {
-  type RolledDraft,
-} from './rolledDraft'
-import {
-  formatRemainingRolledResults,
-  getRemainingRolledResults,
-} from './rolledRemaining'
-import {
-  formatRemainingStandardArrayValues,
-  getRemainingStandardArrayValues,
-} from './standardArrayRemaining'
+import { type RolledDraft } from './rolledDraft'
 import { StandardArrayAbilityInputs } from './StandardArrayAbilityInputs'
 import {
   hasStandardArrayAssignments,
@@ -43,6 +44,7 @@ type AbilityScoresFormProps = {
   pointBuyDraft: PointBuyDraftScores | null
   rolledDraft: RolledDraft | null
   prefersReducedMotion: boolean
+  backgroundSelection?: BackgroundSelection | null
   onCreationMethodChange: (creationMethod: CharacterCreationMethod) => void
   onAbilityScoreChange: (ability: keyof AbilityScores, value: number) => void
   onStandardArrayDraftChange: (
@@ -65,6 +67,101 @@ type AbilityScoresFormProps = {
   randomSource?: () => number
 }
 
+function resolveBonusMap(
+  backgroundSelection: BackgroundSelection | null | undefined,
+): AbilityScoreBonusMap {
+  if (backgroundSelection == null) {
+    return {}
+  }
+
+  const definition = getBundledContentRegistry().getBackground(
+    backgroundSelection.backgroundId,
+  )
+
+  if (
+    definition === null ||
+    backgroundSelection.abilityScoreIncrease === null
+  ) {
+    return {}
+  }
+
+  const bonuses = computeAbilityScoreBonuses(
+    definition,
+    backgroundSelection.abilityScoreIncrease,
+  )
+  const sourceLabel = definition.name
+  const bonusMap: AbilityScoreBonusMap = {}
+
+  for (const [abilityId, amount] of Object.entries(bonuses)) {
+    if (typeof amount !== 'number' || amount === 0) {
+      continue
+    }
+
+    bonusMap[abilityId as keyof AbilityScores] = [{ amount, sourceLabel }]
+  }
+
+  return bonusMap
+}
+
+function resolveBaseScores(options: {
+  creationMethod: CharacterCreationMethod
+  abilityScores: AbilityScores
+  standardArrayDraft: StandardArrayDraftScores | null
+  pointBuyDraft: PointBuyDraftScores | null
+  rolledDraft: RolledDraft | null
+}): Partial<Record<keyof AbilityScores, number | null>> {
+  const {
+    creationMethod,
+    abilityScores,
+    standardArrayDraft,
+    pointBuyDraft,
+    rolledDraft,
+  } = options
+
+  if (creationMethod === 'standard-array' && standardArrayDraft !== null) {
+    return standardArrayDraft
+  }
+
+  if (creationMethod === 'point-buy' && pointBuyDraft !== null) {
+    return pointBuyDraft
+  }
+
+  if (creationMethod === 'rolled') {
+    if (rolledDraft === null) {
+      return {
+        strength: null,
+        dexterity: null,
+        constitution: null,
+        intelligence: null,
+        wisdom: null,
+        charisma: null,
+      }
+    }
+
+    const assignedTotal = (ability: keyof AbilityScores): number | null => {
+      const rollId = rolledDraft.assignments[ability]
+      if (rollId === null) {
+        return null
+      }
+
+      return (
+        rolledDraft.pool.find((entry) => entry.id === rollId)?.total ?? null
+      )
+    }
+
+    return {
+      strength: assignedTotal('strength'),
+      dexterity: assignedTotal('dexterity'),
+      constitution: assignedTotal('constitution'),
+      intelligence: assignedTotal('intelligence'),
+      wisdom: assignedTotal('wisdom'),
+      charisma: assignedTotal('charisma'),
+    }
+  }
+
+  return abilityScores
+}
+
 export function AbilityScoresForm({
   creationMethod,
   abilityScores,
@@ -72,6 +169,7 @@ export function AbilityScoresForm({
   pointBuyDraft,
   rolledDraft,
   prefersReducedMotion,
+  backgroundSelection = null,
   onCreationMethodChange,
   onAbilityScoreChange,
   onStandardArrayDraftChange,
@@ -84,14 +182,15 @@ export function AbilityScoresForm({
   onRolledAssignmentChange,
   randomSource = Math.random,
 }: AbilityScoresFormProps) {
+  const methodUiId = toAbilityScoreMethodUiId(creationMethod)
+  const bonuses = useMemo(
+    () => resolveBonusMap(backgroundSelection),
+    [backgroundSelection],
+  )
   const standardArrayValidation =
     creationMethod === 'standard-array' && standardArrayDraft !== null
       ? validateStandardArrayDraft(standardArrayDraft)
       : null
-  const remainingStandardArrayValues =
-    standardArrayDraft === null
-      ? []
-      : getRemainingStandardArrayValues(standardArrayDraft)
   const showClearStandardArray =
     creationMethod === 'standard-array' &&
     standardArrayDraft !== null &&
@@ -106,191 +205,176 @@ export function AbilityScoresForm({
       ? validatePointBuyAssignment(pointBuyDraft)
       : null
   const pointBuyMessages =
-    pointBuyValidation === null ? [] : formatPointBuyValidation(pointBuyValidation)
-  const remainingRolledResults =
-    rolledDraft === null
+    pointBuyValidation === null
       ? []
-      : getRemainingRolledResults(rolledDraft.pool, rolledDraft.assignments)
-  const showManualInputs = creationMethod === 'manual'
+      : formatPointBuyValidation(pointBuyValidation)
+
+  const breakdown = buildAbilityScoreBreakdown({
+    baseScores: resolveBaseScores({
+      creationMethod,
+      abilityScores,
+      standardArrayDraft,
+      pointBuyDraft,
+      rolledDraft,
+    }),
+    bonuses,
+  })
+
+  function handleMethodSelect(optionId: string) {
+    const nextMethod = toCreationMethodFromUiId(
+      optionId as AbilityScoreMethodUiId,
+      creationMethod,
+    )
+
+    if (nextMethod !== creationMethod) {
+      onCreationMethodChange(nextMethod)
+    }
+  }
 
   return (
     <section className="ability-scores-form">
-      <fieldset className="ability-method">
-        <legend id="ability-method-legend" className="ability-method__legend">
-          Ability score method
-        </legend>
-        <div
-          className="ability-method__options"
-          role="radiogroup"
-          aria-labelledby="ability-method-legend"
+      <div className="ability-scores-form__header">
+        <h2
+          id="wizard-step-ability-scores-heading"
+          className="ability-scores-form__title"
         >
-          {CREATION_METHOD_OPTIONS.map((option) => (
-            <label key={option.id} className="ability-method__option">
-              <input
-                type="radio"
-                name="ability-score-method"
-                value={option.id}
-                checked={creationMethod === option.id}
-                onChange={() => {
-                  onCreationMethodChange(option.id)
-                }}
-              />
-              <span className="ability-method__option-content">
-                <span className="ability-method__option-title">{option.label}</span>
-                <span className="ability-method__option-description">
-                  {option.description}
-                </span>
-              </span>
-            </label>
-          ))}
+          Ability Scores
+        </h2>
+        <div className="ability-scores-form__method">
+          <span id="ability-method-legend" className="sr-only">
+            Ability score method
+          </span>
+          <SingleSelectCardGrid
+            id="ability-score-method"
+            name="ability-score-method"
+            options={ABILITY_SCORE_METHOD_UI_OPTIONS}
+            selectedOptionId={methodUiId}
+            onSelect={handleMethodSelect}
+            ariaLabelledBy="ability-method-legend"
+          />
         </div>
-      </fieldset>
+      </div>
 
-      {creationMethod === 'standard-array' && standardArrayDraft !== null ? (
-        <>
-          <div className="standard-array-guidance">
-            <p className="helper-text">
-              Assign each score exactly once. Higher scores give stronger
-              bonuses. You can rearrange them freely before saving.
-            </p>
-            <p className="remaining-values">
-              Remaining scores:{' '}
-              {formatRemainingStandardArrayValues(remainingStandardArrayValues)}
-            </p>
-          </div>
+      <div className="ability-scores-form__method-controls">
+        {creationMethod === 'standard-array' && standardArrayDraft !== null ? (
+          <>
+            <div className="standard-array-actions">
+              {showClearStandardArray ? (
+                <button type="button" onClick={onClearStandardArray}>
+                  Clear assignments
+                </button>
+              ) : null}
+              {showApplyDefaultStandardArray ? (
+                <button type="button" onClick={onApplyDefaultStandardArray}>
+                  Apply default standard array
+                </button>
+              ) : null}
+            </div>
 
-          <div className="standard-array-actions">
-            {showClearStandardArray ? (
-              <button type="button" onClick={onClearStandardArray}>
-                Clear assignments
-              </button>
-            ) : null}
             {showApplyDefaultStandardArray ? (
-              <button type="button" onClick={onApplyDefaultStandardArray}>
-                Apply default standard array
-              </button>
+              <p className="helper-text">
+                Default layout: STR 15, DEX 14, CON 13, INT 12, WIS 10, CHA 8 —
+                a starting layout only, not a class recommendation.
+              </p>
             ) : null}
-          </div>
+          </>
+        ) : null}
 
-          {showApplyDefaultStandardArray ? (
-            <p className="helper-text">
-              Default layout: STR 15, DEX 14, CON 13, INT 12, WIS 10, CHA 8 —
-              a starting layout only, not a class recommendation.
-            </p>
-          ) : null}
+        {creationMethod === 'point-buy' ? (
+          <>
+            {pointBuyDraft === null ? (
+              <div className="point-buy-actions">
+                <button type="button" onClick={onStartPointBuy}>
+                  Start Point Buy
+                </button>
+                <p className="helper-text">
+                  Your current scores are not a legal point-buy assignment.
+                  Start Point Buy to begin from all 8s without changing saved
+                  scores yet.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="point-buy-remaining" aria-live="polite">
+                  <p className="point-buy-remaining__label">Points Remaining</p>
+                  <p className="point-buy-remaining__value">
+                    {pointBuyValidation?.remaining ?? 0} / {POINT_BUY_BUDGET}
+                  </p>
+                </div>
 
+                {pointBuyMessages.length > 0 ? (
+                  <div className="validation-message" role="alert">
+                    <p>Fix the point-buy assignment:</p>
+                    <ul>
+                      {pointBuyMessages.map((message) => (
+                        <li key={message}>{message}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {Object.values(pointBuyDraft).some(
+                  (score) => score !== POINT_BUY_MIN_SCORE,
+                ) ? (
+                  <div className="point-buy-actions">
+                    <button type="button" onClick={onResetPointBuy}>
+                      Reset all to 8
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      <div className="ability-scores-form__overview">
+        {creationMethod === 'standard-array' && standardArrayDraft !== null ? (
           <StandardArrayAbilityInputs
             draft={standardArrayDraft}
+            bonuses={bonuses}
             onDraftChange={onStandardArrayDraftChange}
           />
-        </>
-      ) : creationMethod === 'point-buy' ? (
-        <>
-          <div className="point-buy-guidance">
-            <p className="helper-text">
-              Spend up to {POINT_BUY_BUDGET} points to set ability scores between
-              8 and 15. Higher scores cost more points.
-            </p>
-          </div>
+        ) : null}
 
-          {pointBuyDraft === null ? (
-            <div className="point-buy-actions">
-              <button type="button" onClick={onStartPointBuy}>
-                Start Point Buy
-              </button>
-              <p className="helper-text">
-                Your current scores are not a legal point-buy assignment. Start
-                Point Buy to begin from all 8s without changing saved scores yet.
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="point-buy-budget">
-                Points spent: {pointBuyValidation?.spent ?? 0} / {POINT_BUY_BUDGET}{' '}
-                · Remaining: {pointBuyValidation?.remaining ?? 0}
-              </p>
-
-              {pointBuyMessages.length > 0 ? (
-                <div className="validation-message" role="alert">
-                  <p>Fix the point-buy assignment:</p>
-                  <ul>
-                    {pointBuyMessages.map((message) => (
-                      <li key={message}>{message}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              <div className="point-buy-actions">
-                <button type="button" onClick={onResetPointBuy}>
-                  Reset all to 8
-                </button>
-              </div>
-
-              <PointBuyAbilityInputs
-                draft={pointBuyDraft}
-                onAdjustScore={onAdjustPointBuyScore}
-              />
-            </>
-          )}
-        </>
-      ) : creationMethod === 'rolled' ? (
-        <>
-          <div className="rolled-guidance">
-            <p className="helper-text">
-              Roll six ability scores, then assign each result to one ability.
-              Duplicate totals stay distinct while assigning.
-            </p>
-            {rolledDraft !== null ? (
-              <p className="remaining-values">
-                Remaining results:{' '}
-                {formatRemainingRolledResults(remainingRolledResults)}
-              </p>
-            ) : null}
-          </div>
-
-          <RolledPoolPanel
-            draft={rolledDraft}
-            prefersReducedMotion={prefersReducedMotion}
-            randomSource={randomSource}
-            onPoolReady={onRolledPoolReady}
+        {creationMethod === 'point-buy' && pointBuyDraft !== null ? (
+          <PointBuyAbilityInputs
+            draft={pointBuyDraft}
+            bonuses={bonuses}
+            onAdjustScore={onAdjustPointBuyScore}
           />
+        ) : null}
 
+        {creationMethod === 'manual' ? (
+          <ManualAbilityInputs
+            abilityScores={abilityScores}
+            bonuses={bonuses}
+            onAbilityScoreChange={onAbilityScoreChange}
+          />
+        ) : null}
+
+        {creationMethod === 'rolled' ? (
           <RolledAbilityInputs
             pool={rolledDraft?.pool ?? []}
             assignments={
               rolledDraft?.assignments ?? createEmptyRolledAssignments()
             }
+            bonuses={bonuses}
             onAssignmentChange={onRolledAssignmentChange}
           />
-        </>
-      ) : showManualInputs ? (
-        <AbilityScoreCardGrid>
-          {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => (
-            <AbilityScoreCard
-              key={key}
-              abilityKey={key}
-              abbreviation={abbreviation}
-              scoreLabel={label}
-              score={abilityScores[key]}
-              variant="interactive"
-              controls={
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  aria-label={`${label} score`}
-                  value={abilityScores[key]}
-                  onChange={(event) => {
-                    const value = Number.parseInt(event.target.value, 10)
-                    onAbilityScoreChange(key, Number.isNaN(value) ? 10 : value)
-                  }}
-                />
-              }
-            />
-          ))}
-        </AbilityScoreCardGrid>
+        ) : null}
+      </div>
+
+      {isManualOrRolledMethod(creationMethod) ? (
+        <RolledPoolPanel
+          draft={creationMethod === 'rolled' ? rolledDraft : null}
+          prefersReducedMotion={prefersReducedMotion}
+          randomSource={randomSource}
+          onPoolReady={onRolledPoolReady}
+        />
       ) : null}
+
+      <AbilityScoreBreakdown entries={breakdown} />
     </section>
   )
 }

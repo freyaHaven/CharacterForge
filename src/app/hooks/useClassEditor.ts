@@ -279,7 +279,11 @@ export function useClassEditor({
 
         return next
       })
-      setClassDrafts((current) => removeInstanceDraft(current, instance.instanceId))
+      if (buildMode === 'single-class') {
+        setClassDrafts(createEmptyClassSelectionDrafts())
+      } else {
+        setClassDrafts((current) => removeInstanceDraft(current, instance.instanceId))
+      }
 
       if (
         selectedInstanceIdRef.current === null ||
@@ -438,21 +442,25 @@ export function useClassEditor({
       }
 
       const instanceId = createClassInstanceId()
-      setClassDrafts((current) => ({
-        ...current,
-        [instanceId]: createClassInstanceDraft(instanceId, classId),
-      }))
-      setSelectedInstanceId(instanceId)
-      selectedInstanceIdRef.current = instanceId
+      const nextDraft = createClassInstanceDraft(instanceId, classId)
 
       if (buildMode === 'single-class') {
+        setClassDrafts({ [instanceId]: nextDraft })
         setCharacter((current) => ({
           ...current,
           classes: [],
           startingClassInstanceId: null,
           targetLevel: 1,
         }))
+      } else {
+        setClassDrafts((current) => ({
+          ...current,
+          [instanceId]: nextDraft,
+        }))
       }
+
+      setSelectedInstanceId(instanceId)
+      selectedInstanceIdRef.current = instanceId
 
       return instanceId
     },

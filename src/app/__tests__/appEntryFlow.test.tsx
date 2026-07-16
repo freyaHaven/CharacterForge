@@ -14,6 +14,10 @@ import {
   openCharacterEditor,
   waitForAppReady,
 } from '../../testing/characterEditorTestUtils'
+import {
+  RECENT_CHARACTERS_STORAGE_KEY,
+  recentCharactersStore,
+} from '../session/recentCharacters'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -47,16 +51,45 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
   })
 }
 
+async function continueRecentCharacter(
+  user: ReturnType<typeof userEvent.setup>,
+  namePattern: RegExp,
+) {
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: /^continue$/i })).toBeInTheDocument()
+  })
+
+  await user.click(screen.getByRole('button', { name: namePattern }))
+}
+
 describe('App entry flow', () => {
   beforeEach(() => {
     clearEditorSession()
+    recentCharactersStore.clear()
+    localStorage.removeItem(RECENT_CHARACTERS_STORAGE_KEY)
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)
     loadMock.mockResolvedValue(null)
   })
 
-  it('shows the landing page on a fresh open', async () => {
+  it('shows the home page on a fresh open', async () => {
+    render(<App />)
+    await waitForAppReady()
+
+    expect(
+      screen.getByRole('button', { name: /create new character/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: /character creation steps/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows home even when an editor session flag is still set', async () => {
+    const character = createStoredCharacter()
+    activateEditorSession(character.id)
+    loadMock.mockResolvedValue(character)
+
     render(<App />)
     await waitForAppReady()
 
@@ -86,20 +119,24 @@ describe('App entry flow', () => {
     expect(saveMock).toHaveBeenCalled()
   })
 
-  it('restores an active editor session from local storage without showing the landing page', async () => {
+  it('continues a recent character into the editor', async () => {
+    const user = userEvent.setup()
     const character = createStoredCharacter()
-    activateEditorSession(character.id)
-    loadMock.mockResolvedValue(character)
+    recentCharactersStore.touch(character.id, Date.now())
+    loadMock.mockImplementation(async (id: string) =>
+      id === character.id ? character : null,
+    )
 
     render(<App />)
     await waitForAppReady()
+    await continueRecentCharacter(user, /elara • dwarf/i)
 
-    expect(
-      screen.queryByRole('button', { name: /create new character/i }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('navigation', { name: /character creation steps/i }),
-    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
+
     expect(loadMock).toHaveBeenCalledWith('char-1')
 
     const brand = document.querySelector('.app-brand')
@@ -114,11 +151,6 @@ describe('App entry flow', () => {
         name: /export character/i,
       }),
     ).toBeInTheDocument()
-    expect(
-      within(brand as HTMLElement).queryByRole('button', {
-        name: /save draft/i,
-      }),
-    ).not.toBeInTheDocument()
   })
 
   it('imports a valid .cforge file into the editor', async () => {
@@ -145,6 +177,40 @@ describe('App entry flow', () => {
 
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Imported Hero' }),
+    )
+  })
+
+  it('adds an imported character to the recent list', async () => {
+    const user = userEvent.setup()
+    const character = createStoredCharacter({
+      id: 'char-imported',
+      name: 'Imported Hero',
+    })
+    const file = new File([serializeCharacterFile(character)], 'hero.cforge', {
+      type: 'application/json',
+    })
+
+    loadMock.mockImplementation(async (id: string) =>
+      id === character.id ? character : null,
+    )
+
+    render(<App />)
+    await waitForAppReady()
+
+    await user.click(screen.getByRole('button', { name: /import character/i }))
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement
+    await user.upload(input, file)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
+
+    expect(recentCharactersStore.list().map((entry) => entry.id)).toContain(
+      'char-imported',
     )
   })
 
@@ -198,8 +264,10 @@ describe('App entry flow', () => {
   it('exports the current character as a downloadable .cforge file', async () => {
     const user = userEvent.setup()
     const character = createStoredCharacter({ name: 'Export Me' })
-    activateEditorSession(character.id)
-    loadMock.mockResolvedValue(character)
+    recentCharactersStore.touch(character.id, Date.now())
+    loadMock.mockImplementation(async (id: string) =>
+      id === character.id ? character : null,
+    )
 
     const createObjectURL = vi.fn(() => 'blob:character')
     const revokeObjectURL = vi.fn()
@@ -214,6 +282,13 @@ describe('App entry flow', () => {
 
     render(<App />)
     await waitForAppReady()
+    await continueRecentCharacter(user, /export me • dwarf/i)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
 
     await user.click(
       screen.getByRole('button', { name: /export character/i }),
@@ -252,8 +327,10 @@ describe('App entry flow', () => {
   it('imports a character from the editor actions', async () => {
     const user = userEvent.setup()
     const character = createStoredCharacter({ name: 'Editor Import' })
-    activateEditorSession(character.id)
-    loadMock.mockResolvedValue(character)
+    recentCharactersStore.touch(character.id, Date.now())
+    loadMock.mockImplementation(async (id: string) =>
+      id === character.id ? character : null,
+    )
 
     const file = new File(
       [serializeCharacterFile(createStoredCharacter({ name: 'Swapped In' }))],
@@ -263,6 +340,13 @@ describe('App entry flow', () => {
 
     render(<App />)
     await waitForAppReady()
+    await continueRecentCharacter(user, /editor import • dwarf/i)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
 
     await user.click(screen.getByRole('button', { name: /import character/i }))
     const input = document.querySelector(
@@ -277,7 +361,7 @@ describe('App entry flow', () => {
     })
   })
 
-  it('still uses local storage only after entering the editor from the landing page', async () => {
+  it('still uses local storage only after entering the editor from the home page', async () => {
     const user = userEvent.setup()
     render(<App />)
     await openCharacterEditor(user)

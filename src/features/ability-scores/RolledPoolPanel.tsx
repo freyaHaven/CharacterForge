@@ -3,7 +3,6 @@ import {
   DEFAULT_ROLLING_FORMULA_ID,
   ROLLED_ABILITY_SCORE_COUNT,
   generateAbilityScorePool,
-  getRollingFormula,
   type GeneratedAbilityScoreResult,
 } from '../../rules/rolled'
 import {
@@ -11,8 +10,8 @@ import {
   shouldConfirmReroll,
   type RolledDraft,
 } from './rolledDraft'
-import { formatRolledResultText } from './formatRollResult'
 import { buildRollPresentationSequence } from './rollPresentation'
+import { DiceRollGroup } from './DiceRollGroup'
 import { RolledDiceAnimation } from './RolledDiceAnimation'
 
 type RolledPoolPanelProps = {
@@ -38,8 +37,6 @@ export function RolledPoolPanel({
 }: RolledPoolPanelProps) {
   const [playback, setPlayback] = useState<PlaybackSession | null>(null)
   const skipAllRef = useRef(false)
-
-  const formula = getRollingFormula(DEFAULT_ROLLING_FORMULA_ID)
 
   useEffect(() => {
     skipAllRef.current = false
@@ -131,68 +128,77 @@ export function RolledPoolPanel({
   }
 
   const currentRoll =
-    playback === null ? null : playback.rolls[playback.currentIndex] ?? null
+    playback === null ? null : (playback.rolls[playback.currentIndex] ?? null)
   const isAnimating = playback !== null && currentRoll !== null
   const instantPlayback =
     playback?.skipAll === true ||
     playback?.skipCurrent === true ||
     prefersReducedMotion
 
+  const completedGroups =
+    playback !== null && playback.completedResults.length > 0
+      ? playback.completedResults
+      : null
+  const settledGroups =
+    draft !== null && playback === null ? draft.pool : null
+
   return (
     <div className="rolled-panel">
-      <p className="helper-text">
-        {formula.label}. {formula.description}
-      </p>
+      <div className="dice-roll-groups">
+        <h3 className="dice-roll-groups__heading">Dice Roll Groups</h3>
 
-      <div className="rolled-panel__actions">
-        <button type="button" onClick={handleRollDice} disabled={isAnimating}>
-          Roll dice
-        </button>
-        {isAnimating ? (
-          <>
-            <button type="button" onClick={handleSkipCurrent}>
-              Skip current animation
-            </button>
-            <button type="button" onClick={handleSkipAll}>
-              Skip all animations
-            </button>
-          </>
+        <div className="rolled-panel__actions">
+          <button type="button" onClick={handleRollDice} disabled={isAnimating}>
+            Roll dice
+          </button>
+          {isAnimating ? (
+            <>
+              <button type="button" onClick={handleSkipCurrent}>
+                Skip current animation
+              </button>
+              <button type="button" onClick={handleSkipAll}>
+                Skip all animations
+              </button>
+            </>
+          ) : null}
+        </div>
+
+        {completedGroups !== null ? (
+          <div className="dice-roll-groups__grid">
+            {completedGroups.map((result, index) => (
+              <DiceRollGroup
+                key={`completed-${index}`}
+                result={result}
+                title={`Roll ${index + 1}`}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {settledGroups !== null ? (
+          <div className="dice-roll-groups__grid">
+            {settledGroups.map((entry, index) => (
+              <DiceRollGroup
+                key={entry.id}
+                result={entry.result}
+                title={`Roll ${index + 1}`}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {isAnimating && currentRoll !== null ? (
+          <RolledDiceAnimation
+            key={`roll-${playback.currentIndex}-${instantPlayback}`}
+            result={currentRoll}
+            sequence={buildRollPresentationSequence(currentRoll, {
+              instant: instantPlayback,
+            })}
+            instant={instantPlayback}
+            onComplete={handleRollComplete}
+          />
         ) : null}
       </div>
-
-      {playback !== null && playback.completedResults.length > 0 ? (
-        <div className="rolled-pool-preview">
-          <p className="rolled-pool-preview__title">Completed results</p>
-          <ul>
-            {playback.completedResults.map((result, index) => (
-              <li key={`completed-${index}`}>{formatRolledResultText(result)}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {draft !== null && playback === null ? (
-        <div className="rolled-pool-preview">
-          <p className="rolled-pool-preview__title">Rolled results</p>
-          <ul>
-            {draft.pool.map((entry) => (
-              <li key={entry.id}>{formatRolledResultText(entry.result)}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {isAnimating && currentRoll !== null ? (
-        <RolledDiceAnimation
-          key={`roll-${playback.currentIndex}-${instantPlayback}`}
-          result={currentRoll}
-          sequence={buildRollPresentationSequence(currentRoll, {
-            instant: instantPlayback,
-          })}
-          instant={instantPlayback}
-          onComplete={handleRollComplete}
-        />
-      ) : null}
     </div>
   )
 }

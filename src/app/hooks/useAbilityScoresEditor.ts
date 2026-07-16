@@ -196,13 +196,24 @@ export function useAbilityScoresEditor({
     (nextDraft: RolledDraft) => {
       markAbilityScoresTouched()
       setRolledDraft(nextDraft)
+      setStandardArrayDraft(null)
+      setPointBuyDraft(null)
 
-      if (validateRolledDraft(nextDraft).valid) {
-        setCharacter((currentCharacter) => ({
-          ...currentCharacter,
+      setCharacter((currentCharacter) => {
+        const withMethod =
+          currentCharacter.creationMethod === 'rolled'
+            ? currentCharacter
+            : { ...currentCharacter, creationMethod: 'rolled' as const }
+
+        if (!validateRolledDraft(nextDraft).valid) {
+          return withMethod
+        }
+
+        return {
+          ...withMethod,
           abilityScores: rolledDraftToAbilityScores(nextDraft),
-        }))
-      }
+        }
+      })
 
       notifyDraftChange()
     },
@@ -237,7 +248,6 @@ export function useAbilityScoresEditor({
   const handleCreationMethodChange = useCallback(
     (creationMethod: Character['creationMethod']) => {
       markAbilityScoresTouched()
-      setCharacter((current) => ({ ...current, creationMethod }))
       notifyDraftChange()
 
       if (creationMethod === 'standard-array') {
@@ -246,15 +256,22 @@ export function useAbilityScoresEditor({
         )
         setPointBuyDraft(null)
         setRolledDraft(null)
+        setCharacter((current) => ({ ...current, creationMethod }))
         return
       }
 
       if (creationMethod === 'point-buy') {
-        setPointBuyDraft(
-          initializePointBuyDraftFromAbilityScores(character.abilityScores),
-        )
+        // Method switch always starts a fresh Point Buy budget from all 8s.
+        // Saved point-buy characters still restore via hydrateFromCharacter.
+        const nextDraft = createMinimumPointBuyDraft()
+        setPointBuyDraft(nextDraft)
         setStandardArrayDraft(null)
         setRolledDraft(null)
+        setCharacter((current) => ({
+          ...current,
+          creationMethod,
+          abilityScores: { ...nextDraft },
+        }))
         return
       }
 
@@ -262,12 +279,14 @@ export function useAbilityScoresEditor({
         setRolledDraft(null)
         setStandardArrayDraft(null)
         setPointBuyDraft(null)
+        setCharacter((current) => ({ ...current, creationMethod }))
         return
       }
 
       setStandardArrayDraft(null)
       setPointBuyDraft(null)
       setRolledDraft(null)
+      setCharacter((current) => ({ ...current, creationMethod }))
     },
     [
       character.abilityScores,

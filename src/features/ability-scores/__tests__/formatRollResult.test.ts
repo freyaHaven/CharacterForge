@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatGeneratedRollAriaLabel,
   formatGeneratedRollText,
   formatManualRollText,
+  formatRolledResultOptionLabel,
   formatRolledResultText,
 } from '../formatRollResult'
 import type { GeneratedAbilityScoreResult } from '../../../rules/rolled'
@@ -20,9 +22,22 @@ const generatedRoll: GeneratedAbilityScoreResult = {
 }
 
 describe('formatRollResult', () => {
-  it('formats generated rolls with dice, dropped die, and total', () => {
+  it('keeps a legacy textual formatter for generated rolls', () => {
     expect(formatGeneratedRollText(generatedRoll)).toBe(
       '4, 5, 2, 6 — drop 2 — total 15',
+    )
+  })
+
+  it('formats accessible roll labels without debug phrasing', () => {
+    expect(formatGeneratedRollAriaLabel(generatedRoll)).toBe(
+      'Roll total: 15. Dice: 4 kept, 5 kept, 2 discarded, 6 kept',
+    )
+  })
+
+  it('formats assignment option labels as totals only', () => {
+    expect(formatRolledResultOptionLabel(generatedRoll, 1)).toBe('15')
+    expect(formatRolledResultOptionLabel(generatedRoll, 2)).toBe(
+      '15 (result 2)',
     )
   })
 

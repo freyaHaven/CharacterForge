@@ -68,7 +68,7 @@ describe('RolledAbilityInputs', () => {
     const options = within(strengthSelect).getAllByRole('option')
     const labels = options.map((option) => option.textContent)
 
-    expect(labels).toContain('Manual result: 15')
-    expect(labels).toContain('Manual result: 15 (result 2)')
+    expect(labels).toContain('15')
+    expect(labels).toContain('15 (result 2)')
   })
 })

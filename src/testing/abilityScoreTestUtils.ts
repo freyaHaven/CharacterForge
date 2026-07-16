@@ -24,6 +24,10 @@ const ABILITY_KEYS: Record<(typeof ABILITY_LABELS)[number], string> = {
 export type AbilityLabel = (typeof ABILITY_LABELS)[number]
 
 function getCreationMethodLabel(method: CharacterCreationMethod): string {
+  if (method === 'manual' || method === 'rolled') {
+    return 'Manual / Rolled'
+  }
+
   const option = CREATION_METHOD_OPTIONS.find((entry) => entry.id === method)
   return option?.label ?? method
 }
@@ -46,6 +50,13 @@ export async function selectCreationMethod(
 }
 
 function getAbilityCard(screen: Screen, ability: AbilityLabel): HTMLElement {
+  const overview = screen.queryByTestId(
+    `ability-score-overview-${ABILITY_KEYS[ability]}`,
+  )
+  if (overview !== null) {
+    return overview
+  }
+
   return screen.getByTestId(`ability-score-card-${ABILITY_KEYS[ability]}`)
 }
 
@@ -67,7 +78,13 @@ export function getAbilityFieldModifier(
   screen: Screen,
   ability: AbilityLabel,
 ): HTMLElement {
-  return within(getAbilityCard(screen, ability)).getByText('—', {
+  const card = getAbilityCard(screen, ability)
+  const overviewTotal = card.querySelector('.ability-score-overview__total')
+  if (overviewTotal !== null) {
+    return overviewTotal as HTMLElement
+  }
+
+  return within(card).getByText('—', {
     selector: '.ability-score-card__modifier',
   })
 }

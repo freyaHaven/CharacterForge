@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import type { GeneratedAbilityScoreResult } from '../../rules/rolled'
 import {
   formatGeneratedRollAriaLabel,
-  formatGeneratedRollText,
 } from './formatRollResult'
 import { RolledDiceFace } from './RolledDiceFace'
 import type { RollPresentationSequence } from './rollPresentation'
@@ -109,9 +108,7 @@ export function RolledDiceAnimation({
         ))}
       </div>
       <p className="rolled-animation__text" aria-live="polite">
-        {showTotal
-          ? formatGeneratedRollText(result)
-          : 'Rolling ability score...'}
+        {showTotal ? `Roll total: ${result.total}` : 'Rolling ability score...'}
       </p>
       <p className="sr-only" aria-live="polite">
         {showTotal ? formatGeneratedRollAriaLabel(result) : 'Rolling ability score.'}

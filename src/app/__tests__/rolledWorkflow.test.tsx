@@ -49,7 +49,7 @@ async function rollPoolAndSkip(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /skip all animations/i }))
 
   await waitFor(() => {
-    expect(screen.getByText(/Rolled results/i)).toBeInTheDocument()
+    expect(screen.getByText(/Dice Roll Groups/i)).toBeInTheDocument()
     expect(getAbilityFieldSelect(screen, 'Strength')).not.toBeDisabled()
   })
 }
@@ -86,7 +86,7 @@ describe('Rolled workflow in App', () => {
     expect(
       screen.queryByRole('button', { name: /save draft/i }),
     ).not.toBeInTheDocument()
-    expect(getAbilityFieldSelect(screen, 'Strength')).toBeDisabled()
+    expect(getAbilityFieldNumberInput(screen, 'Strength')).toBeInTheDocument()
 
     await rollPoolAndSkip(user)
     const callsAfterRoll = saveMock.mock.calls.length
@@ -110,6 +110,7 @@ describe('Rolled workflow in App', () => {
     await rollPoolAndSkip(user)
     await user.selectOptions(getAbilityFieldSelect(screen, 'Strength'), 'rolled-0')
 
+    await selectCreationMethod(user, screen, 'standard-array')
     await selectCreationMethod(user, screen, 'manual')
 
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(10)
@@ -122,10 +123,10 @@ describe('Rolled workflow in App', () => {
 
     await rollPoolAndSkip(user)
 
-    expect(screen.getByText('Rolled results')).toBeInTheDocument()
-    const poolPreview = screen.getByText('Rolled results').closest('.rolled-pool-preview')
-    expect(poolPreview).toHaveTextContent(/total 14/i)
-    expect(poolPreview).toHaveTextContent(/total 9/i)
+    expect(screen.getByText('Dice Roll Groups')).toBeInTheDocument()
+    const poolPreview = screen.getByText('Dice Roll Groups').closest('.dice-roll-groups')
+    expect(poolPreview).toHaveTextContent('14')
+    expect(poolPreview).toHaveTextContent('9')
   })
 
   it('saves numeric scores from a completed rolled assignment', async () => {
@@ -183,7 +184,7 @@ describe('Rolled workflow in App', () => {
     await user.click(screen.getByRole('button', { name: /skip all animations/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/Rolled results/i)).toBeInTheDocument()
+      expect(screen.getByText(/Dice Roll Groups/i)).toBeInTheDocument()
       expect(getAbilityFieldSelect(screen, 'Strength')).toBeInTheDocument()
     })
     vi.useRealTimers()

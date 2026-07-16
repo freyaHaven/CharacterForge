@@ -23,14 +23,10 @@ export function formatGeneratedRollAriaLabel(
   result: GeneratedAbilityScoreResult,
 ): string {
   const diceDescription = result.dice
-    .map((die) =>
-      die.dropped
-        ? `Die ${die.index + 1}: ${die.value}, dropped`
-        : `Die ${die.index + 1}: ${die.value}`,
-    )
-    .join('; ')
+    .map((die) => `${die.value} ${die.dropped ? 'discarded' : 'kept'}`)
+    .join(', ')
 
-  return `Rolled ${diceDescription}. Total ${result.total}.`
+  return `Roll total: ${result.total}. Dice: ${diceDescription}`
 }
 
 export function formatManualRollText(total: number): string {
@@ -57,7 +53,7 @@ export function formatRolledResultOptionLabel(
   result: AbilityScoreResult,
   duplicateIndex: number,
 ): string {
-  const base = formatRolledResultText(result)
+  const base = String(result.total)
 
   if (duplicateIndex <= 1) {
     return base

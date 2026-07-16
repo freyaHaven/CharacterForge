@@ -17,10 +17,11 @@ import {
   goToWizardStep,
 } from '../../testing/wizardTestUtils'
 import {
-  activateEditorSession,
   clearEditorSession,
+  clearRecentCharacters,
   openCharacterEditor,
-  waitForAppReady,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '../../rules/standard-array/standardArray'
 import { MINIMUM_POINT_BUY_ASSIGNMENT } from '../../rules/point-buy'
@@ -61,7 +62,7 @@ async function renderApp(character: Character | null = null) {
   clearEditorSession()
 
   if (character !== null) {
-    activateEditorSession(character.id)
+    seedRecentCharacter(character.id)
     loadMock.mockResolvedValue(character)
   } else {
     loadMock.mockResolvedValue(null)
@@ -71,11 +72,11 @@ async function renderApp(character: Character | null = null) {
   const user = userEvent.setup()
   render(<App />)
 
-  await waitForAppReady()
-
   if (character === null) {
     await openCharacterEditor(user)
     saveMock.mockClear()
+  } else {
+    await openStoredCharacterEditor(user, character)
   }
 
   return { user }
@@ -84,6 +85,7 @@ async function renderApp(character: Character | null = null) {
 describe('Ability Scores wizard integration', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
   })
@@ -97,7 +99,7 @@ describe('Ability Scores wizard integration', () => {
     ).toHaveLength(1)
   })
 
-  it('renders all four creation methods inside the wizard step', async () => {
+  it('renders all three creation methods inside the wizard step', async () => {
     const { user } = await renderApp()
     await goToAbilityScoresStep(user, screen)
 
@@ -110,14 +112,12 @@ describe('Ability Scores wizard integration', () => {
     ).toBeInTheDocument()
 
     await selectCreationMethod(user, screen, 'point-buy')
-    expect(screen.getByText(/points spent:/i)).toBeInTheDocument()
+    expect(screen.getByText(/points remaining/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Increase Strength' })).toBeInTheDocument()
-
-    await selectCreationMethod(user, screen, 'rolled')
-    expect(screen.getByRole('button', { name: /roll dice/i })).toBeInTheDocument()
 
     await selectCreationMethod(user, screen, 'manual')
     expect(getAbilityFieldNumberInput(screen, 'Strength')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeInTheDocument()
   })
 
   it('reports ability scores as not started before interaction on a fresh character', async () => {

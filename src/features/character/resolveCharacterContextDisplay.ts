@@ -76,7 +76,6 @@ export async function resolveCharacterContextDisplay(
     characterName: input.character.name,
     speciesId,
     speciesName,
-    targetLevel: input.character.targetLevel,
     classEntries,
     primaryAbilities: mergePrimaryAbilities(primaryAbilityLists),
     activeStepId: input.activeStepId,

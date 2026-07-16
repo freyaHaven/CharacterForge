@@ -12,10 +12,11 @@ import {
   goToWizardStep,
 } from '../../testing/wizardTestUtils'
 import {
-  activateEditorSession,
   clearEditorSession,
+  clearRecentCharacters,
   openCharacterEditor,
-  waitForAppReady,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
@@ -72,17 +73,18 @@ async function renderEditor(
   clearEditorSession()
 
   if (character !== null) {
-    activateEditorSession(character.id)
+    seedRecentCharacter(character.id)
     loadMock.mockResolvedValue(character)
   } else {
     loadMock.mockResolvedValue(null)
   }
 
   render(<App />)
-  await waitForAppReady()
 
   if (character === null) {
     await openCharacterEditor(user)
+  } else {
+    await openStoredCharacterEditor(user, character)
   }
 
   return user
@@ -91,6 +93,7 @@ async function renderEditor(
 describe('Species wizard integration', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)

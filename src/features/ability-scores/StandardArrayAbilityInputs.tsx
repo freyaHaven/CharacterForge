@@ -1,7 +1,10 @@
 import { STANDARD_ARRAY } from '../../rules/standard-array/standardArray'
+import type { AbilityScoreBonusMap } from './resolveAbilityScoreBreakdown'
+import { buildAbilityScoreBreakdown } from './resolveAbilityScoreBreakdown'
+import type { AbilityScoreKey } from './abilityScoreDisplay'
 import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
-import { AbilityScoreCard } from './AbilityScoreCard'
-import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
+import type { AbilityScoreOverviewValue } from './AbilityScoreOverviewGrid'
+import { AbilityScoreOverviewGrid } from './AbilityScoreOverviewGrid'
 import type { StandardArrayDraftScores } from './standardArrayDraft'
 
 export const STANDARD_ARRAY_UNASSIGNED_LABEL = '—'
@@ -10,6 +13,7 @@ const UNASSIGNED_VALUE = ''
 
 type StandardArrayAbilityInputsProps = {
   draft: StandardArrayDraftScores
+  bonuses?: AbilityScoreBonusMap
   onDraftChange: (
     ability: keyof StandardArrayDraftScores,
     value: number | null,
@@ -33,55 +37,57 @@ function getValuesUsedByOtherAbilities(
 
 export function StandardArrayAbilityInputs({
   draft,
+  bonuses,
   onDraftChange,
 }: StandardArrayAbilityInputsProps) {
-  return (
-    <AbilityScoreCardGrid>
-      {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => {
-        const usedByOthers = getValuesUsedByOtherAbilities(draft, key)
-        const selectedValue = draft[key]
-        const selectValue =
-          selectedValue === null ? UNASSIGNED_VALUE : String(selectedValue)
+  const breakdown = buildAbilityScoreBreakdown({
+    baseScores: draft,
+    bonuses,
+  })
 
-        return (
-          <AbilityScoreCard
-            key={key}
-            abilityKey={key}
-            abbreviation={abbreviation}
-            scoreLabel={label}
-            score={selectedValue}
-            variant="interactive"
-            controls={
-              <select
-                aria-label={`${label} score`}
-                value={selectValue}
-                onChange={(event) => {
-                  if (event.target.value === UNASSIGNED_VALUE) {
-                    onDraftChange(key, null)
-                    return
-                  }
+  const scores = Object.fromEntries(
+    breakdown.map((entry) => {
+      const usedByOthers = getValuesUsedByOtherAbilities(draft, entry.abilityKey)
+      const selectedValue = draft[entry.abilityKey]
+      const selectValue =
+        selectedValue === null ? UNASSIGNED_VALUE : String(selectedValue)
 
-                  const value = Number.parseInt(event.target.value, 10)
-                  onDraftChange(key, value)
-                }}
+      const value: AbilityScoreOverviewValue = {
+        base: entry.baseScore,
+        total: entry.totalScore,
+        controls: (
+          <select
+            aria-label={`${entry.label} score`}
+            value={selectValue}
+            onChange={(event) => {
+              if (event.target.value === UNASSIGNED_VALUE) {
+                onDraftChange(entry.abilityKey, null)
+                return
+              }
+
+              const nextValue = Number.parseInt(event.target.value, 10)
+              onDraftChange(entry.abilityKey, nextValue)
+            }}
+          >
+            <option value={UNASSIGNED_VALUE}>
+              {STANDARD_ARRAY_UNASSIGNED_LABEL}
+            </option>
+            {STANDARD_ARRAY.map((arrayValue) => (
+              <option
+                key={arrayValue}
+                value={arrayValue}
+                disabled={usedByOthers.has(arrayValue)}
               >
-                <option value={UNASSIGNED_VALUE}>
-                  {STANDARD_ARRAY_UNASSIGNED_LABEL}
-                </option>
-                {STANDARD_ARRAY.map((value) => (
-                  <option
-                    key={value}
-                    value={value}
-                    disabled={usedByOthers.has(value)}
-                  >
-                    {value}
-                  </option>
-                ))}
-              </select>
-            }
-          />
-        )
-      })}
-    </AbilityScoreCardGrid>
-  )
+                {arrayValue}
+              </option>
+            ))}
+          </select>
+        ),
+      }
+
+      return [entry.abilityKey, value]
+    }),
+  ) as Record<AbilityScoreKey, AbilityScoreOverviewValue>
+
+  return <AbilityScoreOverviewGrid scores={scores} />
 }

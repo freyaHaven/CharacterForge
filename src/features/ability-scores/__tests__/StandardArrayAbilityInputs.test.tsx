@@ -76,7 +76,7 @@ describe('StandardArrayAbilityInputs', () => {
     expect(within(strengthSelect).getByRole('option', { name: '15' })).toBeEnabled()
   })
 
-  it('displays an em dash modifier while an ability is unassigned', () => {
+  it('displays TOTAL -- while an ability is unassigned', () => {
     const draft: StandardArrayDraftScores = {
       ...defaultStandardArrayDraft(),
       strength: null,
@@ -86,6 +86,8 @@ describe('StandardArrayAbilityInputs', () => {
       <StandardArrayAbilityInputs draft={draft} onDraftChange={vi.fn()} />,
     )
 
-    expect(getAbilityFieldModifier(screen, 'Strength')).toHaveTextContent('—')
+    expect(getAbilityFieldModifier(screen, 'Strength')).toHaveTextContent(
+      'TOTAL --',
+    )
   })
 })

@@ -3,60 +3,73 @@ import {
   canIncreasePointBuyScore,
   getPointBuyAbilityCost,
 } from '../../rules/point-buy'
-import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
-import { AbilityScoreCard } from './AbilityScoreCard'
-import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
+import type { AbilityScoreBonusMap } from './resolveAbilityScoreBreakdown'
+import { buildAbilityScoreBreakdown } from './resolveAbilityScoreBreakdown'
+import type { AbilityScoreKey } from './abilityScoreDisplay'
+import type { AbilityScoreOverviewValue } from './AbilityScoreOverviewGrid'
+import { AbilityScoreOverviewGrid } from './AbilityScoreOverviewGrid'
 import type { PointBuyDraftScores } from './pointBuyDraft'
 
 type PointBuyAbilityInputsProps = {
   draft: PointBuyDraftScores
+  bonuses?: AbilityScoreBonusMap
   onAdjustScore: (ability: keyof PointBuyDraftScores, delta: -1 | 1) => void
 }
 
 export function PointBuyAbilityInputs({
   draft,
+  bonuses,
   onAdjustScore,
 }: PointBuyAbilityInputsProps) {
-  return (
-    <AbilityScoreCardGrid>
-      {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => {
-        const score = draft[key]
-        const cost = getPointBuyAbilityCost(draft, key) ?? 0
+  const breakdown = buildAbilityScoreBreakdown({
+    baseScores: draft,
+    bonuses,
+  })
 
-        return (
-          <AbilityScoreCard
-            key={key}
-            abilityKey={key}
-            abbreviation={abbreviation}
-            scoreLabel={label}
-            score={score}
-            variant="interactive"
-            controls={
-              <div className="ability-score-card__point-buy-controls">
-                <button
-                  type="button"
-                  className="score-stepper"
-                  aria-label={`Decrease ${label}`}
-                  disabled={!canDecreasePointBuyScore(draft, key)}
-                  onClick={() => onAdjustScore(key, -1)}
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  className="score-stepper"
-                  aria-label={`Increase ${label}`}
-                  disabled={!canIncreasePointBuyScore(draft, key)}
-                  onClick={() => onAdjustScore(key, 1)}
-                >
-                  +
-                </button>
-              </div>
-            }
-            detail={`${cost} pts`}
-          />
-        )
-      })}
-    </AbilityScoreCardGrid>
-  )
+  const scores = Object.fromEntries(
+    breakdown.map((entry) => {
+      const score = draft[entry.abilityKey]
+      const cost = getPointBuyAbilityCost(draft, entry.abilityKey) ?? 0
+
+      const value: AbilityScoreOverviewValue = {
+        base: entry.baseScore,
+        total: entry.totalScore,
+        controls: (
+          <div className="ability-score-overview__point-buy">
+            <div className="ability-score-overview__point-buy-controls">
+              <button
+                type="button"
+                className="score-stepper"
+                aria-label={`Decrease ${entry.label}`}
+                disabled={!canDecreasePointBuyScore(draft, entry.abilityKey)}
+                onClick={() => onAdjustScore(entry.abilityKey, -1)}
+              >
+                −
+              </button>
+              <span
+                className="ability-score-overview__base"
+                aria-label={`${entry.label} score`}
+              >
+                {score}
+              </span>
+              <button
+                type="button"
+                className="score-stepper"
+                aria-label={`Increase ${entry.label}`}
+                disabled={!canIncreasePointBuyScore(draft, entry.abilityKey)}
+                onClick={() => onAdjustScore(entry.abilityKey, 1)}
+              >
+                +
+              </button>
+            </div>
+            <span className="ability-score-overview__cost">{cost} pts</span>
+          </div>
+        ),
+      }
+
+      return [entry.abilityKey, value]
+    }),
+  ) as Record<AbilityScoreKey, AbilityScoreOverviewValue>
+
+  return <AbilityScoreOverviewGrid scores={scores} />
 }

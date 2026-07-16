@@ -28,7 +28,6 @@ function createFallbackDisplay(
     characterName: input.character.name,
     speciesId: null,
     speciesName: null,
-    targetLevel: input.character.targetLevel,
     classEntries: [],
     primaryAbilities: [],
     activeStepId: input.activeStepId,

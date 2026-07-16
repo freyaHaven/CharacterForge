@@ -11,9 +11,14 @@ import {
 import { goToAbilityScoresStep } from '../../testing/wizardTestUtils'
 import {
   clearEditorSession,
+  clearRecentCharacters,
   openCharacterEditor,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
+import { createDefaultCharacter } from '../../domain/character/defaults'
 import { MINIMUM_POINT_BUY_ASSIGNMENT } from '../../rules/point-buy'
+import type { Character } from '../../domain/types'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -42,57 +47,89 @@ async function switchToPointBuy(user: ReturnType<typeof userEvent.setup>) {
   await selectCreationMethod(user, screen, 'point-buy')
 }
 
-async function makeInvalidPointBuyScores() {
-  fireEvent.change(getAbilityFieldNumberInput(screen, 'Strength'), {
-    target: { value: '16' },
-  })
+function expectAllPointBuyScoresAreEight() {
+  for (const ability of [
+    'strength',
+    'dexterity',
+    'constitution',
+    'intelligence',
+    'wisdom',
+    'charisma',
+  ] as const) {
+    expect(
+      screen.getByTestId(`ability-score-overview-${ability}`),
+    ).toHaveTextContent('8')
+  }
 }
 
 describe('Point Buy workflow in App', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
     loadMock.mockResolvedValue(null)
     saveMock.mockResolvedValue(undefined)
   })
 
-  it('does not overwrite invalid existing scores when switching to point buy', async () => {
+  it('initialises Point Buy at all 8s with a full 27-point budget', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
     await switchToPointBuy(user)
 
-    expect(screen.getByRole('button', { name: /start point buy/i })).toBeInTheDocument()
-    await selectCreationMethod(user, screen, 'manual')
-    expect(getAbilityFieldNumberInput(screen, 'Strength')).toHaveValue(16)
+    expectAllPointBuyScoresAreEight()
+    expect(screen.getByText(/points remaining/i)).toBeInTheDocument()
+    expect(screen.getByText('27 / 27')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /start point buy/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /reset all to 8/i }),
+    ).not.toBeInTheDocument()
   })
 
-  it('starts point buy from all 8s', async () => {
+  it('resets to all 8s when switching from another method to Point Buy', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
+
+    fireEvent.change(getAbilityFieldNumberInput(screen, 'Strength'), {
+      target: { value: '14' },
+    })
+    await selectCreationMethod(user, screen, 'standard-array')
     await switchToPointBuy(user)
 
-    await user.click(screen.getByRole('button', { name: /start point buy/i }))
-
-    expect(screen.getByLabelText(/strength score/i)).toHaveTextContent('8')
-    expect(screen.getByText(/points spent: 0 \/ 27/i)).toBeInTheDocument()
-    expect(screen.getByText(/remaining: 27/i)).toBeInTheDocument()
+    expectAllPointBuyScoresAreEight()
+    expect(screen.getByText('27 / 27')).toBeInTheDocument()
   })
 
-  it('initialises the draft from scores that are already a valid point-buy assignment', async () => {
-    const { user } = await renderLoadedApp()
-    await switchToPointBuy(user)
+  it('restores a saved valid Point Buy assignment when loading a character', async () => {
+    const character: Character = createDefaultCharacter({
+      id: 'char-pb',
+      name: 'Point Buyer',
+      creationMethod: 'point-buy',
+      abilityScores: {
+        strength: 15,
+        dexterity: 14,
+        constitution: 13,
+        intelligence: 12,
+        wisdom: 10,
+        charisma: 8,
+      },
+    })
+    seedRecentCharacter(character.id)
+    loadMock.mockResolvedValue(character)
 
-    expect(screen.queryByRole('button', { name: /start point buy/i })).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/strength score/i)).toHaveTextContent('10')
-    expect(screen.getByText(/points spent: 12 \/ 27/i)).toBeInTheDocument()
+    const user = userEvent.setup()
+    render(<App />)
+    await openStoredCharacterEditor(user, character)
+    await goToAbilityScoresStep(user, screen)
+
+    expect(screen.getByLabelText(/strength score/i)).toHaveTextContent('15')
+    expect(screen.getByLabelText(/dexterity score/i)).toHaveTextContent('14')
+    expect(screen.getByText('0 / 27')).toBeInTheDocument()
   })
 
   it('syncs a valid draft into numeric character scores', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
     await switchToPointBuy(user)
-    await user.click(screen.getByRole('button', { name: /start point buy/i }))
 
     await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
     await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
@@ -103,9 +140,7 @@ describe('Point Buy workflow in App', () => {
 
   it('syncs after a valid draft and allows manual view to reflect scores', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
     await switchToPointBuy(user)
-    await user.click(screen.getByRole('button', { name: /start point buy/i }))
 
     for (let click = 0; click < 7; click += 1) {
       await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
@@ -117,24 +152,27 @@ describe('Point Buy workflow in App', () => {
 
   it('resets all draft scores to 8', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
     await switchToPointBuy(user)
-    await user.click(screen.getByRole('button', { name: /start point buy/i }))
+
+    expect(
+      screen.queryByRole('button', { name: /reset all to 8/i }),
+    ).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
     await user.click(screen.getByRole('button', { name: /reset all to 8/i }))
 
     expect(screen.getByLabelText(/strength score/i)).toHaveTextContent('8')
     expect(screen.getByLabelText(/dexterity score/i)).toHaveTextContent('8')
+    expect(
+      screen.queryByRole('button', { name: /reset all to 8/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('allows saving with unspent points', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
     await switchToPointBuy(user)
-    await user.click(screen.getByRole('button', { name: /start point buy/i }))
 
-    expect(screen.getByText(/remaining:\s*27/i)).toBeInTheDocument()
+    expect(screen.getByText('27 / 27')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
@@ -146,20 +184,17 @@ describe('Point Buy workflow in App', () => {
     })
   })
 
-  it('shows budget, cost, and modifier details while editing point buy', async () => {
+  it('shows budget, cost, and overview details while editing point buy', async () => {
     const { user } = await renderLoadedApp()
-    await makeInvalidPointBuyScores()
     await switchToPointBuy(user)
-    await user.click(screen.getByRole('button', { name: /start point buy/i }))
 
     for (const _ of Array.from({ length: 7 })) {
       await user.click(screen.getByRole('button', { name: 'Increase Strength' }))
     }
 
     expect(screen.getByLabelText(/strength score/i)).toHaveTextContent('15')
-    expect(screen.getByText('+2')).toBeInTheDocument()
     expect(screen.getByText('9 pts')).toBeInTheDocument()
-    expect(screen.getByText(/points spent: 9 \/ 27/i)).toBeInTheDocument()
-    expect(screen.getByText(/remaining: 18/i)).toBeInTheDocument()
+    expect(screen.getByText('18 / 27')).toBeInTheDocument()
+    expect(screen.getByText('TOTAL 15')).toBeInTheDocument()
   })
 })

@@ -9,10 +9,11 @@ import type { Character } from '../../domain/types'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import { goToSpeciesStep } from '../../testing/wizardTestUtils'
 import {
-  activateEditorSession,
   clearEditorSession,
+  clearRecentCharacters,
   openCharacterEditor,
-  waitForAppReady,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
@@ -67,7 +68,7 @@ function expectSelectedSpecies(name: string) {
 
 async function renderLoadedApp(character = createStoredCharacter()) {
   clearEditorSession()
-  activateEditorSession(character.id)
+  seedRecentCharacter(character.id)
   loadMock.mockResolvedValue(character)
   const user = userEvent.setup()
   render(
@@ -76,7 +77,7 @@ async function renderLoadedApp(character = createStoredCharacter()) {
     </StrictMode>,
   )
 
-  await waitForAppReady()
+  await openStoredCharacterEditor(user, character)
 
   return { user, character }
 }
@@ -107,6 +108,7 @@ function getAncestrySelect() {
 describe('Species workflow in App', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)

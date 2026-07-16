@@ -36,9 +36,7 @@ describe('RolledDiceAnimation', () => {
       />,
     )
 
-    expect(
-      screen.getByText('4, 5, 2, 6 — drop 2 — total 15'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Roll total: 15')).toBeInTheDocument()
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
 
@@ -61,9 +59,7 @@ describe('RolledDiceAnimation', () => {
       vi.runAllTimers()
     })
 
-    expect(
-      screen.getByText('4, 5, 2, 6 — drop 2 — total 15'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Roll total: 15')).toBeInTheDocument()
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
 })

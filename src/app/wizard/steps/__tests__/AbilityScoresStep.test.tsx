@@ -36,12 +36,14 @@ describe('AbilityScoresStep', () => {
     render(<AbilityScoresStep {...defaultProps} />)
 
     expect(
-      screen.getByRole('heading', { name: 'Abilities', level: 2 }),
+      screen.getByRole('heading', { name: 'Ability Scores', level: 2 }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('radio', { name: /^Manual/i }),
+      screen.getByRole('radio', { name: /^Manual \/ Rolled/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('radiogroup', { name: /ability score method/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('radiogroup', { name: /ability score method/i }),
+    ).toBeInTheDocument()
   })
 
   it('passes standard array props through to the form', () => {

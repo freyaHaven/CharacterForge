@@ -12,9 +12,10 @@ import {
   goToWizardStep,
 } from '../../testing/wizardTestUtils'
 import {
-  activateEditorSession,
   clearEditorSession,
-  waitForAppReady,
+  clearRecentCharacters,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
 import { createTestFighterClassInstance } from '../../testing/classFixtures'
@@ -96,7 +97,7 @@ function createCompleteSoldierBackground(): NonNullable<Character['background']>
 
 async function renderLoadedApp(character = createStoredCharacter()) {
   clearEditorSession()
-  activateEditorSession(character.id)
+  seedRecentCharacter(character.id)
   loadMock.mockResolvedValue(character)
   const user = userEvent.setup()
   render(
@@ -105,7 +106,7 @@ async function renderLoadedApp(character = createStoredCharacter()) {
     </StrictMode>,
   )
 
-  await waitForAppReady()
+  await openStoredCharacterEditor(user, character)
 
   return { user, character }
 }
@@ -137,6 +138,7 @@ function expectSelectedBackground(name: string) {
 describe('Background workflow', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
   })

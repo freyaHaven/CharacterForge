@@ -1,22 +1,23 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   formatCharacterFileError,
   parseCharacterFile,
   readCharacterFileText,
 } from '../adapters/characterFile'
 import { createLocalStorageCharacterRepository } from '../adapters/localStorageCharacterRepository'
+import { createRecentTrackingRepository } from '../adapters/recentTrackingCharacterRepository'
 import { createBundledBackgroundCatalog } from '../adapters/bundledBackgroundCatalog'
 import { createBundledClassCatalog } from '../adapters/bundledClassCatalog'
 import { createBundledFeatCatalog } from '../adapters/bundledFeatCatalog'
 import { createBundledSpeciesCatalog } from '../adapters/bundledSpeciesCatalog'
 import { EditionChangeDialog } from '../features/species/EditionChangeDialog'
 import { CharacterContextSummary } from '../features/character/CharacterContextSummary'
-import { LandingPage } from './LandingPage'
+import { HomePage } from './HomePage'
 import { useCharacterEditor } from './hooks/useCharacterEditor'
-import {
-  activateEditorSession,
-  isEditorSessionActive,
-} from './session/editorSession'
+import { activateEditorSession } from './session/editorSession'
+import { loadRecentCharacterSummaries } from './session/loadRecentCharacterSummaries'
+import type { RecentCharacterSummary } from './session/recentCharacterDisplay'
+import { recentCharactersStore } from './session/recentCharacters'
 import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
 import { BackgroundStep } from './wizard/steps/BackgroundStep'
 import { BasicsStep } from './wizard/steps/BasicsStep'
@@ -33,24 +34,28 @@ import { getAlignmentLabel } from '../domain/character/alignment'
 import { getPronounLabel } from '../domain/character/pronouns'
 import './app.css'
 
-const repository = createLocalStorageCharacterRepository()
+const baseRepository = createLocalStorageCharacterRepository()
+const repository = createRecentTrackingRepository(
+  baseRepository,
+  recentCharactersStore,
+)
 const speciesCatalog = createBundledSpeciesCatalog()
 const classCatalog = createBundledClassCatalog()
 const backgroundCatalog = createBundledBackgroundCatalog()
 const featCatalog = createBundledFeatCatalog()
 
-type AppView = 'landing' | 'editor'
+type AppView = 'home' | 'editor'
 
 type AppProps = {
   randomSource?: () => number
 }
 
 export default function App({ randomSource = Math.random }: AppProps) {
-  const [appView, setAppView] = useState<AppView>(() =>
-    isEditorSessionActive() ? 'editor' : 'landing',
-  )
+  const [appView, setAppView] = useState<AppView>('home')
   const [importError, setImportError] = useState<string | null>(null)
-  const [shouldRestoreFromStorage] = useState(() => isEditorSessionActive())
+  const [recentCharacters, setRecentCharacters] = useState<
+    RecentCharacterSummary[]
+  >([])
 
   const editor = useCharacterEditor({
     repository,
@@ -59,8 +64,26 @@ export default function App({ randomSource = Math.random }: AppProps) {
     backgroundCatalog,
     featCatalog,
     randomSource,
-    restoreFromStorage: shouldRestoreFromStorage,
+    restoreFromStorage: false,
   })
+
+  const refreshRecentCharacters = useCallback(async () => {
+    const summaries = await loadRecentCharacterSummaries({
+      recentStore: recentCharactersStore,
+      repository,
+      speciesCatalog,
+      classCatalog,
+    })
+    setRecentCharacters(summaries)
+  }, [])
+
+  useEffect(() => {
+    if (appView !== 'home') {
+      return
+    }
+
+    void refreshRecentCharacters()
+  }, [appView, refreshRecentCharacters])
 
   const handleCreateNew = useCallback(async () => {
     setImportError(null)
@@ -90,6 +113,24 @@ export default function App({ randomSource = Math.random }: AppProps) {
       }
     },
     [editor],
+  )
+
+  const handleContinue = useCallback(
+    async (characterId: string) => {
+      setImportError(null)
+      activateEditorSession(characterId)
+      const opened = await editor.openCharacter(characterId)
+
+      if (!opened) {
+        recentCharactersStore.remove(characterId)
+        await refreshRecentCharacters()
+        setImportError('That character could not be found.')
+        return
+      }
+
+      setAppView('editor')
+    },
+    [editor, refreshRecentCharacters],
   )
 
   if (editor.isLoading) {
@@ -126,14 +167,18 @@ export default function App({ randomSource = Math.random }: AppProps) {
         ) : null}
       </header>
 
-      {appView === 'landing' ? (
-        <LandingPage
+      {appView === 'home' ? (
+        <HomePage
           importError={importError}
+          recentCharacters={recentCharacters}
           onCreateNew={() => {
             void handleCreateNew()
           }}
           onImportFile={(file) => {
             void handleImportFile(file)
+          }}
+          onContinue={(characterId) => {
+            void handleContinue(characterId)
           }}
         />
       ) : (
@@ -192,6 +237,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   pointBuyDraft={abilityScores.pointBuyDraft}
                   rolledDraft={abilityScores.rolledDraft}
                   prefersReducedMotion={editor.prefersReducedMotion}
+                  backgroundSelection={character.background}
                   onCreationMethodChange={abilityScores.handleCreationMethodChange}
                   onAbilityScoreChange={abilityScores.updateAbilityScore}
                   onStandardArrayDraftChange={abilityScores.updateStandardArrayDraft}

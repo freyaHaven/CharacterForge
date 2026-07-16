@@ -1,15 +1,22 @@
 /** @vitest-environment jsdom */
 
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { createBundledClassCatalog } from '../../../adapters/bundledClassCatalog'
 import { withSingleClassInstance } from '../../../domain/character/characterClassSelection'
 import { createTestFighterClassInstance } from '../../../testing/classFixtures'
 import { createDefaultCharacter } from '../../../domain/character/defaults'
 import type { Character } from '../../../domain/types'
+import { getEffectiveClassInstances } from '../../../features/class/classBuildMode'
+import {
+  clearClassEditorWorkflow,
+} from '../../session/classEditorWorkflowStorage'
 import { useReviewClassDisplay } from '../../useReviewClassDisplay'
 import { useClassEditor } from '../useClassEditor'
+
+const FIGHTER_ID = 'srd-2024:fighter'
+const BARBARIAN_ID = 'srd-2024:barbarian'
 
 function createCharacterWithCommittedFighter(): Character {
   return {
@@ -35,6 +42,21 @@ function useClassEditorWithReview(character: Character) {
   )
 
   return { classEditor, classReviewDisplay }
+}
+
+function renderClassEditor(initialCharacter: Character = createDefaultCharacter()) {
+  const catalog = createBundledClassCatalog()
+
+  return renderHook(() => {
+    const [character, setCharacter] = useState(initialCharacter)
+    const editor = useClassEditor({
+      character,
+      setCharacter,
+      classCatalog: catalog,
+    })
+
+    return { character, setCharacter, editor }
+  })
 }
 
 describe('useClassEditor', () => {
@@ -93,5 +115,148 @@ describe('useClassEditor', () => {
 
     expect(renderCount).toBeLessThanOrEqual(renderCountAfterSettle + 1)
     expect(getClassCalls).toBe(getClassCallsAfterSettle)
+  })
+
+  describe('single-class class switching', () => {
+    beforeEach(() => {
+      clearClassEditorWorkflow(createDefaultCharacter().id)
+    })
+
+    it('replaces a prior incomplete draft when selecting a different class', () => {
+      const character = createDefaultCharacter()
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('single-class')
+      })
+
+      act(() => {
+        result.current.editor.selectOrAddClass(FIGHTER_ID)
+      })
+
+      expect(
+        Object.values(result.current.editor.classDrafts).map(
+          (draft) => draft.classId,
+        ),
+      ).toEqual([FIGHTER_ID])
+
+      act(() => {
+        result.current.editor.selectOrAddClass(BARBARIAN_ID)
+      })
+
+      const draftClassIds = Object.values(result.current.editor.classDrafts).map(
+        (draft) => draft.classId,
+      )
+      const effective = getEffectiveClassInstances(
+        result.current.character.classes,
+        result.current.editor.classDrafts,
+      )
+
+      expect(draftClassIds).toEqual([BARBARIAN_ID])
+      expect(effective).toHaveLength(1)
+      expect(effective[0]?.classId).toBe(BARBARIAN_ID)
+      expect(result.current.character.classes).toEqual([])
+    })
+
+    it('clears a committed class and sibling drafts when selecting a different class', () => {
+      const character = createCharacterWithCommittedFighter()
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('single-class')
+      })
+
+      act(() => {
+        result.current.editor.selectOrAddClass(BARBARIAN_ID)
+      })
+
+      const effective = getEffectiveClassInstances(
+        result.current.character.classes,
+        result.current.editor.classDrafts,
+      )
+
+      expect(result.current.character.classes).toEqual([])
+      expect(Object.keys(result.current.editor.classDrafts)).toHaveLength(1)
+      expect(effective).toHaveLength(1)
+      expect(effective[0]?.classId).toBe(BARBARIAN_ID)
+      expect(
+        Object.values(result.current.editor.classDrafts).some(
+          (draft) => draft.classId === FIGHTER_ID,
+        ),
+      ).toBe(false)
+    })
+
+    it('clears all drafts when committing a single-class instance', () => {
+      const character = createDefaultCharacter()
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('single-class')
+      })
+
+      act(() => {
+        result.current.editor.selectOrAddClass(FIGHTER_ID)
+      })
+
+      const fighterDraft = Object.values(result.current.editor.classDrafts)[0]
+      expect(fighterDraft).toBeDefined()
+
+      act(() => {
+        result.current.editor.selectOrAddClass(BARBARIAN_ID)
+      })
+
+      const barbarianDraft = Object.values(result.current.editor.classDrafts)[0]
+      expect(barbarianDraft?.classId).toBe(BARBARIAN_ID)
+
+      act(() => {
+        result.current.editor.commitClassInstance({
+          instanceId: barbarianDraft!.instanceId,
+          classId: BARBARIAN_ID,
+          level: 1,
+          choices: {},
+        })
+      })
+
+      expect(result.current.editor.classDrafts).toEqual({})
+      expect(result.current.character.classes).toHaveLength(1)
+      expect(result.current.character.classes[0]?.classId).toBe(BARBARIAN_ID)
+    })
+  })
+
+  describe('multiclass class switching', () => {
+    beforeEach(() => {
+      clearClassEditorWorkflow(createDefaultCharacter().id)
+    })
+
+    it('keeps both classes when adding a second class', () => {
+      const character = createDefaultCharacter()
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('multiclass')
+      })
+
+      act(() => {
+        result.current.editor.toggleMulticlassClass(FIGHTER_ID)
+        result.current.editor.toggleMulticlassClass(BARBARIAN_ID)
+      })
+
+      const effective = getEffectiveClassInstances(
+        result.current.character.classes,
+        result.current.editor.classDrafts,
+      )
+      const classIds = effective.map((instance) => instance.classId).sort()
+
+      expect(effective).toHaveLength(2)
+      expect(classIds).toEqual([BARBARIAN_ID, FIGHTER_ID].sort())
+    })
   })
 })

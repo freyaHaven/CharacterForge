@@ -1,11 +1,14 @@
 import type { AbilityScores } from '../../domain/types'
 import type { RolledAssignments } from '../../rules/rolled'
+import type { AbilityScoreBonusMap } from './resolveAbilityScoreBreakdown'
+import { buildAbilityScoreBreakdown } from './resolveAbilityScoreBreakdown'
 import { ABILITY_SCORE_ENTRIES } from './abilityScoreDisplay'
-import { AbilityScoreCard } from './AbilityScoreCard'
-import { AbilityScoreCardGrid } from './AbilityScoreCardGrid'
+import type { AbilityScoreOverviewValue } from './AbilityScoreOverviewGrid'
+import { AbilityScoreOverviewGrid } from './AbilityScoreOverviewGrid'
 import { formatRolledResultOptionLabel } from './formatRollResult'
 import type { RolledResult } from './rolledDraft'
 import { getRemainingRolledResults } from './rolledRemaining'
+import type { AbilityScoreKey } from './abilityScoreDisplay'
 
 function getRemainingRolledPoolResults(
   pool: readonly RolledResult[],
@@ -23,6 +26,7 @@ const UNASSIGNED_VALUE = ''
 type RolledAbilityInputsProps = {
   pool: readonly RolledResult[]
   assignments: RolledAssignments
+  bonuses?: AbilityScoreBonusMap
   onAssignmentChange: (
     ability: keyof AbilityScores,
     rollId: string | null,
@@ -64,69 +68,75 @@ function getOptionLabel(
 export function RolledAbilityInputs({
   pool,
   assignments,
+  bonuses,
   onAssignmentChange,
 }: RolledAbilityInputsProps) {
   const remaining = getRemainingRolledPoolResults(pool, assignments)
   const isPoolReady = pool.length > 0
+  const baseScores = Object.fromEntries(
+    ABILITY_SCORE_ENTRIES.map(({ key }) => {
+      const assignedRollId = assignments[key]
+      const assignedEntry =
+        assignedRollId === null
+          ? null
+          : (pool.find((entry) => entry.id === assignedRollId) ?? null)
+      return [key, assignedEntry?.total ?? null]
+    }),
+  ) as Partial<Record<AbilityScoreKey, number | null>>
 
-  return (
-    <AbilityScoreCardGrid>
-      {ABILITY_SCORE_ENTRIES.map(({ key, abbreviation, label }) => {
-        const assignedRollId = assignments[key]
-        const assignedEntry =
-          assignedRollId === null
-            ? null
-            : pool.find((entry) => entry.id === assignedRollId) ?? null
-        const assignedScore = assignedEntry?.total ?? null
-        const usedIds = getRollIdsUsedByOtherAbilities(assignments, key)
-        const availableOptions = [
-          ...remaining,
-          ...(assignedEntry === null ? [] : [assignedEntry]),
-        ]
+  const breakdown = buildAbilityScoreBreakdown({
+    baseScores,
+    bonuses,
+  })
 
-        return (
-          <AbilityScoreCard
-            key={key}
-            abilityKey={key}
-            abbreviation={abbreviation}
-            scoreLabel={label}
-            score={assignedScore}
-            variant="interactive"
-            controls={
-              <select
-                aria-label={`${label} rolled result`}
-                value={assignedRollId ?? UNASSIGNED_VALUE}
-                disabled={!isPoolReady}
-                onChange={(event) => {
-                  const value = event.target.value
-                  onAssignmentChange(
-                    key,
-                    value === UNASSIGNED_VALUE ? null : value,
-                  )
-                }}
+  const scores = Object.fromEntries(
+    breakdown.map((entry) => {
+      const assignedRollId = assignments[entry.abilityKey]
+      const assignedEntry =
+        assignedRollId === null
+          ? null
+          : (pool.find((item) => item.id === assignedRollId) ?? null)
+      const usedIds = getRollIdsUsedByOtherAbilities(assignments, entry.abilityKey)
+      const availableOptions = [
+        ...remaining,
+        ...(assignedEntry === null ? [] : [assignedEntry]),
+      ]
+
+      const value: AbilityScoreOverviewValue = {
+        base: entry.baseScore,
+        total: entry.totalScore,
+        controls: (
+          <select
+            aria-label={`${entry.label} rolled result`}
+            value={assignedRollId ?? UNASSIGNED_VALUE}
+            disabled={!isPoolReady}
+            onChange={(event) => {
+              const nextValue = event.target.value
+              onAssignmentChange(
+                entry.abilityKey,
+                nextValue === UNASSIGNED_VALUE ? null : nextValue,
+              )
+            }}
+          >
+            <option value={UNASSIGNED_VALUE}>{ROLLED_UNASSIGNED_LABEL}</option>
+            {availableOptions.map((option) => (
+              <option
+                key={option.id}
+                value={option.id}
+                disabled={
+                  option.id !== assignedRollId && usedIds.has(option.id)
+                }
               >
-                <option value={UNASSIGNED_VALUE}>{ROLLED_UNASSIGNED_LABEL}</option>
-                {availableOptions.map((entry) => (
-                  <option
-                    key={entry.id}
-                    value={entry.id}
-                    disabled={
-                      entry.id !== assignedRollId && usedIds.has(entry.id)
-                    }
-                  >
-                    {getOptionLabel(entry, availableOptions)}
-                  </option>
-                ))}
-              </select>
-            }
-            detail={
-              assignedEntry !== null
-                ? formatRolledResultOptionLabel(assignedEntry.result, 1)
-                : undefined
-            }
-          />
-        )
-      })}
-    </AbilityScoreCardGrid>
-  )
+                {getOptionLabel(option, availableOptions)}
+              </option>
+            ))}
+          </select>
+        ),
+      }
+
+      return [entry.abilityKey, value]
+    }),
+  ) as Record<AbilityScoreKey, AbilityScoreOverviewValue>
+
+  return <AbilityScoreOverviewGrid scores={scores} />
 }

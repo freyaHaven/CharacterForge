@@ -1,10 +1,8 @@
 import type { AbilityId } from '../../domain/abilities/types'
-import type { CharacterLevel } from '../../domain/class/types'
-import {
-  formatAbilityLabel,
-  formatAbilityList,
-} from '../class/formatClassDetails'
+import { formatAbilityLabel } from '../class/formatClassDetails'
 import type { WizardStepId } from '../../app/wizard/types'
+
+const CONTEXT_SEPARATOR = ' • '
 
 export type CharacterContextClassEntry = {
   classId: string
@@ -17,7 +15,6 @@ export type CharacterContextDisplay = {
   speciesId: string | null
   identityLine: string | null
   buildLine: string | null
-  characterLevelLine: string | null
   guidanceLine: string | null
   classEntries: CharacterContextClassEntry[]
 }
@@ -26,18 +23,9 @@ export type CharacterContextDisplayInput = {
   characterName: string
   speciesId: string | null
   speciesName: string | null
-  targetLevel: CharacterLevel
   classEntries: CharacterContextClassEntry[]
   primaryAbilities: AbilityId[]
   activeStepId: WizardStepId
-}
-
-function formatSingleClassEntry(entry: CharacterContextClassEntry): string {
-  if (entry.subclassLabel !== null) {
-    return `${entry.className} ${entry.level} · ${entry.subclassLabel}`
-  }
-
-  return `${entry.className} ${entry.level}`
 }
 
 function formatClassEntries(
@@ -47,18 +35,15 @@ function formatClassEntries(
     return null
   }
 
-  if (entries.length === 1) {
-    return formatSingleClassEntry(entries[0])
-  }
-
   return entries
     .map((entry) => `${entry.className} ${entry.level}`)
-    .join(' / ')
+    .join(CONTEXT_SEPARATOR)
 }
 
 function formatIdentityLine(
   characterName: string,
   speciesName: string | null,
+  activeStepId: WizardStepId,
 ): string | null {
   const segments: string[] = []
   const trimmedName = characterName.trim()
@@ -67,7 +52,8 @@ function formatIdentityLine(
     segments.push(trimmedName)
   }
 
-  if (speciesName !== null) {
+  // Species step already surfaces the species choice; keep identity to name only.
+  if (speciesName !== null && activeStepId !== 'species') {
     segments.push(speciesName)
   }
 
@@ -75,32 +61,15 @@ function formatIdentityLine(
     return null
   }
 
-  return segments.join(' · ')
+  return segments.join(CONTEXT_SEPARATOR)
 }
 
-function formatPrimaryAbilitiesGuidance(
-  abilities: AbilityId[],
-  activeStepId: WizardStepId,
-): string | null {
+function formatAbilityScoresGuidance(abilities: AbilityId[]): string | null {
   if (abilities.length === 0) {
     return null
   }
 
-  if (activeStepId === 'ability-scores') {
-    if (abilities.length === 1) {
-      return `Prioritise: ${formatAbilityLabel(abilities[0])}`
-    }
-
-    if (abilities.length === 2) {
-      return `Prioritise: ${formatAbilityLabel(abilities[0])} or ${formatAbilityLabel(abilities[1])}`
-    }
-
-    const leading = formatAbilityList(abilities.slice(0, -1))
-    const last = formatAbilityLabel(abilities[abilities.length - 1])
-    return `Prioritise: ${leading}, or ${last}`
-  }
-
-  return `Primary abilities: ${formatAbilityList(abilities)}`
+  return `Prioritise: ${abilities.map(formatAbilityLabel).join(CONTEXT_SEPARATOR)}`
 }
 
 export function buildCharacterContextDisplay(
@@ -109,25 +78,22 @@ export function buildCharacterContextDisplay(
   const identityLine = formatIdentityLine(
     input.characterName,
     input.speciesName,
+    input.activeStepId,
   )
-  const buildLine = formatClassEntries(input.classEntries)
-  const characterLevelLine =
-    input.classEntries.length > 1
-      ? `Character level: ${input.targetLevel}`
-      : null
+  // Class step already surfaces the class build; omit the duplicate build line.
+  const buildLine =
+    input.activeStepId === 'class'
+      ? null
+      : formatClassEntries(input.classEntries)
   const guidanceLine =
-    input.classEntries.length > 0
-      ? formatPrimaryAbilitiesGuidance(
-          input.primaryAbilities,
-          input.activeStepId,
-        )
+    input.activeStepId === 'ability-scores' && input.classEntries.length > 0
+      ? formatAbilityScoresGuidance(input.primaryAbilities)
       : null
 
   return {
     speciesId: input.speciesId,
     identityLine,
     buildLine,
-    characterLevelLine,
     guidanceLine,
     classEntries: input.classEntries,
   }
@@ -139,7 +105,6 @@ export function hasCharacterContextContent(
   return (
     display.identityLine !== null ||
     display.buildLine !== null ||
-    display.characterLevelLine !== null ||
     display.guidanceLine !== null
   )
 }

@@ -44,26 +44,10 @@ describe('AbilityScoresForm standard array guidance', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows remaining values that update after an assignment', () => {
-    const { rerender } = render(<AbilityScoresForm {...defaultProps} />)
+  it('does not show a remaining scores sentence', () => {
+    render(<AbilityScoresForm {...defaultProps} />)
 
-    expect(screen.getByText(/remaining scores:/i)).toHaveTextContent(
-      '15, 14, 13, 12, 10, 8',
-    )
-
-    rerender(
-      <AbilityScoresForm
-        {...defaultProps}
-        standardArrayDraft={{
-          ...createEmptyStandardArrayDraft(),
-          strength: 15,
-        }}
-      />,
-    )
-
-    expect(screen.getByText(/remaining scores:/i)).toHaveTextContent(
-      '14, 13, 12, 10, 8',
-    )
+    expect(screen.queryByText(/remaining scores:/i)).not.toBeInTheDocument()
   })
 
   it('calls clear assignments from the form', async () => {
@@ -93,16 +77,6 @@ describe('AbilityScoresForm standard array guidance', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows the beginner explanation for standard array', () => {
-    render(<AbilityScoresForm {...defaultProps} />)
-
-    expect(
-      screen.getByText(
-        /assign each score exactly once\. higher scores give stronger bonuses/i,
-      ),
-    ).toBeInTheDocument()
-  })
-
   it('shows validation issues for an invalid point-buy draft', () => {
     render(
       <AbilityScoresForm
@@ -122,5 +96,32 @@ describe('AbilityScoresForm standard array guidance', () => {
     expect(
       screen.getByText(/this assignment spends 54 of 27 points/i),
     ).toBeInTheDocument()
+  })
+
+  it('places the ability overview before dice roll groups for manual mode', () => {
+    render(
+      <AbilityScoresForm {...defaultProps} creationMethod="manual" />,
+    )
+
+    const overview = screen.getByTestId('ability-score-overview-strength')
+    const diceHeading = screen.getByRole('heading', {
+      name: /dice roll groups/i,
+    })
+
+    expect(
+      overview.compareDocumentPosition(diceHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('does not show rolled remaining-results or manual help copy', () => {
+    render(
+      <AbilityScoresForm {...defaultProps} creationMethod="manual" />,
+    )
+
+    expect(
+      screen.queryByText(/type scores directly below/i),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/remaining results:/i)).not.toBeInTheDocument()
   })
 })

@@ -13,9 +13,10 @@ import {
 } from '../../testing/wizardTestUtils'
 import { getAbilityFieldNumberInput } from '../../testing/abilityScoreTestUtils'
 import {
-  activateEditorSession,
   clearEditorSession,
-  waitForAppReady,
+  clearRecentCharacters,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
 import { createTestFighterClassInstance } from '../../testing/classFixtures'
@@ -70,14 +71,14 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
 
 async function renderLoadedApp(character = createStoredCharacter()) {
   clearEditorSession()
-  activateEditorSession(character.id)
+  seedRecentCharacter(character.id)
   loadMock.mockResolvedValue(character)
   saveMock.mockResolvedValue(undefined)
 
   const user = userEvent.setup()
   render(<App />)
 
-  await waitForAppReady()
+  await openStoredCharacterEditor(user, character)
 
   return { user, character }
 }
@@ -85,6 +86,7 @@ async function renderLoadedApp(character = createStoredCharacter()) {
 describe('Character Details workflow', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     loadMock.mockReset()
     saveMock.mockReset()
     saveMock.mockResolvedValue(undefined)

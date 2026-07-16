@@ -68,7 +68,7 @@ export function useCharacterEditor({
   const [character, setCharacter] = useState<Character>(() =>
     createDefaultCharacter(),
   )
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(restoreFromStorage)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [finishMessage, setFinishMessage] = useState<string | null>(null)
   const [activeStepId, setActiveStepId] = useState<WizardStepId>(
@@ -474,6 +474,49 @@ export function useCharacterEditor({
     [applyCharacterState, repository],
   )
 
+  const openCharacter = useCallback(
+    async (id: string): Promise<boolean> => {
+      setIsLoading(true)
+
+      try {
+        const stored = await repository.load(id)
+        if (stored === null) {
+          return false
+        }
+
+        const hydratedCharacter: Character = {
+          ...createDefaultCharacter(),
+          ...stored,
+          details: migrateLegacyCharacterDetails(stored.details),
+        }
+
+        setCharacter(hydratedCharacter)
+        setActiveStepId(DEFAULT_WIZARD_UI_STATE.activeStepId)
+        setBasicsTouched(false)
+        setDetailsTouched(false)
+        setSaveMessage(null)
+        setFinishMessage(null)
+        species.resetSpeciesDraft()
+        classEditor.hydrateForCharacter(hydratedCharacter)
+        background.resetBackgroundDraft()
+        feat.resetFeatDraft()
+        hydrateFromCharacter(hydratedCharacter)
+        setActiveCharacterId(hydratedCharacter.id)
+        return true
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [
+      background.resetBackgroundDraft,
+      classEditor.hydrateForCharacter,
+      feat.resetFeatDraft,
+      hydrateFromCharacter,
+      repository,
+      species.resetSpeciesDraft,
+    ],
+  )
+
   const handleExportCharacter = useCallback(() => {
     const characterToExport = buildCharacterForSave({
       character,
@@ -530,6 +573,7 @@ export function useCharacterEditor({
     handleExportCharacter,
     startNewCharacter,
     importCharacter,
+    openCharacter,
     updateName,
   }
 }

@@ -171,9 +171,8 @@ describe('Standard Array workflow in App', () => {
     saveMock.mockClear()
     await expectNoAutosaveAfter()
 
-    expect(screen.getByText(/remaining scores:/i)).toHaveTextContent(
-      '15, 14, 13, 12, 10, 8',
-    )
+    expect(getAbilityFieldSelect(screen, 'Strength')).toHaveDisplayValue('—')
+    expect(screen.queryByText(/remaining scores:/i)).not.toBeInTheDocument()
   })
 
   it('does not change manual numeric scores when clearing an incomplete draft', async () => {

@@ -16,9 +16,10 @@ import {
   waitForClassLoaded,
 } from '../../testing/wizardTestUtils'
 import {
-  activateEditorSession,
   clearEditorSession,
-  waitForAppReady,
+  clearRecentCharacters,
+  openStoredCharacterEditor,
+  seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 import { clearClassEditorWorkflow } from '../session/classEditorWorkflowStorage'
 
@@ -59,7 +60,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
 
 async function renderLoadedApp(character = createStoredCharacter()) {
   clearEditorSession()
-  activateEditorSession(character.id)
+  seedRecentCharacter(character.id)
   loadMock.mockResolvedValue(character)
   const user = userEvent.setup()
   render(
@@ -68,7 +69,7 @@ async function renderLoadedApp(character = createStoredCharacter()) {
     </StrictMode>,
   )
 
-  await waitForAppReady()
+  await openStoredCharacterEditor(user, character)
 
   return { user, character }
 }
@@ -93,6 +94,7 @@ function expectSelectedClass(name: string) {
 describe('Class workflow in App', () => {
   beforeEach(() => {
     clearEditorSession()
+    clearRecentCharacters()
     clearClassEditorWorkflow('char-1')
     loadMock.mockReset()
     saveMock.mockReset()
@@ -127,18 +129,18 @@ describe('Class workflow in App', () => {
 
     await waitFor(() => {
       expect(
-        within(stickyHeader as HTMLElement).getByText('Aldric · Dwarf'),
+        within(stickyHeader as HTMLElement).getByText('Aldric • Dwarf'),
       ).toBeInTheDocument()
     })
 
     expect(
-      within(stickyHeader as HTMLElement).getByText('Fighter 1'),
-    ).toBeInTheDocument()
+      within(stickyHeader as HTMLElement).queryByText('Fighter 1'),
+    ).not.toBeInTheDocument()
     expect(
-      within(stickyHeader as HTMLElement).getByText(
-        'Primary abilities: Strength, Dexterity',
+      within(stickyHeader as HTMLElement).queryByText(
+        /Primary abilities:|Prioritise:/i,
       ),
-    ).toBeInTheDocument()
+    ).not.toBeInTheDocument()
   })
 
   it('keeps an incomplete fighter draft-only and blocks saving', async () => {
