@@ -61,11 +61,13 @@ describe('ClassStep', () => {
     expect(screen.getByText(/class path:/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fighter' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Barbarian' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Rogue' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Monk' })).toBeInTheDocument()
     expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
     expect(screen.queryByText('Preview')).not.toBeInTheDocument()
   })
 
-  it('includes Barbarian alongside Fighter in multiclass mode', async () => {
+  it('includes martial classes in multiclass mode', async () => {
     renderClassStep('multiclass')
 
     await waitFor(() => {
@@ -77,6 +79,8 @@ describe('ClassStep', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Fighter/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Barbarian/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Rogue/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Monk/i })).toBeInTheDocument()
     expect(screen.queryByText('Preview')).not.toBeInTheDocument()
   })
 

@@ -38,8 +38,10 @@ import { LevelStepper } from './LevelStepper'
 import { formatClassValidationIssue } from './formatClassValidation'
 import type { ClassSelectionDraft } from './classSelectionDraft'
 import {
+  choiceGrantsSkillExpertise,
   choiceGrantsSkillProficiency,
   collectSkillProficiencySelections,
+  getExcludedExpertiseOptionIds,
 } from '../../domain/class/skillProficiencySelections'
 import {
   collectWeaponMasterySelections,
@@ -56,7 +58,15 @@ function getExcludedMultiSelectOptionIds(
   }
 
   const choice = definition.choices.find((entry) => entry.id === choiceId)
-  if (choice !== undefined && choiceGrantsSkillProficiency(choice)) {
+  if (choice === undefined) {
+    return []
+  }
+
+  if (choiceGrantsSkillExpertise(choice)) {
+    return getExcludedExpertiseOptionIds(definition, choiceId, choices)
+  }
+
+  if (choiceGrantsSkillProficiency(choice)) {
     return collectSkillProficiencySelections(definition, choices, choiceId)
   }
 

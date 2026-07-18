@@ -83,6 +83,28 @@ export function isMeleeWeaponId(value: unknown): value is MeleeWeaponId {
   )
 }
 
+/**
+ * Weapons with the Finesse or Light property (Rogue proficiency / mastery pool).
+ * Includes Shortbow to match the SRD Rogue Weapon Mastery example.
+ */
+export const FINESSE_OR_LIGHT_WEAPON_IDS = [
+  'club',
+  'dagger',
+  'handaxe',
+  'light-hammer',
+  'sickle',
+  'dart',
+  'shortbow',
+  'light-crossbow',
+  'rapier',
+  'scimitar',
+  'shortsword',
+  'whip',
+  'hand-crossbow',
+] as const satisfies readonly WeaponId[]
+
+export type FinesseOrLightWeaponId = (typeof FINESSE_OR_LIGHT_WEAPON_IDS)[number]
+
 export function isWeaponId(value: unknown): value is WeaponId {
   return (
     typeof value === 'string' &&

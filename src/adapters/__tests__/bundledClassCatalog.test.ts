@@ -9,6 +9,9 @@ describe('createBundledClassCatalog', () => {
     expect(classes.map((entry) => entry.id)).toEqual([
       'srd-2024:fighter',
       'srd-2024:barbarian',
+      'srd-2024:rogue',
+      'srd-2024:monk',
+      'srd-2024:ranger',
     ])
   })
 

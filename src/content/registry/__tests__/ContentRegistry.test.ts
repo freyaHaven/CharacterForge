@@ -8,9 +8,15 @@ describe('ContentRegistry (bundled)', () => {
     expect(registry.listPacks().map((pack) => pack.id)).toEqual(['srd-2024'])
     expect(registry.getClass('srd-2024:fighter')?.name).toBe('Fighter')
     expect(registry.getClass('srd-2024:barbarian')?.name).toBe('Barbarian')
+    expect(registry.getClass('srd-2024:rogue')?.name).toBe('Rogue')
+    expect(registry.getClass('srd-2024:monk')?.name).toBe('Monk')
+    expect(registry.getClass('srd-2024:ranger')?.name).toBe('Ranger')
     expect(registry.listClasses('srd-2024').map((entry) => entry.id)).toEqual([
       'srd-2024:fighter',
       'srd-2024:barbarian',
+      'srd-2024:rogue',
+      'srd-2024:monk',
+      'srd-2024:ranger',
     ])
     expect(registry.listClasses('srd-2014')).toEqual([])
   })
@@ -30,9 +36,35 @@ describe('ContentRegistry (bundled)', () => {
         name: 'Path of the Berserker',
       },
     )
+    expect(registry.getSubclass('srd-2024:thief')).toMatchObject({
+      choiceOptionId: 'thief',
+      classId: 'srd-2024:rogue',
+      name: 'Thief',
+    })
+    expect(registry.getSubclass('srd-2024:warrior-of-the-open-hand')).toMatchObject(
+      {
+        choiceOptionId: 'warrior-of-the-open-hand',
+        classId: 'srd-2024:monk',
+        name: 'Warrior of the Open Hand',
+      },
+    )
+    expect(registry.getSubclass('srd-2024:hunter')).toMatchObject({
+      choiceOptionId: 'hunter',
+      classId: 'srd-2024:ranger',
+      name: 'Hunter',
+    })
     expect(
       registry.listSubclasses('srd-2024:fighter').map((entry) => entry.id),
     ).toEqual(['srd-2024:champion'])
+    expect(
+      registry.listSubclasses('srd-2024:rogue').map((entry) => entry.id),
+    ).toEqual(['srd-2024:thief'])
+    expect(
+      registry.listSubclasses('srd-2024:monk').map((entry) => entry.id),
+    ).toEqual(['srd-2024:warrior-of-the-open-hand'])
+    expect(
+      registry.listSubclasses('srd-2024:ranger').map((entry) => entry.id),
+    ).toEqual(['srd-2024:hunter'])
   })
 
   it('keeps subclass choice option ids stable for persistence', () => {

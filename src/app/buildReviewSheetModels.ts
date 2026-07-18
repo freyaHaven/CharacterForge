@@ -152,6 +152,31 @@ function collectProficientSkills(
   return skills
 }
 
+function collectExpertiseSkills(
+  character: Character,
+  classDefinitions: Map<string, ClassDefinition>,
+): Set<SkillId> {
+  const skills = new Set<SkillId>()
+
+  for (const instance of character.classes) {
+    const definition = classDefinitions.get(instance.classId)
+    if (definition === undefined) {
+      continue
+    }
+
+    for (const effect of resolveClassEffects(
+      definition,
+      classInstanceToSelection(instance),
+    )) {
+      if (effect.kind === 'skill-expertise') {
+        skills.add(effect.skillId)
+      }
+    }
+  }
+
+  return skills
+}
+
 function collectSavingThrowProficiencies(
   character: Character,
   classDefinitions: Map<string, ClassDefinition>,
@@ -331,12 +356,15 @@ function buildSkills(
   abilityScores: AbilityScores,
   proficiencyBonus: number,
   proficientSkills: Set<SkillId>,
+  expertiseSkills: Set<SkillId>,
 ): ReviewSkillRowModel[] {
   return SKILL_IDS.map((skillId) => {
     const abilityId = SKILL_ABILITY_MAP[skillId]
-    const rank: ProficiencyRank = proficientSkills.has(skillId)
-      ? 'proficient'
-      : 'none'
+    const rank: ProficiencyRank = expertiseSkills.has(skillId)
+      ? 'expertise'
+      : proficientSkills.has(skillId)
+        ? 'proficient'
+        : 'none'
     const modifier = getSkillModifier(
       abilityScores[abilityId],
       proficiencyBonus,
@@ -514,6 +542,10 @@ export function buildReviewSheetModels(
     input.classDefinitions,
     input.backgroundDefinition,
   )
+  const expertiseSkills = collectExpertiseSkills(
+    character,
+    input.classDefinitions,
+  )
   const proficientSaves = collectSavingThrowProficiencies(
     character,
     input.classDefinitions,
@@ -523,6 +555,7 @@ export function buildReviewSheetModels(
     character.abilityScores,
     proficiencyBonus,
     proficientSkills,
+    expertiseSkills,
   )
   const initiativeModifier = getAbilityModifier(character.abilityScores.dexterity)
   const speciesCard = buildSpeciesCard(

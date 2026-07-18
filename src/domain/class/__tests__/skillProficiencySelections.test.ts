@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createSyntheticClassDefinition } from '../../../testing/syntheticClassDefinition'
-import { collectSkillProficiencySelections } from '../skillProficiencySelections'
+import {
+  collectSkillExpertiseSelections,
+  collectSkillProficiencySelections,
+  getExcludedExpertiseOptionIds,
+} from '../skillProficiencySelections'
 
 const multiSkillClass = createSyntheticClassDefinition({
   choices: [
@@ -51,6 +55,32 @@ const multiSkillClass = createSyntheticClassDefinition({
         },
       ],
     },
+    {
+      id: 'expertise',
+      level: 1,
+      prompt: 'Choose expertise',
+      type: 'multi-select',
+      required: true,
+      min: 2,
+      max: 2,
+      options: [
+        {
+          id: 'athletics',
+          label: 'Athletics',
+          effects: [{ kind: 'skill-expertise', skillId: 'athletics' }],
+        },
+        {
+          id: 'perception',
+          label: 'Perception',
+          effects: [{ kind: 'skill-expertise', skillId: 'perception' }],
+        },
+        {
+          id: 'intimidation',
+          label: 'Intimidation',
+          effects: [{ kind: 'skill-expertise', skillId: 'intimidation' }],
+        },
+      ],
+    },
   ],
 })
 
@@ -75,5 +105,24 @@ describe('collectSkillProficiencySelections', () => {
         'bonus-skill',
       ),
     ).toEqual(['athletics', 'perception'])
+  })
+})
+
+describe('expertise selection helpers', () => {
+  it('collects expertise skill ids', () => {
+    expect(
+      collectSkillExpertiseSelections(multiSkillClass, {
+        expertise: ['athletics', 'perception'],
+      }),
+    ).toEqual(['athletics', 'perception'])
+  })
+
+  it('excludes non-proficient skills and expertise taken on other choices', () => {
+    expect(
+      getExcludedExpertiseOptionIds(multiSkillClass, 'expertise', {
+        'skill-proficiencies': ['athletics', 'perception'],
+        expertise: ['athletics'],
+      }),
+    ).toEqual(['intimidation'])
   })
 })

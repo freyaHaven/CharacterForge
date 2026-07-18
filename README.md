@@ -44,7 +44,7 @@ The Class step uses a **class-path introduction** before the catalogue:
 
 **Single class**
 
-- Class catalogue (preview classes such as Barbarian are excluded).
+- Class catalogue (preview classes are excluded from single-class mode).
 - After selecting a class, a two-column layout:
   - **Class Overview** (left) — level stepper, reference metadata as compact
     chips (primary abilities, saving throws, armour, weapons), and interactive
@@ -75,6 +75,10 @@ step UI correctly.
   - **Barbarian** — levels 1–20, Rage, Unarmored Defense, weapon mastery
     (melee), Path of the Berserker at level 3, feature progression through
     level 20
+  - **Rogue** — levels 1–20, Expertise, Sneak Attack, weapon mastery, Thief
+    subclass at level 3, feature progression through level 20
+  - **Monk** — levels 1–20, Martial Arts, Focus, Unarmored Defense/Movement,
+    Warrior of the Open Hand at level 3, feature progression through level 20
 
 **SRD 2014**
 
@@ -183,7 +187,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian |
+| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian; Rogue; Monk |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
@@ -215,8 +219,8 @@ Icons are decorative; class names in the UI provide accessible labels.
 
 ## Roadmap
 
-- **Class content:** Additional 2024 SRD classes (Rogue, Monk, Paladin, and
-  others); parallel `srd-2014` definitions where rules differ
+- **Class content:** Additional 2024 SRD classes (Paladin and others);
+  parallel `srd-2014` definitions where rules differ
 - **Class icons:** Register remaining PNG emblems as artwork is finalized
 - **Species:** 2014 SRD species in a future `srd-2014` content pack
 - **Background step:** edition-specific picker polish

@@ -64,6 +64,7 @@ export type ResolvedDeferredCharacterRequirement = {
 export type ClassChoiceEffect =
   | { kind: 'fighting-style'; styleId: string }
   | { kind: 'skill-proficiency'; skillId: SkillId }
+  | { kind: 'skill-expertise'; skillId: SkillId }
 
 /** Feature granted by selecting a subclass (or similar) choice option. */
 export type ClassOptionFeature = {

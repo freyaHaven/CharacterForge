@@ -292,6 +292,12 @@ export const ASI_FEATURE_LEVELS = [4, 6, 8, 12, 14, 16] as const
 
 export const BARBARIAN_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
 
+export const MONK_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
+export const ROGUE_ASI_FEATURE_LEVELS = [4, 8, 10, 12, 16] as const
+
+export const RANGER_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
 /** Deterministic complete ASI picks for tests and fixtures. */
 export function createAsiChoicesUpToLevel(
   level: number,

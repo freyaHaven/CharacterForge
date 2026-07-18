@@ -25,7 +25,11 @@ export function isSkillProficiencyChoice(
   choice: Extract<ClassChoice, { type: 'multi-select' }>,
 ): boolean {
   return choice.options.some((option) =>
-    option.effects?.some((effect) => effect.kind === 'skill-proficiency'),
+    option.effects?.some(
+      (effect) =>
+        effect.kind === 'skill-proficiency' ||
+        effect.kind === 'skill-expertise',
+    ),
   )
 }
 

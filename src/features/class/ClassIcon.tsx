@@ -7,13 +7,16 @@ type ClassIconProps = {
   alt?: string
 }
 
+/** Intrinsic pixel size of registered class glyph PNGs (and matching fallback). */
+export const CLASS_ICON_INTRINSIC_SIZE = 192
+
 function DefaultClassIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
       viewBox="0 0 48 48"
-      width="48"
-      height="48"
+      width={CLASS_ICON_INTRINSIC_SIZE}
+      height={CLASS_ICON_INTRINSIC_SIZE}
       aria-hidden="true"
       focusable="false"
     >
@@ -43,6 +46,8 @@ export function ClassIcon({ classId, className, alt }: ClassIconProps) {
       <img
         className={className}
         src={iconSrc}
+        width={CLASS_ICON_INTRINSIC_SIZE}
+        height={CLASS_ICON_INTRINSIC_SIZE}
         alt={isDecorative ? '' : alt}
         aria-hidden={isDecorative ? true : undefined}
         draggable={false}
