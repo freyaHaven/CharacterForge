@@ -6,7 +6,7 @@ import {
   getVisibleWizardSteps,
   hasCharacterDetailsStep,
   hasFeatChoices,
-  hasSpellSelections,
+  hasSpellContent,
   isWizardStepVisible,
 } from '../stepVisibility'
 
@@ -16,7 +16,7 @@ describe('wizard step visibility', () => {
   it('shows the primary flow and hides deferred steps', () => {
     expect(hasCharacterDetailsStep(context)).toBe(false)
     expect(hasFeatChoices(context)).toBe(false)
-    expect(hasSpellSelections(context)).toBe(false)
+    expect(hasSpellContent(context)).toBe(false)
 
     const visibleIds = getVisibleWizardSteps(context).map((step) => step.id)
 
@@ -31,7 +31,18 @@ describe('wizard step visibility', () => {
     ])
   })
 
-  it('keeps character details, feats, and spells conditional and hidden for now', () => {
+  it('shows Spells when hasSpellContent is true', () => {
+    const withSpells = createWizardStepContext(createDefaultCharacter(), {
+      hasSpellContent: true,
+    })
+
+    expect(hasSpellContent(withSpells)).toBe(true)
+    expect(
+      getVisibleWizardSteps(withSpells).map((step) => step.id),
+    ).toContain('spells')
+  })
+
+  it('keeps character details, feats, and spells conditional', () => {
     const characterDetailsStep = WIZARD_STEPS.find(
       (step) => step.id === 'character-details',
     )

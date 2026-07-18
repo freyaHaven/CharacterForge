@@ -1,13 +1,13 @@
 import {
   CURRENT_SCHEMA_VERSION,
   isStoredCharacterEnvelope,
-  type StoredCharacterV10,
+  type StoredCharacter,
 } from '../storedCharacter'
 import { detectStoredVersion } from './detectStoredVersion'
 import { MIGRATIONS } from './registry'
 
 export type MigrateToCurrentSchemaResult =
-  | { ok: true; envelope: StoredCharacterV10 }
+  | { ok: true; envelope: StoredCharacter }
   | { ok: false; reason: 'malformed' | 'unsupported-version' }
 
 /**
@@ -47,5 +47,5 @@ export function migrateToCurrentSchema(
     return { ok: false, reason: 'malformed' }
   }
 
-  return { ok: true, envelope: envelope as StoredCharacterV10 }
+  return { ok: true, envelope: envelope as StoredCharacter }
 }

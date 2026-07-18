@@ -15,8 +15,7 @@ export const sageSrd2024: BackgroundDefinition = {
     featId: 'srd-2024:magic-initiate-wizard',
     name: 'Magic Initiate (Wizard)',
     description:
-      'You learn two cantrips and one 1st-level spell from the Wizard spell list. Spell selection will be configured in a later step.',
-    magicInitiateClass: 'wizard',
+      'You learn two cantrips and one 1st-level spell from the Wizard spell list. Configure spell selections on the Spells step.',
   },
   skillProficiencies: ['arcana', 'history'],
   toolProficiency: {

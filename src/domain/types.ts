@@ -4,6 +4,7 @@ import type { BackgroundSelection } from './background/types'
 import type { CharacterClassSelection, CharacterLevel } from './class/types'
 import type { FeatSelection } from './feat/types'
 import type { SpeciesSelection } from './species/types'
+import type { SpellSourceState } from './spell/types'
 
 export type { AlignmentId } from './character/alignment'
 export {
@@ -95,6 +96,7 @@ export type {
   FeatDefinition,
   FeatPrerequisite,
   FeatSelection,
+  FeatSpellcasting,
 } from './feat/types'
 export type {
   ConditionId,
@@ -108,6 +110,20 @@ export type {
   SpeciesSelection,
   SpeciesTrait,
 } from './species/types'
+export type {
+  ClassSpellcasting,
+  SpellCountSpec,
+  SpellDefinition,
+  SpellEntitlement,
+  SpellLevelRange,
+  SpellListDefinition,
+  SpellSelection,
+  SpellSelectionKind,
+  SpellSlotContributor,
+  SpellSourceRef,
+  SpellSourceState,
+} from './spell/types'
+export type { FeatSpellcasting } from './feat/types'
 
 export type CharacterCreationMethod =
   | 'manual'
@@ -137,4 +153,6 @@ export type Character = {
   background: BackgroundSelection | null
   feat: FeatSelection | null
   details: CharacterDetails
+  /** Persisted player-owned spell state, keyed by spellcasting source. */
+  spellSourceStates: SpellSourceState[]
 }

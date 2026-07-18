@@ -13,7 +13,7 @@ export {
   getVisibleWizardSteps,
   hasCharacterDetailsStep,
   hasFeatChoices,
-  hasSpellSelections,
+  hasSpellContent,
   isWizardStepVisible,
 } from './stepVisibility'
 

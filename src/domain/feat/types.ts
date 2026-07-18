@@ -1,5 +1,8 @@
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
+import type { FeatSpellcasting } from '../spell/types'
+
+export type { FeatSpellcasting } from '../spell/types'
 
 export type FeatCategory =
   | 'origin'
@@ -49,8 +52,8 @@ export type FeatDefinition = {
   benefits: FeatBenefit[]
   repeatable: boolean
   choices: FeatChoice[]
-  /** Reserved for deferred Magic Initiate spell selection. */
-  magicInitiateClass?: 'cleric' | 'wizard' | 'druid'
+  /** Present when the feat grants spell selections or known spells. */
+  spellcasting?: FeatSpellcasting
 }
 
 export type FeatSelection = {

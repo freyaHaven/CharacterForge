@@ -7,6 +7,7 @@ import { isCharacterDetails } from './details'
 import { isBackgroundSelection } from '../background/isBackgroundSelection'
 import { isCharacterClassSelection } from '../class/isCharacterClassSelection'
 import { isFeatSelection } from '../feat/isFeatSelection'
+import { isSpellSourceStateArray } from '../spell/isSpellSourceState'
 import { isSpeciesSelection } from '../species/isSpeciesSelection'
 import {
   getAllocatedLevel,
@@ -116,6 +117,7 @@ export function isCharacter(value: unknown): value is Character {
       (candidate.targetLevel as number) &&
     isBackground(candidate.background) &&
     isFeat(candidate.feat) &&
-    isCharacterDetails(candidate.details)
+    isCharacterDetails(candidate.details) &&
+    isSpellSourceStateArray(candidate.spellSourceStates)
   )
 }

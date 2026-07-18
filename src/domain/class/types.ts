@@ -2,7 +2,13 @@ import type { AbilityId } from '../abilities/types'
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
 import type { SkillId } from '../skills/types'
+import type {
+  ClassSpellcasting,
+  SpellEntitlement,
+} from '../spell/types'
 import type { HitPointIncrease } from './hitPointIncreases'
+
+export type { ClassSpellcasting, SpellEntitlement } from '../spell/types'
 
 export type ClassLevel = number
 
@@ -31,6 +37,8 @@ export type ClassFeature = {
   id: string
   name: string
   description: string
+  /** Spell entitlements unlocked with this feature at its progression level. */
+  spellEntitlements?: SpellEntitlement[]
 }
 
 export type ClassLevelFeatures = {
@@ -72,6 +80,8 @@ export type ClassOptionFeature = {
   name: string
   description: string
   level: ClassLevel
+  /** Spell entitlements unlocked with this feature (e.g. domain spells). */
+  spellEntitlements?: SpellEntitlement[]
 }
 
 export type ClassChoiceOption = {
@@ -81,6 +91,8 @@ export type ClassChoiceOption = {
   effects?: ClassChoiceEffect[]
   /** Features granted by this option (e.g. Champion subclass features). */
   features?: ClassOptionFeature[]
+  /** Spell entitlements unlocked when this option is selected. */
+  spellEntitlements?: SpellEntitlement[]
 }
 
 export type ClassChoice =
@@ -102,10 +114,6 @@ export type ClassChoice =
       max: number
       options: ClassChoiceOption[]
     }
-
-export type ClassSpellcasting = {
-  ability: AbilityId
-}
 
 export type ClassCatalogStatus = 'available' | 'preview'
 

@@ -4,6 +4,8 @@ import type { WizardStepDefinition } from './types'
 
 export type WizardStepContext = {
   character: Character
+  /** Derived: character has any meaningful spell-related content. */
+  hasSpellContent?: boolean
 }
 
 /**
@@ -23,8 +25,9 @@ export function hasFeatChoices(_context: WizardStepContext): boolean {
   return false
 }
 
-export function hasSpellSelections(_context: WizardStepContext): boolean {
-  return false
+/** Spells step appears when the character has any spell content (including grants-only). */
+export function hasSpellContent(context: WizardStepContext): boolean {
+  return context.hasSpellContent === true
 }
 
 export function isWizardStepVisible(
@@ -44,7 +47,7 @@ export function isWizardStepVisible(
   }
 
   if (step.visibility.when === 'spells') {
-    return hasSpellSelections(context)
+    return hasSpellContent(context)
   }
 
   return true
@@ -58,6 +61,10 @@ export function getVisibleWizardSteps(
 
 export function createWizardStepContext(
   character: Character,
+  options?: { hasSpellContent?: boolean },
 ): WizardStepContext {
-  return { character }
+  return {
+    character,
+    hasSpellContent: options?.hasSpellContent,
+  }
 }

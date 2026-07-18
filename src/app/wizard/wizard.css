@@ -427,6 +427,50 @@
   color: var(--text-h);
 }
 
+.spells-slots,
+.spells-source,
+.spells-entitlement {
+  margin-top: 1.25rem;
+}
+
+.spells-slots__title,
+.spells-entitlement__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.spells-source__meta,
+.spells-entitlement__count,
+.spells-granted__label {
+  margin: 0 0 0.5rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.spells-granted__list,
+.spells-picker,
+.spells-validation {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.spells-validation {
+  color: var(--danger, #b91c1c);
+}
+
+.spells-picker {
+  list-style: none;
+  padding-left: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.spells-picker label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
 .review-step__intro {
   margin: 0 0 1rem;
   color: var(--text);

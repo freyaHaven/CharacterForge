@@ -66,6 +66,7 @@ function withMigratedDefaults(
     background: background ?? null,
     feat: feat ?? null,
     details: details ?? createDefaultCharacterDetails(),
+    spellSourceStates: [],
   }
 }
 
@@ -136,7 +137,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 11,
+      schemaVersion: 12,
       character,
     })
   })

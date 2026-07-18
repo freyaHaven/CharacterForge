@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from '../../../content/packs/srd-2024/classes/fighter'
 import { createDefaultCharacter } from '../../../domain/character/defaults'
+import { createTestClassSpellcasting } from '../../../testing/createTestClassSpellcasting'
 import { resolveCharacterSpellcasting } from '../resolveCharacterSpellcasting'
 
 function createCatalog(definitions: Record<string, typeof fighterSrd2024 | null>) {
@@ -33,13 +34,13 @@ describe('resolveCharacterSpellcasting', () => {
       character,
     )
 
-    expect(result).toEqual({
-      hasSpellcastingCapability: false,
-      spellLines: [],
-    })
+    expect(result.hasSpellcastingCapability).toBe(false)
+    expect(result.hasSpellContent).toBe(false)
+    expect(result.spellLines).toEqual([])
+    expect(result.groups).toEqual([])
   })
 
-  it('detects spellcasting from resolved class effects rather than class name', async () => {
+  it('detects spellcasting from class spellcasting entitlements', async () => {
     const character = createDefaultCharacter({
       classes: [
         {
@@ -57,12 +58,26 @@ describe('resolveCharacterSpellcasting', () => {
           ...fighterSrd2024,
           id: 'srd-2024:wizard',
           name: 'Wizard',
-          spellcasting: { ability: 'intelligence' },
+          spellcasting: createTestClassSpellcasting({
+            ability: 'intelligence',
+            entitlements: [
+              {
+                id: 'prepared',
+                kind: 'select',
+                listId: 'test:list',
+                selectionKind: 'prepared',
+                count: { kind: 'fixed', value: 2 },
+                levelRange: { min: 1, max: 'slot-ceiling' },
+              },
+            ],
+          }),
         },
       }),
       character,
     )
 
     expect(result.hasSpellcastingCapability).toBe(true)
+    expect(result.hasSpellContent).toBe(true)
+    expect(result.groups).toHaveLength(1)
   })
 })

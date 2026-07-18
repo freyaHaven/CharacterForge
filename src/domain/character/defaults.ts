@@ -28,6 +28,7 @@ export function createDefaultCharacter(
     background: null,
     feat: null,
     details: createDefaultCharacterDetails(),
+    spellSourceStates: [],
     ...overrides,
   }
 }

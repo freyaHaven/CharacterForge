@@ -3,6 +3,10 @@ import type { ClassDefinition, SubclassDefinition } from '../../domain/class/typ
 import type { ContentSource } from '../../domain/content/types'
 import type { EditionId } from '../../domain/edition'
 import type { FeatDefinition } from '../../domain/feat/types'
+import type {
+  SpellDefinition,
+  SpellListDefinition,
+} from '../../domain/spell/types'
 import type { SpeciesDefinition } from '../../domain/species/types'
 
 export type ContentPackManifest = {
@@ -25,8 +29,8 @@ export type ContentPack = {
   species?: SpeciesDefinition[]
   backgrounds?: BackgroundDefinition[]
   feats?: FeatDefinition[]
-  /** Reserved for future spell content. */
-  spells?: unknown[]
+  spells?: SpellDefinition[]
+  spellLists?: SpellListDefinition[]
   /** Reserved for future equipment content. */
   equipment?: unknown[]
 }

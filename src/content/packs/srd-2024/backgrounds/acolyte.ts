@@ -15,8 +15,7 @@ export const acolyteSrd2024: BackgroundDefinition = {
     featId: 'srd-2024:magic-initiate-cleric',
     name: 'Magic Initiate (Cleric)',
     description:
-      'You learn two cantrips and one 1st-level spell from the Cleric spell list. Spell selection will be configured in a later step.',
-    magicInitiateClass: 'cleric',
+      'You learn two cantrips and one 1st-level spell from the Cleric spell list. Configure spell selections on the Spells step.',
   },
   skillProficiencies: ['insight', 'religion'],
   toolProficiency: {

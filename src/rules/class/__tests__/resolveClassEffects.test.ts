@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from '../../../content/packs/srd-2024/classes/fighter'
 import type { ClassSelection } from '../../../domain/class/types'
+import { createTestClassSpellcasting } from '../../../testing/createTestClassSpellcasting'
 import { resolveClassEffects } from '../resolveClassEffects'
 
 const completeFighterSelection: ClassSelection = {
@@ -59,7 +60,7 @@ describe('resolveClassEffects', () => {
     const effects = resolveClassEffects(
       {
         ...fighterSrd2024,
-        spellcasting: { ability: 'intelligence' },
+        spellcasting: createTestClassSpellcasting({ ability: 'intelligence' }),
       },
       completeFighterSelection,
     )

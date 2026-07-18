@@ -14,7 +14,8 @@ describe('rangerSrd2024', () => {
   })
 
   it('uses Wisdom spellcasting', () => {
-    expect(rangerSrd2024.spellcasting).toEqual({ ability: 'wisdom' })
+    expect(rangerSrd2024.spellcasting?.ability).toBe('wisdom')
+    expect(rangerSrd2024.spellcasting?.slotContributor).toBe('half')
   })
 
   it('requires three skill proficiencies', () => {

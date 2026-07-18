@@ -13,7 +13,8 @@ describe('paladinSrd2024', () => {
   })
 
   it('uses Charisma spellcasting', () => {
-    expect(paladinSrd2024.spellcasting).toEqual({ ability: 'charisma' })
+    expect(paladinSrd2024.spellcasting?.ability).toBe('charisma')
+    expect(paladinSrd2024.spellcasting?.slotContributor).toBe('half')
   })
 
   it('requires two skill proficiencies', () => {

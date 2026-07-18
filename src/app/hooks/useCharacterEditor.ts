@@ -9,10 +9,12 @@ import { getActiveCharacterId, setActiveCharacterId } from '../session/editorSes
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
+import type { SpellCatalog } from '../../domain/ports/spellCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
 import { createBundledBackgroundCatalog } from '../../adapters/bundledBackgroundCatalog'
 import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
+import { createBundledSpellCatalog } from '../../adapters/bundledSpellCatalog'
 import { buildCharacterForSave } from '../buildCharacterForSave'
 import {
   canSaveCharacter,
@@ -34,7 +36,10 @@ import { useReviewBackgroundDisplay } from '../useReviewBackgroundDisplay'
 import { useReviewFeatDisplay } from '../useReviewFeatDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
 import { useReviewSpellcasting } from '../useReviewSpellcasting'
+import { useSpellsStepValidation } from '../useSpellsStepValidation'
 import { useReviewSheetModels } from '../useReviewSheetModels'
+import { pruneInactiveSpellSourceStates } from '../../rules/spell/pruneInactiveSpellSourceStates'
+import type { SpellSourceState } from '../../domain/spell/types'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
 import { getAllStepStatuses } from '../wizard/stepStatus'
 import type { WizardStepId } from '../wizard/types'
@@ -46,12 +51,18 @@ import { useFeatEditor } from './useFeatEditor'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { useSpeciesEditor } from './useSpeciesEditor'
 
+const defaultClassCatalog = createBundledClassCatalog()
+const defaultBackgroundCatalog = createBundledBackgroundCatalog()
+const defaultFeatCatalog = createBundledFeatCatalog()
+const defaultSpellCatalog = createBundledSpellCatalog()
+
 export type UseCharacterEditorOptions = {
   repository: CharacterRepository
   speciesCatalog: SpeciesCatalog
   classCatalog?: ClassCatalog
   backgroundCatalog?: BackgroundCatalog
   featCatalog?: FeatCatalog
+  spellCatalog?: SpellCatalog
   randomSource?: () => number
   restoreFromStorage?: boolean
 }
@@ -59,9 +70,10 @@ export type UseCharacterEditorOptions = {
 export function useCharacterEditor({
   repository,
   speciesCatalog,
-  classCatalog = createBundledClassCatalog(),
-  backgroundCatalog = createBundledBackgroundCatalog(),
-  featCatalog = createBundledFeatCatalog(),
+  classCatalog = defaultClassCatalog,
+  backgroundCatalog = defaultBackgroundCatalog,
+  featCatalog = defaultFeatCatalog,
+  spellCatalog = defaultSpellCatalog,
   randomSource = Math.random,
   restoreFromStorage = true,
 }: UseCharacterEditorOptions) {
@@ -196,6 +208,54 @@ export function useCharacterEditor({
     feat.featDraftIncomplete,
   )
 
+  const spellcastingReview = useReviewSpellcasting(classCatalog, character, {
+    featCatalog,
+    backgroundCatalog,
+    spellCatalog,
+  })
+
+  const { spellValidation, committedSpellsValid } = useSpellsStepValidation(
+    spellcastingReview,
+    character,
+    spellCatalog,
+  )
+
+  const setSpellSourceStates = useCallback(
+    (nextStates: SpellSourceState[]) => {
+      clearSaveMessage()
+      setCharacter((current) => ({
+        ...current,
+        spellSourceStates: pruneInactiveSpellSourceStates(
+          { ...current, spellSourceStates: nextStates },
+          spellcastingReview.activeSources,
+        ),
+      }))
+    },
+    [clearSaveMessage, spellcastingReview.activeSources],
+  )
+
+  // Prune source states when class instances / feat / background identity change.
+  const ownershipKey = [
+    character.classes.map((entry) => entry.instanceId).join(','),
+    character.feat?.featId ?? '',
+    character.background?.backgroundId ?? '',
+  ].join('|')
+
+  useEffect(() => {
+    setCharacter((current) => {
+      const pruned = pruneInactiveSpellSourceStates(
+        current,
+        spellcastingReview.activeSources,
+      )
+      if (pruned.length === current.spellSourceStates.length) {
+        return current
+      }
+      return { ...current, spellSourceStates: pruned }
+    })
+    // ownershipKey tracks removed class/feat/background; activeSources read from latest summary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [ownershipKey])
+
   const stepStatuses = getAllStepStatuses({
     character,
     basicsTouched,
@@ -213,6 +273,8 @@ export function useCharacterEditor({
     featDraft: feat.featDraft,
     featDraftValidation: feat.featDraftValidation,
     committedFeatValid: feat.committedFeatValid,
+    spellValidation,
+    committedSpellsValid,
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
@@ -247,10 +309,10 @@ export function useCharacterEditor({
     feat.featDraft,
   )
 
-  const wizardStepContext = createWizardStepContext(character)
+  const wizardStepContext = createWizardStepContext(character, {
+    hasSpellContent: spellcastingReview.hasSpellContent,
+  })
   const reviewableStepIds = getReviewableStepIds(wizardStepContext)
-
-  const spellcastingReview = useReviewSpellcasting(classCatalog, character)
 
   const reviewSheetModels = useReviewSheetModels(
     character,
@@ -549,6 +611,9 @@ export function useCharacterEditor({
     classReviewDisplay,
     reviewSheetModels,
     spellcastingReview,
+    spellCatalog,
+    spellValidation,
+    setSpellSourceStates,
     unresolvedDeferredRequirements,
     finishPolicy,
     finishBlockedMessage,

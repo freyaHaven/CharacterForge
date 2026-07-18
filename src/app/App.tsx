@@ -334,7 +334,19 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   onCommittedSelectionChange={feat.commitFeatSelection}
                 />
               ),
-              spells: <SpellsStep />,
+              spells: (
+                <SpellsStep
+                  summary={editor.spellcastingReview}
+                  spellSourceStates={character.spellSourceStates}
+                  onChangeSpellSourceStates={editor.setSpellSourceStates}
+                  spellCatalog={editor.spellCatalog}
+                  validationIssues={
+                    editor.spellValidation?.ok === false
+                      ? editor.spellValidation.issues
+                      : []
+                  }
+                />
+              ),
               review: (
                 <ReviewStep
                   characterName={character.name}

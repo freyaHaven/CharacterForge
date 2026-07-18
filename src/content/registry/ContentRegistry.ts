@@ -3,6 +3,10 @@ import type { ClassDefinition, SubclassDefinition } from '../../domain/class/typ
 import { subclassToChoiceOption } from '../../domain/class/subclassDefinition'
 import type { EditionId } from '../../domain/edition'
 import type { FeatDefinition } from '../../domain/feat/types'
+import type {
+  SpellDefinition,
+  SpellListDefinition,
+} from '../../domain/spell/types'
 import type { SpeciesDefinition } from '../../domain/species/types'
 import type { ContentPack, ContentPackManifest } from '../types/contentPack'
 
@@ -49,10 +53,13 @@ export class ContentRegistry {
   private readonly speciesById = new Map<string, SpeciesDefinition>()
   private readonly backgroundsById = new Map<string, BackgroundDefinition>()
   private readonly featsById = new Map<string, FeatDefinition>()
+  private readonly spellsById = new Map<string, SpellDefinition>()
+  private readonly spellListsById = new Map<string, SpellListDefinition>()
   private readonly classesByEdition = new Map<EditionId, ClassDefinition[]>()
   private readonly featsByEdition = new Map<EditionId, FeatDefinition[]>()
   private readonly backgroundsByEdition = new Map<EditionId, BackgroundDefinition[]>()
   private readonly speciesByEdition = new Map<EditionId, SpeciesDefinition[]>()
+  private readonly spellsByEdition = new Map<EditionId, SpellDefinition[]>()
   private readonly subclassesByClassId = new Map<string, SubclassDefinition[]>()
 
   registerPack(pack: ContentPack): void {
@@ -99,6 +106,17 @@ export class ContentRegistry {
       const editionFeats = this.featsByEdition.get(feat.editionId) ?? []
       editionFeats.push(feat)
       this.featsByEdition.set(feat.editionId, editionFeats)
+    }
+
+    for (const spell of pack.spells ?? []) {
+      this.indexById(this.spellsById, spell.id, spell, 'spell')
+      const editionSpells = this.spellsByEdition.get(spell.editionId) ?? []
+      editionSpells.push(spell)
+      this.spellsByEdition.set(spell.editionId, editionSpells)
+    }
+
+    for (const spellList of pack.spellLists ?? []) {
+      this.indexById(this.spellListsById, spellList.id, spellList, 'spell list')
     }
   }
 
@@ -154,8 +172,20 @@ export class ContentRegistry {
     return this.featsByEdition.get(editionId) ?? []
   }
 
-  getSpell(_spellId: string): null {
-    return null
+  getSpell(spellId: string): SpellDefinition | null {
+    return this.spellsById.get(spellId) ?? null
+  }
+
+  listSpells(editionId: EditionId): SpellDefinition[] {
+    return this.spellsByEdition.get(editionId) ?? []
+  }
+
+  getSpellList(spellListId: string): SpellListDefinition | null {
+    return this.spellListsById.get(spellListId) ?? null
+  }
+
+  listSpellLists(): SpellListDefinition[] {
+    return [...this.spellListsById.values()]
   }
 
   getEquipment(_equipmentId: string): null {

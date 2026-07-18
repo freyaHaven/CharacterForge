@@ -71,6 +71,7 @@ function withMigratedDefaults(
     background: background ?? null,
     feat: feat ?? null,
     details: details ?? createDefaultCharacterDetails(),
+    spellSourceStates: [],
   }
 }
 

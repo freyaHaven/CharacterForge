@@ -1,4 +1,5 @@
 import type { FeatDefinition } from '../../../../domain/feat/types'
+import { SPELL_LIST_IDS } from '../spell-lists'
 import { SRD_2024_SOURCE } from '../source'
 
 export const magicInitiateWizardSrd2024: FeatDefinition = {
@@ -7,7 +8,7 @@ export const magicInitiateWizardSrd2024: FeatDefinition = {
   name: 'Magic Initiate (Wizard)',
   summary: 'Learn two cantrips and one 1st-level Wizard spell.',
   description:
-    'You learn two cantrips and one 1st-level spell from the Wizard spell list. Spell selection will be configured in a later step.',
+    'You learn two cantrips and one 1st-level spell from the Wizard spell list. You can cast the 1st-level spell once per Long Rest without a spell slot, and you can also cast it using any spell slots you have. Intelligence is your spellcasting ability for these spells.',
   source: SRD_2024_SOURCE,
   category: 'origin',
   prerequisite: { kind: 'none' },
@@ -26,5 +27,26 @@ export const magicInitiateWizardSrd2024: FeatDefinition = {
   ],
   repeatable: false,
   choices: [],
-  magicInitiateClass: 'wizard',
+  spellcasting: {
+    ability: 'intelligence',
+    spellListId: SPELL_LIST_IDS.wizard,
+    entitlements: [
+      {
+        id: 'mi-cantrips',
+        kind: 'select',
+        listId: SPELL_LIST_IDS.wizard,
+        selectionKind: 'cantrip',
+        count: { kind: 'fixed', value: 2 },
+        levelRange: { min: 0, max: 0 },
+      },
+      {
+        id: 'mi-1st-level',
+        kind: 'select',
+        listId: SPELL_LIST_IDS.wizard,
+        selectionKind: 'known',
+        count: { kind: 'fixed', value: 1 },
+        levelRange: { min: 1, max: 1 },
+      },
+    ],
+  },
 }

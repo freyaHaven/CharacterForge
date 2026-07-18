@@ -9,6 +9,10 @@ import {
   formatWeaponMasteryOptionLabel,
 } from '../../../../domain/weapons/mastery'
 import { SRD_2024_SOURCE } from '../source'
+import {
+  blessedWarriorCantripsEntitlement,
+  paladinSpellcastingSrd2024,
+} from '../spellcasting/paladin'
 import { devotionSrd2024 } from '../subclasses/devotion'
 
 const PALADIN_SKILL_OPTIONS = [
@@ -37,7 +41,7 @@ export const paladinSrd2024: ClassDefinition = {
   hitDie: { sides: 10 },
   primaryAbilities: ['strength', 'charisma'],
   savingThrows: ['wisdom', 'charisma'],
-  spellcasting: { ability: 'charisma' },
+  spellcasting: paladinSpellcastingSrd2024,
   proficiencies: {
     armor: ['light', 'medium', 'heavy', 'shield'],
     weapons: ['simple', 'martial'],
@@ -340,6 +344,7 @@ export const paladinSrd2024: ClassDefinition = {
           description:
             'You learn two Cleric cantrips of your choice. Guidance and Sacred Flame are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.',
           effects: [{ kind: 'fighting-style', styleId: 'blessed-warrior' }],
+          spellEntitlements: [blessedWarriorCantripsEntitlement],
         },
       ],
     },

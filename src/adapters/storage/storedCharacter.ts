@@ -9,7 +9,7 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 11
+export const CURRENT_SCHEMA_VERSION = 12
 
 type CharacterIdentity = {
   id: string
@@ -101,10 +101,18 @@ export type StoredCharacterV10 = {
 /** Schema v11: class instances include hit point increase choices. */
 export type StoredCharacterV11 = {
   schemaVersion: 11
+  character: Omit<Character, 'spellSourceStates'> & {
+    spellSourceStates?: Character['spellSourceStates']
+  }
+}
+
+/** Schema v12: persisted spell source states. */
+export type StoredCharacterV12 = {
+  schemaVersion: 12
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV11
+export type StoredCharacter = StoredCharacterV12
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -127,7 +135,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV8
   | StoredCharacterV9
   | StoredCharacterV10
-  | StoredCharacterV11 {
+  | StoredCharacterV11
+  | StoredCharacterV12 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

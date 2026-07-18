@@ -17,6 +17,26 @@ export const devotionSrd2024: SubclassDefinition = {
       level: 3,
       description:
         'The magic of your oath ensures you always have certain spells ready; when you reach a Paladin level specified in the Oath of Devotion Spells table, you thereafter always have the listed spells prepared.\n3rd: Protection from Evil and Good, Shield of Faith\n5th: Aid, Zone of Truth\n9th: Beacon of Hope, Dispel Magic\n13th: Freedom of Movement, Guardian of Faith\n17th: Commune, Flame Strike',
+      spellEntitlements: [
+        {
+          id: 'oath-spells',
+          kind: 'granted',
+          countsAgainstLimit: false,
+          appliesTo: 'prepared',
+          spells: [
+            { spellId: 'srd-2024:protection-from-evil-and-good', minLevel: 3 },
+            { spellId: 'srd-2024:shield-of-faith', minLevel: 3 },
+            { spellId: 'srd-2024:aid', minLevel: 5 },
+            { spellId: 'srd-2024:zone-of-truth', minLevel: 5 },
+            { spellId: 'srd-2024:beacon-of-hope', minLevel: 9 },
+            { spellId: 'srd-2024:dispel-magic', minLevel: 9 },
+            { spellId: 'srd-2024:freedom-of-movement', minLevel: 13 },
+            { spellId: 'srd-2024:guardian-of-faith', minLevel: 13 },
+            { spellId: 'srd-2024:commune', minLevel: 17 },
+            { spellId: 'srd-2024:flame-strike', minLevel: 17 },
+          ],
+        },
+      ],
     },
     {
       id: 'devotion-sacred-weapon',

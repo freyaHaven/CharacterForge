@@ -9,6 +9,10 @@ import {
   formatWeaponMasteryOptionLabel,
 } from '../../../../domain/weapons/mastery'
 import { SRD_2024_SOURCE } from '../source'
+import {
+  druidicWarriorCantripsEntitlement,
+  rangerSpellcastingSrd2024,
+} from '../spellcasting/ranger'
 import { hunterSrd2024 } from '../subclasses/hunter'
 
 const RANGER_SKILL_OPTIONS = [
@@ -45,7 +49,7 @@ export const rangerSrd2024: ClassDefinition = {
   hitDie: { sides: 10 },
   primaryAbilities: ['dexterity', 'wisdom'],
   savingThrows: ['strength', 'dexterity'],
-  spellcasting: { ability: 'wisdom' },
+  spellcasting: rangerSpellcastingSrd2024,
   proficiencies: {
     armor: ['light', 'medium', 'shield'],
     weapons: ['simple', 'martial'],
@@ -374,6 +378,7 @@ export const rangerSrd2024: ClassDefinition = {
           description:
             'You learn two Druid cantrips of your choice. Guidance and Starry Wisp are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip.',
           effects: [{ kind: 'fighting-style', styleId: 'druidic-warrior' }],
+          spellEntitlements: [druidicWarriorCantripsEntitlement],
         },
       ],
     },

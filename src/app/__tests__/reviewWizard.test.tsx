@@ -210,7 +210,12 @@ describe('Review wizard integration', () => {
     await completeRequiredSteps(user)
     await openReviewStep(user)
 
-    await user.click(screen.getByRole('button', { name: /finish character/i }))
+    const finishButton = screen.getByRole('button', { name: /finish character/i })
+    await waitFor(() => {
+      expect(finishButton).toBeDisabled()
+    })
+
+    await user.click(finishButton)
 
     expect(saveMock).not.toHaveBeenCalled()
     expect(screen.queryByText('Character complete.')).not.toBeInTheDocument()

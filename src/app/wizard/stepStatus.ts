@@ -14,6 +14,7 @@ import type { RolledAssignmentValidationResult } from '../../rules/rolled'
 import type { ClassValidationResult } from '../../rules/class/classRules'
 import type { BackgroundValidationResult } from '../../rules/background/backgroundRules'
 import type { FeatValidationResult } from '../../rules/feat/featRules'
+import type { SpellValidationResult } from '../../rules/spell/validateSpellSourceStates'
 import type { SpeciesValidationResult } from '../../rules/species/speciesRules'
 import type { StandardArrayDraftValidationResult } from '../../features/ability-scores/standardArrayDraft'
 import { canSaveCharacter } from '../characterSavePolicy'
@@ -58,6 +59,11 @@ export type StepValidationContext = {
   featDraftValidation: FeatValidationResult | null
   /** Whether the committed feat selection is valid for the current edition. */
   committedFeatValid: boolean
+
+  /** Validation of spell source states; null when Spells step has no content. */
+  spellValidation: SpellValidationResult | null
+  /** Whether committed spell source states are valid (or spells step inactive). */
+  committedSpellsValid: boolean
 
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
@@ -201,6 +207,28 @@ export function getCharacterDetailsStepStatus(
   return { completion: 'not-started', hasValidationErrors: false }
 }
 
+export function getSpellsStepStatus(context: StepValidationContext): StepStatus {
+  if (context.spellValidation === null) {
+    return { completion: 'not-started', hasValidationErrors: false }
+  }
+
+  if (context.spellValidation.ok && context.committedSpellsValid) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  const hasValidationErrors =
+    context.spellValidation.ok === false || !context.committedSpellsValid
+
+  const hasAnySelection = context.character.spellSourceStates.some(
+    (state) => state.selections.length > 0,
+  )
+
+  return {
+    completion: hasAnySelection || hasValidationErrors ? 'in-progress' : 'not-started',
+    hasValidationErrors,
+  }
+}
+
 export function getPlaceholderStepStatus(): StepStatus {
   return { completion: 'not-started', hasValidationErrors: false }
 }
@@ -256,7 +284,7 @@ export function getNonReviewStepStatuses(
     background: getBackgroundStepStatus(context),
     equipment: getPlaceholderStepStatus(),
     feats: getFeatStepStatus(context),
-    spells: getPlaceholderStepStatus(),
+    spells: getSpellsStepStatus(context),
   }
 }
 

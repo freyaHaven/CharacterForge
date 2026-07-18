@@ -13,8 +13,6 @@ export type BackgroundOriginFeat = {
   featId: string
   name: string
   description: string
-  /** Reserved for deferred Magic Initiate spell selection. */
-  magicInitiateClass?: 'cleric' | 'wizard' | 'druid'
 }
 
 export type BackgroundToolOption = {
