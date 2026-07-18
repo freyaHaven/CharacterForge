@@ -10,6 +10,8 @@ import { createDefaultCharacter } from '../../../domain/character/defaults'
 import type { Character } from '../../../domain/types'
 import { resolveHitPointMaximum } from '../../../rules/hit-points/resolveHitPointMaximum'
 import { fighterSrd2024 } from '../../../content/packs/srd-2024/classes/fighter'
+import { barbarianSrd2024 } from '../../../content/packs/srd-2024/classes/barbarian'
+import { paladinSrd2024 } from '../../../content/packs/srd-2024/classes/paladin'
 import { rogueSrd2024 } from '../../../content/packs/srd-2024/classes/rogue'
 import { createTestFighterClassInstance } from '../../../testing/classFixtures'
 import { tryCommitClassInstanceDraft } from '../../../features/class/classSelectionDraft'
@@ -28,6 +30,8 @@ const ROGUE_ID = 'srd-2024:rogue'
 const classDefinitionsById = new Map([
   [fighterSrd2024.id, fighterSrd2024],
   [rogueSrd2024.id, rogueSrd2024],
+  [barbarianSrd2024.id, barbarianSrd2024],
+  [paladinSrd2024.id, paladinSrd2024],
 ])
 
 function createCommittedFighter(level: number, constitution: number): Character {
@@ -479,4 +483,86 @@ describe('useClassEditor single-class browse preserves committed state', () => {
     )
     expect(result.current.character.classes).toEqual(character.classes)
   })
+})
+
+describe('different Hit Die browse HP', () => {
+  const BARBARIAN_ID = 'srd-2024:barbarian'
+  const PALADIN_ID = 'srd-2024:paladin'
+
+  function createCommittedClass(classId: string, instanceId: string): Character {
+    return {
+      ...createDefaultCharacter({
+        abilityScores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+      }),
+      ...withSingleClassInstance({
+        instanceId,
+        classId,
+        level: 1,
+        choices: {},
+        hitPointIncreases: [{ classLevel: 1, method: 'max' }],
+      }),
+      targetLevel: 1,
+    }
+  }
+
+  it.each([
+    {
+      label: 'Barbarian → Rogue',
+      committedId: BARBARIAN_ID,
+      browseId: ROGUE_ID,
+      expectedHp: 12,
+    },
+    {
+      label: 'Rogue → Barbarian',
+      committedId: ROGUE_ID,
+      browseId: BARBARIAN_ID,
+      expectedHp: 8,
+    },
+    {
+      label: 'Paladin → Rogue',
+      committedId: PALADIN_ID,
+      browseId: ROGUE_ID,
+      expectedHp: 10,
+    },
+  ])(
+    '$label keeps committed HP ($expectedHp)',
+    ({ committedId, browseId, expectedHp }) => {
+      const character = createCommittedClass(committedId, 'committed-instance')
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('single-class')
+      })
+
+      const before = resolveOverviewHp(
+        result.current.character,
+        result.current.editor.classDrafts,
+      )
+
+      act(() => {
+        result.current.editor.selectOrAddClass(browseId)
+      })
+
+      const after = resolveOverviewHp(
+        result.current.character,
+        result.current.editor.classDrafts,
+      )
+
+      expect(before.maximum).toBe(expectedHp)
+      expect(after.maximum).toBe(expectedHp)
+      expect(result.current.character.classes[0]?.classId).toBe(committedId)
+      expect(
+        Object.values(result.current.editor.classDrafts)[0]?.classId,
+      ).toBe(browseId)
+    },
+  )
 })

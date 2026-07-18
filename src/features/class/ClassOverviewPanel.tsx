@@ -50,6 +50,8 @@ export type ClassOverviewPanelProps = {
   draftValidation: ClassValidationResult | null
   /** Character hit point maximum label, e.g. `28` or `—`. */
   hitPointsLabel?: string | null
+  isConfiguringReplacement?: boolean
+  committedClassName?: string | null
   onLevelChange: (level: number) => void
 }
 
@@ -59,6 +61,8 @@ export function ClassOverviewPanel({
   maxLevel,
   choices,
   hitPointsLabel = null,
+  isConfiguringReplacement = false,
+  committedClassName = null,
   onLevelChange,
 }: ClassOverviewPanelProps) {
   const subclassLabel = getSubclassLabel(definition, choices)
@@ -71,6 +75,14 @@ export function ClassOverviewPanel({
       <h3 id="class-overview-heading" className="class-picker__section-title">
         Class Overview
       </h3>
+
+      {isConfiguringReplacement ? (
+        <p className="class-picker__replacement-banner" role="status">
+          Configuring a replacement
+          {committedClassName !== null ? ` for ${committedClassName}` : ''}.
+          Your current class stays selected until you finish and confirm.
+        </p>
+      ) : null}
 
       <div className="class-picker__overview-card">
         <div className="class-picker__overview-header">
@@ -117,7 +129,11 @@ export function ClassOverviewPanel({
             </div>
 
             <div className="class-picker__overview-metadata-group">
-              <dt>Hit Points</dt>
+              <dt>
+                {isConfiguringReplacement
+                  ? 'Current character Hit Points'
+                  : 'Hit Points'}
+              </dt>
               <dd>{hitPointsLabel ?? '—'}</dd>
             </div>
           </div>

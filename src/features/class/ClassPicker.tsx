@@ -153,6 +153,7 @@ export function ClassPicker({
     null,
   )
   const activeInstanceRef = useRef<string | null>(activeInstanceId)
+  const catalogueSelectionGenerationRef = useRef(0)
 
   if (activeInstanceId !== null) {
     activeInstanceRef.current = activeInstanceId
@@ -170,6 +171,11 @@ export function ClassPicker({
   const selectedClassIds = useMemo(
     () => new Set(getUniqueClassIds(committedClasses, classDrafts)),
     [committedClasses, classDrafts],
+  )
+
+  const committedClassIds = useMemo(
+    () => new Set(committedClasses.map((instance) => instance.classId)),
+    [committedClasses],
   )
 
   const committedInstance =
@@ -202,6 +208,20 @@ export function ClassPicker({
     () => new Map(classList.map((definition) => [definition.id, definition.name])),
     [classList],
   )
+
+  const committedClassName = useMemo(() => {
+    const committedId = committedClasses[0]?.classId
+    if (committedId === undefined) {
+      return null
+    }
+    return classNamesById.get(committedId) ?? committedId
+  }, [classNamesById, committedClasses])
+
+  const isConfiguringReplacement =
+    buildMode === 'single-class' &&
+    committedClasses.length > 0 &&
+    activeClassId !== null &&
+    !committedClassIds.has(activeClassId)
 
   const multiclassStage =
     buildMode === 'multiclass'
@@ -387,12 +407,30 @@ export function ClassPicker({
   async function commitDraft(
     nextDraft: ClassSelectionDraft,
     instanceId: string | null = resolveActiveInstanceId(),
+    selectionGeneration: number = catalogueSelectionGenerationRef.current,
   ) {
     if (instanceId === null) {
       return
     }
 
+    if (selectionGeneration !== catalogueSelectionGenerationRef.current) {
+      return
+    }
+
+    if (activeInstanceRef.current !== instanceId) {
+      return
+    }
+
     const definition = await catalog.getClass(nextDraft.classId)
+
+    if (selectionGeneration !== catalogueSelectionGenerationRef.current) {
+      return
+    }
+
+    if (activeInstanceRef.current !== instanceId) {
+      return
+    }
+
     const instanceDraft = legacyDraftToInstanceDraft(nextDraft, instanceId)
     const { committed } = tryCommitClassInstanceDraft(
       instanceDraft,
@@ -400,6 +438,14 @@ export function ClassPicker({
       definition,
       { isStartingClass: resolveIsStartingClass(instanceId) },
     )
+
+    if (selectionGeneration !== catalogueSelectionGenerationRef.current) {
+      return
+    }
+
+    if (activeInstanceRef.current !== instanceId) {
+      return
+    }
 
     if (committed !== null) {
       onDraftChange(null)
@@ -446,6 +492,7 @@ export function ClassPicker({
   }
 
   async function selectSingleClass(classDefinition: ClassDefinition) {
+    const selectionGeneration = ++catalogueSelectionGenerationRef.current
     setChoiceExpansionState({})
     const instanceId = onSelectOrAddClass(classDefinition)
     activeInstanceRef.current = instanceId
@@ -468,13 +515,17 @@ export function ClassPicker({
       { isStartingClass: true },
     )
 
+    if (selectionGeneration !== catalogueSelectionGenerationRef.current) {
+      return
+    }
+
     if (committed !== null) {
       onDraftChange(null)
       onCommitInstance(committed)
       return
     }
 
-    await commitDraft(nextDraft, instanceId)
+    await commitDraft(nextDraft, instanceId, selectionGeneration)
   }
 
   function handleMulticlassCatalogToggle(classDefinition: ClassDefinition) {
@@ -681,7 +732,12 @@ export function ClassPicker({
                       <ClassCatalogCard
                         key={classDefinition.id}
                         classDefinition={classDefinition}
-                        isSelected={activeClassId === classDefinition.id}
+                        isCommitted={committedClassIds.has(classDefinition.id)}
+                        isEditing={
+                          activeClassId === classDefinition.id &&
+                          !committedClassIds.has(classDefinition.id)
+                        }
+                        isPreview={isPreviewClassDefinition(classDefinition)}
                         onSelect={selectSingleClass}
                       />
                     ))}
@@ -699,6 +755,8 @@ export function ClassPicker({
                       draft={draft}
                       committedSelection={committedSelection}
                       isStartingClass={isActiveStartingClass}
+                      isConfiguringReplacement={isConfiguringReplacement}
+                      committedClassName={committedClassName}
                       hitPointIncreases={activeHitPointIncreases}
                       hitPointsLabel={hitPointsLabel}
                       featCatalog={featCatalog}

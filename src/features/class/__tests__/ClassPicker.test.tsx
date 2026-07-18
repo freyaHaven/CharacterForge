@@ -641,11 +641,85 @@ describe('ClassPicker', () => {
     await selectSingleClassMode(user)
     await user.click(screen.getByRole('button', { name: 'Fighter' }))
 
-    const selectedCard = screen.getByRole('button', { name: 'Fighter' })
-    expect(selectedCard).toHaveAttribute('aria-pressed', 'true')
+    // Incomplete first selection is an editing draft, not a committed selection.
+    const catalogList = document.getElementById('class-catalog-list')
+    expect(catalogList).not.toBeNull()
+    const editingCard = within(catalogList!).getByRole('button', {
+      name: 'Fighter',
+    })
+    expect(editingCard).toHaveAttribute('aria-pressed', 'false')
+    expect(editingCard).toHaveAttribute('aria-current', 'true')
     expect(
-      selectedCard.querySelector('.class-picker__card-badge[aria-hidden="true"]'),
+      editingCard.querySelector('.class-picker__card-badge[aria-hidden="true"]'),
+    ).toBeNull()
+    expect(within(editingCard).getByText('Editing')).toBeInTheDocument()
+    expect(editingCard.className).toContain('class-picker__card--editing')
+  })
+
+  it('keeps the committed checkmark on Paladin while browsing incomplete Ranger', async () => {
+    const user = userEvent.setup()
+    render(
+      <ClassPickerHarnessWithCommitted
+        initialBuildMode="single-class"
+        initialTargetLevel={1}
+        initialCommitted={[
+          {
+            instanceId: 'paladin-instance',
+            classId: 'srd-2024:paladin',
+            level: 1,
+            choices: {},
+            hitPointIncreases: [{ classLevel: 1, method: 'max' }],
+          },
+        ]}
+        initialStartingClassInstanceId="paladin-instance"
+        initialInstanceId="paladin-instance"
+      />,
+    )
+    await waitForClassesLoaded()
+
+    const catalogList = document.getElementById('class-catalog-list')
+    expect(catalogList).not.toBeNull()
+
+    await user.click(within(catalogList!).getByRole('button', { name: 'Ranger' }))
+
+    const paladinCard = within(catalogList!).getByRole('button', {
+      name: 'Paladin',
+    })
+    const rangerCard = within(catalogList!).getByRole('button', {
+      name: 'Ranger',
+    })
+
+    expect(paladinCard).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      paladinCard.querySelector('.class-picker__card-badge[aria-hidden="true"]'),
     ).not.toBeNull()
+    expect(within(paladinCard).queryByText('Editing')).not.toBeInTheDocument()
+
+    expect(rangerCard).toHaveAttribute('aria-pressed', 'false')
+    expect(rangerCard).toHaveAttribute('aria-current', 'true')
+    expect(
+      rangerCard.querySelector('.class-picker__card-badge[aria-hidden="true"]'),
+    ).toBeNull()
+    expect(within(rangerCard).getByText('Editing')).toBeInTheDocument()
+    expect(rangerCard.className).toContain('class-picker__card--editing')
+    expect(paladinCard.className).toContain('class-picker__card--selected')
+
+    expect(
+      screen.getByText(/Configuring a replacement for Paladin/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Current character Hit Points')).toBeInTheDocument()
+
+    await user.click(within(catalogList!).getByRole('button', { name: 'Paladin' }))
+
+    await waitFor(() => {
+      expect(within(catalogList!).queryByText('Editing')).not.toBeInTheDocument()
+    })
+    expect(
+      screen.queryByText(/Configuring a replacement/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(catalogList!).getByRole('button', { name: 'Paladin' }),
+    ).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('switches between class tabs in multiclass configure stage', async () => {

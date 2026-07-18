@@ -22,6 +22,8 @@ export type SingleClassConfiguratorProps = {
   draft: ClassSelectionDraft | null
   committedSelection: ClassSelection | null
   isStartingClass: boolean
+  isConfiguringReplacement?: boolean
+  committedClassName?: string | null
   hitPointIncreases?: readonly HitPointIncrease[]
   hitPointsLabel?: string | null
   featCatalog: FeatCatalog
@@ -45,6 +47,8 @@ export function SingleClassConfigurator({
   draft,
   committedSelection,
   isStartingClass,
+  isConfiguringReplacement = false,
+  committedClassName = null,
   hitPointIncreases,
   hitPointsLabel = null,
   featCatalog,
@@ -77,6 +81,8 @@ export function SingleClassConfigurator({
         draft={draft}
         draftValidation={draftValidation}
         hitPointsLabel={hitPointsLabel}
+        isConfiguringReplacement={isConfiguringReplacement}
+        committedClassName={committedClassName}
         onLevelChange={onLevelChange}
       />
       <ClassProgressionSection

@@ -2202,7 +2202,9 @@ html {
   height: 0.9rem;
 }
 
-.class-picker__card:hover:not(.class-picker__card--selected) {
+.class-picker__card:hover:not(.class-picker__card--selected):not(
+  .class-picker__card--editing
+) {
   border-color: color-mix(in srgb, var(--accent-border) 40%, var(--border));
   background: color-mix(in srgb, var(--accent-bg) 30%, var(--bg));
 }
@@ -2216,6 +2218,39 @@ html {
   border-color: var(--accent-border);
   background: var(--accent-bg);
   box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+
+.class-picker__card--editing {
+  border-color: color-mix(in srgb, var(--text-h) 55%, var(--border));
+  background: color-mix(in srgb, var(--text-h) 6%, var(--bg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-h) 28%, var(--border));
+}
+
+.class-picker__card-editing-badge {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text-h) 35%, var(--border));
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.class-picker__replacement-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-h) 28%, var(--border));
+  background: color-mix(in srgb, var(--text-h) 5%, var(--bg));
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .class-picker__card-icon {

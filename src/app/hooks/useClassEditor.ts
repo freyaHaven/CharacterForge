@@ -235,10 +235,16 @@ export function useClassEditor({
   const setClassDraft = useCallback(
     (draft: ClassSelectionDraft | null) => {
       const resolvedInstanceId =
-        activeInstanceId ?? selectedInstanceIdRef.current
+        selectedInstanceIdRef.current ??
+        activeInstanceId ??
+        null
 
       if (draft === null) {
-        if (resolvedInstanceId !== null) {
+        if (buildMode === 'single-class') {
+          // Exit replacement / cancel: drop every draft so catalogue focus
+          // returns to the committed class without a stale foreign draft.
+          setClassDrafts(createEmptyClassSelectionDrafts())
+        } else if (resolvedInstanceId !== null) {
           setClassDrafts((current) =>
             removeInstanceDraft(current, resolvedInstanceId),
           )
