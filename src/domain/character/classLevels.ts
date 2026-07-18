@@ -37,6 +37,33 @@ export function getEffectiveClassesForCharacterAllocation(
   return [...instances.values()]
 }
 
+/**
+ * Classes that contribute to Hit Point display and derivation.
+ *
+ * Committed instances always contribute. A draft overlays a committed instance
+ * only when it edits that same instance without changing `classId`. Foreign
+ * replacement drafts and uncommitted multiclass drafts are excluded. When no
+ * class is committed yet, drafts may preview HP for the initial selection.
+ */
+export function getClassInstancesForHitPoints(
+  committedClasses: readonly CharacterClassSelection[],
+  classDrafts: Record<string, CharacterClassSelectionDraft>,
+): CharacterClassSelection[] {
+  if (committedClasses.length === 0) {
+    return Object.values(classDrafts).map(instanceDraftToClassInstance)
+  }
+
+  return committedClasses.map((instance) => {
+    const draft = classDrafts[instance.instanceId]
+
+    if (draft === undefined || draft.classId !== instance.classId) {
+      return instance
+    }
+
+    return instanceDraftToClassInstance(draft)
+  })
+}
+
 export function getEffectiveClassesForAllocation(
   committedClasses: readonly CharacterClassSelection[],
   activeInstanceId: string | null,

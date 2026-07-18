@@ -3,7 +3,6 @@ import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { Character } from '../../domain/types'
 import type { WizardStepId } from '../../app/wizard/types'
-import { getEffectiveClassInstances } from '../class/classBuildMode'
 import type { ClassSelectionDrafts } from '../class/classSelectionDraft'
 import type { SpeciesSelectionDraft } from '../species/speciesSelectionDraft'
 import { getSubclassLabelFromDefinition } from './getSubclassLabel'
@@ -18,6 +17,7 @@ export type ResolveCharacterContextDisplayInput = {
   character: Character
   activeStepId: WizardStepId
   speciesDraft: SpeciesSelectionDraft | null
+  /** Retained for API compatibility; class context uses committed classes only. */
   classDrafts: ClassSelectionDrafts
   speciesCatalog: SpeciesCatalog
   classCatalog: ClassCatalog
@@ -45,15 +45,12 @@ export async function resolveCharacterContextDisplay(
     speciesName = speciesDefinition?.name ?? null
   }
 
-  const effectiveClasses = getEffectiveClassInstances(
-    input.character.classes,
-    input.classDrafts,
-  )
-
+  // Global Character Context reflects committed classes only. Browsing a
+  // replacement class draft must not imply the character has already changed.
   const classEntries: CharacterContextClassEntry[] = []
   const primaryAbilityLists: AbilityId[][] = []
 
-  for (const instance of effectiveClasses) {
+  for (const instance of input.character.classes) {
     const definition = await input.classCatalog.getClass(instance.classId)
 
     if (definition === null) {

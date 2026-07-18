@@ -5,10 +5,13 @@ import type {
 } from '../../domain/class/types'
 import {
   getAllocatedLevel,
+  getClassInstancesForHitPoints,
   getEffectiveClassesForCharacterAllocation,
 } from '../../domain/character/classLevels'
 import type { ClassSelectionDrafts } from './classSelectionDraft'
 import { instanceDraftToClassInstance } from './classSelectionDraft'
+
+export { getClassInstancesForHitPoints }
 
 export type ClassBuildMode = 'single-class' | 'multiclass'
 

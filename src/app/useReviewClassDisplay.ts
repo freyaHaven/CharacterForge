@@ -14,7 +14,6 @@ import {
 } from '../domain/weapons/mastery'
 import { isWeaponId } from '../domain/weapons/types'
 import { getSubclassLabelFromDefinition } from '../features/character/getSubclassLabel'
-import { getEffectiveClassInstances } from '../features/class/classBuildMode'
 import type { ClassSelectionDrafts } from '../features/class/classSelectionDraft'
 import { getSubclassFeaturesUpToLevel } from '../features/class/subclassFeatures'
 import {
@@ -154,15 +153,14 @@ export function useReviewClassDisplay(
   catalog: ClassCatalog,
   editionId: EditionId,
   committedClasses: readonly CharacterClassSelection[],
-  classDrafts: ClassSelectionDrafts,
+  /** Retained for API compatibility; review uses committed classes only. */
+  _classDrafts: ClassSelectionDrafts,
   targetLevel: CharacterLevel,
 ): ClassReviewDisplay {
   const [display, setDisplay] = useState<ClassReviewDisplay>(EMPTY_DISPLAY)
 
   useEffect(() => {
-    const instances = getEffectiveClassInstances(committedClasses, classDrafts)
-
-    if (instances.length === 0) {
+    if (committedClasses.length === 0) {
       setDisplay(EMPTY_DISPLAY)
       return
     }
@@ -170,7 +168,7 @@ export function useReviewClassDisplay(
     let isActive = true
 
     void Promise.all(
-      instances.map(async (instance) => {
+      committedClasses.map(async (instance) => {
         const definition = await catalog.getClass(instance.classId)
         if (definition === null) {
           return null
@@ -231,7 +229,7 @@ export function useReviewClassDisplay(
     return () => {
       isActive = false
     }
-  }, [catalog, committedClasses, classDrafts, editionId, targetLevel])
+  }, [catalog, committedClasses, editionId, targetLevel])
 
   return display
 }

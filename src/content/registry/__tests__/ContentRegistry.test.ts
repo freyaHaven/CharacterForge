@@ -11,12 +11,14 @@ describe('ContentRegistry (bundled)', () => {
     expect(registry.getClass('srd-2024:rogue')?.name).toBe('Rogue')
     expect(registry.getClass('srd-2024:monk')?.name).toBe('Monk')
     expect(registry.getClass('srd-2024:ranger')?.name).toBe('Ranger')
+    expect(registry.getClass('srd-2024:paladin')?.name).toBe('Paladin')
     expect(registry.listClasses('srd-2024').map((entry) => entry.id)).toEqual([
       'srd-2024:fighter',
       'srd-2024:barbarian',
       'srd-2024:rogue',
       'srd-2024:monk',
       'srd-2024:ranger',
+      'srd-2024:paladin',
     ])
     expect(registry.listClasses('srd-2014')).toEqual([])
   })
@@ -53,6 +55,11 @@ describe('ContentRegistry (bundled)', () => {
       classId: 'srd-2024:ranger',
       name: 'Hunter',
     })
+    expect(registry.getSubclass('srd-2024:oath-of-devotion')).toMatchObject({
+      choiceOptionId: 'oath-of-devotion',
+      classId: 'srd-2024:paladin',
+      name: 'Oath of Devotion',
+    })
     expect(
       registry.listSubclasses('srd-2024:fighter').map((entry) => entry.id),
     ).toEqual(['srd-2024:champion'])
@@ -65,6 +72,9 @@ describe('ContentRegistry (bundled)', () => {
     expect(
       registry.listSubclasses('srd-2024:ranger').map((entry) => entry.id),
     ).toEqual(['srd-2024:hunter'])
+    expect(
+      registry.listSubclasses('srd-2024:paladin').map((entry) => entry.id),
+    ).toEqual(['srd-2024:oath-of-devotion'])
   })
 
   it('keeps subclass choice option ids stable for persistence', () => {

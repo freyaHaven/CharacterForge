@@ -175,7 +175,28 @@ describe('CharacterContextSummary', () => {
     expect(screen.queryByText(/Prioritise:/i)).not.toBeInTheDocument()
   })
 
-  it('previews an uncommitted class draft on non-class steps', async () => {
+  it('does not preview an uncommitted class draft in character context', async () => {
+    renderSummary({
+      character: {
+        ...withSingleClassInstance(createTestFighterClassInstance()),
+      },
+      classDrafts: {
+        'draft-instance-1': createClassInstanceDraft(
+          'draft-instance-1',
+          'srd-2024:rogue',
+        ),
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Fighter 1')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText(/Rogue/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Prioritise:/i)).not.toBeInTheDocument()
+  })
+
+  it('does not show a class draft when no class is committed', async () => {
     renderSummary({
       classDrafts: {
         'draft-instance-1': createClassInstanceDraft(
@@ -186,9 +207,10 @@ describe('CharacterContextSummary', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Fighter 1')).toBeInTheDocument()
+      expect(screen.getByText('Elara • Dwarf')).toBeInTheDocument()
     })
 
+    expect(screen.queryByText('Fighter 1')).not.toBeInTheDocument()
     expect(screen.queryByText(/Prioritise:/i)).not.toBeInTheDocument()
   })
 

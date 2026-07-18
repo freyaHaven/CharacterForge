@@ -79,6 +79,11 @@ step UI correctly.
     subclass at level 3, feature progression through level 20
   - **Monk** — levels 1–20, Martial Arts, Focus, Unarmored Defense/Movement,
     Warrior of the Open Hand at level 3, feature progression through level 20
+  - **Ranger** — levels 1–20, Spellcasting, Favored Enemy, Fighting Style,
+    weapon mastery, Hunter at level 3, feature progression through level 20
+  - **Paladin** — levels 1–20, Lay On Hands, Spellcasting, Fighting Style,
+    weapon mastery, Oath of Devotion at level 3, feature progression through
+    level 20
 
 **SRD 2014**
 
@@ -187,7 +192,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian; Rogue; Monk |
+| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian; Rogue; Monk; Ranger; Paladin |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
@@ -219,8 +224,8 @@ Icons are decorative; class names in the UI provide accessible labels.
 
 ## Roadmap
 
-- **Class content:** Additional 2024 SRD classes (Paladin and others);
-  parallel `srd-2014` definitions where rules differ
+- **Class content:** Additional 2024 SRD classes; parallel `srd-2014`
+  definitions where rules differ
 - **Class icons:** Register remaining PNG emblems as artwork is finalized
 - **Species:** 2014 SRD species in a future `srd-2014` content pack
 - **Background step:** edition-specific picker polish

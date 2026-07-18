@@ -137,6 +137,12 @@ export function useClassEditor({
   }, [])
 
   useEffect(() => {
+    // Avoid writing an empty pre-hydrate snapshot that would clobber a stored
+    // incomplete replacement draft on remount/refresh.
+    if (hydratedCharacterIdRef.current !== character.id) {
+      return
+    }
+
     const hasClassProgress =
       buildMode !== null ||
       character.classes.length > 0 ||
@@ -339,6 +345,7 @@ export function useClassEditor({
                 characterFeatId: character.feat?.featId ?? null,
               }),
           isStartingClass:
+            buildMode === 'single-class' ||
             character.startingClassInstanceId === instanceId ||
             (character.startingClassInstanceId === null &&
               character.classes.length === 0),
@@ -350,6 +357,7 @@ export function useClassEditor({
       }
     },
     [
+      buildMode,
       character.classes,
       character.editionId,
       character.feat?.featId,
@@ -461,20 +469,29 @@ export function useClassEditor({
       if (existingInstanceId !== null) {
         setSelectedInstanceId(existingInstanceId)
         selectedInstanceIdRef.current = existingInstanceId
+
+        if (buildMode === 'single-class') {
+          // Drop foreign replacement drafts; keep an in-progress edit of this instance.
+          setClassDrafts((current) => {
+            const kept = current[existingInstanceId]
+            return kept !== undefined
+              ? { [existingInstanceId]: kept }
+              : createEmptyClassSelectionDrafts()
+          })
+        }
+
         return existingInstanceId
       }
 
       const instanceId = createClassInstanceId()
-      const nextDraft = createClassInstanceDraft(instanceId, classId)
+      const nextDraft = createClassInstanceDraft(instanceId, classId, {
+        isStartingClass: buildMode === 'single-class',
+      })
 
       if (buildMode === 'single-class') {
+        // Browse/replace: draft only. Preserve committed class, starting class,
+        // target level, and HP state until a successful commit.
         setClassDrafts({ [instanceId]: nextDraft })
-        setCharacter((current) => ({
-          ...current,
-          classes: [],
-          startingClassInstanceId: null,
-          targetLevel: 1,
-        }))
       } else {
         setClassDrafts((current) => ({
           ...current,
@@ -487,7 +504,7 @@ export function useClassEditor({
 
       return instanceId
     },
-    [buildMode, character.classes, classDrafts, setCharacter],
+    [buildMode, character.classes, classDrafts],
   )
 
   const setMulticlassInstanceLevel = useCallback(

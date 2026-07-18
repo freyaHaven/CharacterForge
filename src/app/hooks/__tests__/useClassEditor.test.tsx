@@ -155,12 +155,12 @@ describe('useClassEditor', () => {
       )
 
       expect(draftClassIds).toEqual([BARBARIAN_ID])
+      expect(result.current.character.classes).toEqual([])
       expect(effective).toHaveLength(1)
       expect(effective[0]?.classId).toBe(BARBARIAN_ID)
-      expect(result.current.character.classes).toEqual([])
     })
 
-    it('clears a committed class and sibling drafts when selecting a different class', () => {
+    it('preserves a committed class when browsing a different class draft', () => {
       const character = createCharacterWithCommittedFighter()
       clearClassEditorWorkflow(character.id)
       const { result } = renderClassEditor(character)
@@ -170,19 +170,21 @@ describe('useClassEditor', () => {
         result.current.editor.setBuildMode('single-class')
       })
 
+      const committedBefore = result.current.character.classes
+      const startingBefore = result.current.character.startingClassInstanceId
+      const targetBefore = result.current.character.targetLevel
+
       act(() => {
         result.current.editor.selectOrAddClass(BARBARIAN_ID)
       })
 
-      const effective = getEffectiveClassInstances(
-        result.current.character.classes,
-        result.current.editor.classDrafts,
-      )
-
-      expect(result.current.character.classes).toEqual([])
+      expect(result.current.character.classes).toEqual(committedBefore)
+      expect(result.current.character.startingClassInstanceId).toBe(startingBefore)
+      expect(result.current.character.targetLevel).toBe(targetBefore)
       expect(Object.keys(result.current.editor.classDrafts)).toHaveLength(1)
-      expect(effective).toHaveLength(1)
-      expect(effective[0]?.classId).toBe(BARBARIAN_ID)
+      expect(
+        Object.values(result.current.editor.classDrafts)[0]?.classId,
+      ).toBe(BARBARIAN_ID)
       expect(
         Object.values(result.current.editor.classDrafts).some(
           (draft) => draft.classId === FIGHTER_ID,
@@ -226,6 +228,69 @@ describe('useClassEditor', () => {
       expect(result.current.editor.classDrafts).toEqual({})
       expect(result.current.character.classes).toHaveLength(1)
       expect(result.current.character.classes[0]?.classId).toBe(BARBARIAN_ID)
+    })
+
+    it('atomically replaces the committed class on successful single-class commit', () => {
+      const character = createCharacterWithCommittedFighter()
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('single-class')
+      })
+
+      act(() => {
+        result.current.editor.selectOrAddClass(BARBARIAN_ID)
+      })
+
+      const barbarianDraft = Object.values(result.current.editor.classDrafts)[0]
+      expect(barbarianDraft).toBeDefined()
+
+      act(() => {
+        result.current.editor.commitClassInstance({
+          instanceId: barbarianDraft!.instanceId,
+          classId: BARBARIAN_ID,
+          level: 3,
+          choices: {},
+        })
+      })
+
+      expect(result.current.character.classes).toHaveLength(1)
+      expect(result.current.character.classes[0]?.classId).toBe(BARBARIAN_ID)
+      expect(result.current.character.classes[0]?.level).toBe(3)
+      expect(result.current.character.startingClassInstanceId).toBe(
+        barbarianDraft!.instanceId,
+      )
+      expect(result.current.character.targetLevel).toBe(3)
+      expect(result.current.editor.classDrafts).toEqual({})
+    })
+
+    it('clears a replacement draft when returning to the committed class', () => {
+      const character = createCharacterWithCommittedFighter()
+      clearClassEditorWorkflow(character.id)
+      const { result } = renderClassEditor(character)
+
+      act(() => {
+        result.current.editor.hydrateForCharacter(character)
+        result.current.editor.setBuildMode('single-class')
+      })
+
+      act(() => {
+        result.current.editor.selectOrAddClass(BARBARIAN_ID)
+      })
+
+      expect(Object.keys(result.current.editor.classDrafts)).toHaveLength(1)
+
+      act(() => {
+        result.current.editor.selectOrAddClass(FIGHTER_ID)
+      })
+
+      expect(result.current.editor.classDrafts).toEqual({})
+      expect(result.current.character.classes[0]?.classId).toBe(FIGHTER_ID)
+      expect(result.current.editor.activeInstanceId).toBe(
+        character.classes[0]?.instanceId,
+      )
     })
   })
 

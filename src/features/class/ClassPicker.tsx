@@ -33,6 +33,7 @@ import {
   deriveMulticlassStage,
   filterCatalogForBuildMode,
   formatMulticlassLevelSummary,
+  getClassInstancesForHitPoints,
   getEffectiveClassInstances,
   getUniqueClassIds,
   isPreviewClassDefinition,
@@ -252,20 +253,37 @@ export function ClassPicker({
       activeInstanceId === startingClassInstanceId)
 
   const hitPointsLabel = useMemo(() => {
-    if (effectiveInstances.length === 0) {
+    const hpInstances = getClassInstancesForHitPoints(
+      committedClasses,
+      classDrafts,
+    )
+
+    if (hpInstances.length === 0) {
       return null
     }
 
-    const classesForHp = effectiveInstances.map((instance) => {
+    const resolvedStartingClassInstanceId =
+      startingClassInstanceId ??
+      (buildMode === 'single-class'
+        ? (hpInstances[0]?.instanceId ?? null)
+        : null)
+
+    const classesForHp = hpInstances.map((instance) => {
       const isStarting =
-        buildMode === 'single-class' ||
-        (startingClassInstanceId !== null &&
-          instance.instanceId === startingClassInstanceId)
+        resolvedStartingClassInstanceId !== null &&
+        instance.instanceId === resolvedStartingClassInstanceId
       const draftForInstance = classDrafts[instance.instanceId]
+      const sameClassDraft =
+        draftForInstance !== undefined &&
+        draftForInstance.classId === instance.classId
       const increases =
-        instance.instanceId === activeInstanceId && draft?.hitPointIncreases !== undefined
+        sameClassDraft &&
+        instance.instanceId === activeInstanceId &&
+        draft?.hitPointIncreases !== undefined
           ? draft.hitPointIncreases
-          : (draftForInstance?.hitPointIncreases ?? instance.hitPointIncreases)
+          : sameClassDraft
+            ? (draftForInstance.hitPointIncreases ?? instance.hitPointIncreases)
+            : instance.hitPointIncreases
 
       return {
         ...instance,
@@ -277,10 +295,7 @@ export function ClassPicker({
 
     const resolved = resolveHitPointMaximum({
       classes: classesForHp,
-      startingClassInstanceId:
-        buildMode === 'single-class'
-          ? (activeInstanceId ?? classesForHp[0]?.instanceId ?? null)
-          : startingClassInstanceId,
+      startingClassInstanceId: resolvedStartingClassInstanceId,
       classDefinitionsById: new Map(
         classList.map((definition) => [definition.id, definition]),
       ),
@@ -296,8 +311,8 @@ export function ClassPicker({
     buildMode,
     classDrafts,
     classList,
+    committedClasses,
     draft?.hitPointIncreases,
-    effectiveInstances,
     speciesDefinition,
     speciesSelection,
     startingClassInstanceId,
@@ -435,6 +450,12 @@ export function ClassPicker({
     const instanceId = onSelectOrAddClass(classDefinition)
     activeInstanceRef.current = instanceId
     onActiveInstanceChange(instanceId)
+
+    // Returning to an already-committed class must not overlay an empty draft.
+    if (committedClasses.some((entry) => entry.instanceId === instanceId)) {
+      onDraftChange(null)
+      return
+    }
 
     const nextDraft = createClassSelectionDraft(classDefinition.id, {
       isStartingClass: true,
