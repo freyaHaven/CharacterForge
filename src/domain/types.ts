@@ -112,6 +112,7 @@ export type {
 } from './species/types'
 export type {
   ClassSpellcasting,
+  CrossSourceDuplicatePolicy,
   SpellCountSpec,
   SpellDefinition,
   SpellEntitlement,
@@ -123,7 +124,6 @@ export type {
   SpellSourceRef,
   SpellSourceState,
 } from './spell/types'
-export type { FeatSpellcasting } from './feat/types'
 
 export type CharacterCreationMethod =
   | 'manual'

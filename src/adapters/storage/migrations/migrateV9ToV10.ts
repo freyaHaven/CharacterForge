@@ -14,6 +14,6 @@ export function migrateV9ToV10(envelope: unknown): StoredCharacterV10 {
     character: {
       ...v9.character,
       feat: null,
-    },
+    } as StoredCharacterV10['character'],
   }
 }

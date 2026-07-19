@@ -10,6 +10,11 @@ export type SpellDefinition = {
   /** 0 = cantrip. */
   level: number
   school: string
+  castingTime: string
+  range: string
+  components: string
+  duration: string
+  description: string
   source: ContentSource
 }
 
@@ -25,6 +30,14 @@ export type SpellListDefinition = {
 export type SpellSlotContributor = 'full' | 'half'
 
 export type SpellSelectionKind = 'cantrip' | 'prepared' | 'known'
+
+/**
+ * How a select entitlement treats spells already available elsewhere.
+ * - `allow` — no special treatment
+ * - `discourage` — still selectable, clearly labelled (default for known/prepared)
+ * - `forbid` — not selectable when already available elsewhere (default for cantrips)
+ */
+export type CrossSourceDuplicatePolicy = 'allow' | 'discourage' | 'forbid'
 
 export type SpellCountSpec =
   | { kind: 'fixed'; value: number }
@@ -49,6 +62,11 @@ export type SpellEntitlement =
       selectionKind: SpellSelectionKind
       count: SpellCountSpec
       levelRange: SpellLevelRange
+      /**
+       * Override default cross-source duplicate policy for this entitlement.
+       * When omitted, cantrips forbid duplicates; known/prepared discourage them.
+       */
+      crossSourceDuplicatePolicy?: CrossSourceDuplicatePolicy
     }
   | {
       id: string

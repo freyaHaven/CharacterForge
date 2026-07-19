@@ -6,6 +6,10 @@ import type {
   ResolvedSpellEntitlement,
   ResolvedSpellSourceGroup,
 } from '../character/resolveCharacterSpellcasting'
+import {
+  collectSpellAvailability,
+  evaluateSpellSelectionEligibility,
+} from './spellSelectionEligibility'
 
 export type SpellValidationIssueCode =
   | 'inactive-source-state'
@@ -16,6 +20,7 @@ export type SpellValidationIssueCode =
   | 'spell-level-ineligible'
   | 'duplicate-selection'
   | 'granted-spell-selected'
+  | 'cross-source-duplicate'
 
 export type SpellValidationIssue = {
   code: SpellValidationIssueCode
@@ -66,6 +71,7 @@ export async function validateSpellSourceStates(
   const activeKeys = new Set(
     summary.activeSources.map((source) => spellSourceKey(source)),
   )
+  const availability = collectSpellAvailability(summary)
 
   for (const state of spellSourceStates) {
     const key = spellSourceKey(state.source)
@@ -119,6 +125,30 @@ export async function validateSpellSourceStates(
           entitlementId: entitlement.entitlementId,
           spellId: selection.spellId,
           message: `${selection.spellId} is already granted and should not be selected.`,
+        })
+      }
+
+      const eligibility = evaluateSpellSelectionEligibility({
+        spellId: selection.spellId,
+        summary,
+        group,
+        entitlement,
+        availability,
+      })
+      if (
+        eligibility.recommendation === 'blocked' &&
+        (eligibility.alreadyAvailableFromOtherSource ||
+          eligibility.duplicateWithinCurrentSource)
+      ) {
+        issues.push({
+          code: 'cross-source-duplicate',
+          sourceKey: key,
+          groupLabel: group.label,
+          entitlementId: entitlement.entitlementId,
+          spellId: selection.spellId,
+          message:
+            eligibility.duplicateReason ??
+            'This spell is already available from another source.',
         })
       }
 

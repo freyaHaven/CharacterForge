@@ -973,6 +973,120 @@ html {
   font-size: 0.95rem;
 }
 
+.help-tooltip {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.help-tooltip__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text-h));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 88%, var(--text-h));
+  color: var(--text);
+  cursor: help;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.help-tooltip__trigger:hover {
+  border-color: color-mix(in srgb, var(--accent-border) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-bg) 55%, var(--bg));
+  color: var(--text-h);
+}
+
+.help-tooltip__trigger:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
+}
+
+.help-tooltip__glyph {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.help-tooltip__panel {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: min(20rem, calc(100vw - 1rem));
+  max-height: min(50vh, 18rem);
+  overflow: auto;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, var(--text-h));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 94%, var(--text-h));
+  color: var(--text-h);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--text-h) 14%, transparent);
+}
+
+.help-tooltip__panel:has(.help-tooltip__close) {
+  padding-top: 0.85rem;
+  padding-right: 1.75rem;
+}
+
+.help-tooltip__title {
+  margin: 0 0 0.35rem;
+  padding-right: 1.25rem;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text-h);
+}
+
+.help-tooltip__body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text-h) 82%, var(--text));
+}
+
+.help-tooltip__body > :first-child {
+  margin-top: 0;
+}
+
+.help-tooltip__body > :last-child {
+  margin-bottom: 0;
+}
+
+.help-tooltip__close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.help-tooltip__close:hover {
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--accent-bg) 45%, transparent);
+}
+
+.help-tooltip__close:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
+}
+
 .modifier {
   font-family: var(--mono);
   min-width: 2.5rem;

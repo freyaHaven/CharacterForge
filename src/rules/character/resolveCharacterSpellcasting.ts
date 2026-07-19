@@ -14,6 +14,7 @@ import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpellCatalog } from '../../domain/ports/spellCatalog'
 import { spellSourceKey } from '../../domain/spell/sourceKey'
 import type {
+  CrossSourceDuplicatePolicy,
   FeatSpellcasting,
   SpellDefinition,
   SpellEntitlement,
@@ -54,6 +55,8 @@ export type ResolvedSpellEntitlement = {
   attackBonus: number
   saveDcLabel: string
   attackBonusLabel: string
+  /** Resolved from content or selectionKind defaults. */
+  crossSourceDuplicatePolicy?: CrossSourceDuplicatePolicy
 }
 
 export type ResolvedSpellSourceGroup = {
@@ -333,6 +336,7 @@ function buildResolvedEntitlement(
     grantedSpells: [],
     remainingPicks,
     ability: active.ability,
+    crossSourceDuplicatePolicy: entitlement.crossSourceDuplicatePolicy,
     ...stats,
   }
 }
