@@ -241,6 +241,20 @@ function entitlementLabel(
   }
 }
 
+function formatGrantedFeatSpellcastingLabel(
+  featName: string,
+  grantedBy: 'Background' | 'Feat',
+  contextName?: string,
+): string {
+  const baseName = featName.replace(/\s*\([^)]*\)\s*$/u, '').trim()
+  const displayName = baseName.length > 0 ? baseName : featName
+  const suffix = `(Granted by ${grantedBy})`
+  if (contextName !== undefined && contextName.length > 0) {
+    return `${contextName}: ${displayName} ${suffix}`
+  }
+  return `${displayName} ${suffix}`
+}
+
 function collectFeatActiveEntitlements(
   spellcasting: FeatSpellcasting,
   sourceBase:
@@ -396,7 +410,7 @@ export async function resolveCharacterSpellcasting(
             featId: feat.id,
           },
           `feat:character-feat:${feat.id}`,
-          feat.name,
+          formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
         ),
       )
     }
@@ -423,7 +437,11 @@ export async function resolveCharacterSpellcasting(
               backgroundId: background.id,
             },
             `background-origin:${background.id}`,
-            `${background.name}: ${originFeat.name}`,
+            formatGrantedFeatSpellcastingLabel(
+              originFeat.name,
+              'Background',
+              background.name,
+            ),
           ),
         )
       }

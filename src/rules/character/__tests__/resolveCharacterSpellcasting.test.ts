@@ -80,4 +80,157 @@ describe('resolveCharacterSpellcasting', () => {
     expect(result.hasSpellContent).toBe(true)
     expect(result.groups).toHaveLength(1)
   })
+
+  it('labels background-origin spellcasting as granted by background', async () => {
+    const character = createDefaultCharacter({
+      background: {
+        backgroundId: 'srd-2024:acolyte',
+        abilityScoreBonuses: {
+          abilityScoreIncreases: {},
+        },
+        choices: {},
+      },
+    })
+
+    const result = await resolveCharacterSpellcasting(
+      createCatalog({}),
+      character,
+      {
+        backgroundCatalog: {
+          listBackgrounds: async () => [],
+          getBackground: async () => ({
+            id: 'srd-2024:acolyte',
+            editionId: 'srd-2024',
+            name: 'Acolyte',
+            description: 'Test',
+            source: {
+              id: 'test',
+              name: 'Test',
+              version: '1',
+              licence: 'CC-BY-4.0',
+              attribution: 'Test',
+              documentUrl: 'https://example.test',
+            },
+            eligibleAbilityScores: ['wisdom'],
+            originFeat: {
+              id: 'magic-initiate-cleric',
+              featId: 'srd-2024:magic-initiate-cleric',
+              name: 'Magic Initiate (Cleric)',
+              description: 'Test',
+            },
+            skillProficiencies: [],
+            toolProficiency: {
+              kind: 'fixed',
+              toolId: 'calligraphers-supplies',
+              label: "Calligrapher's Supplies",
+            },
+            equipment: {
+              id: 'equipment',
+              prompt: 'Equipment',
+              options: [],
+            },
+            choices: [],
+          }),
+        },
+        featCatalog: {
+          listFeats: async () => [],
+          getFeat: async () => ({
+            id: 'srd-2024:magic-initiate-cleric',
+            editionId: 'srd-2024',
+            name: 'Magic Initiate (Cleric)',
+            summary: 'Test',
+            description: 'Test',
+            source: {
+              id: 'test',
+              name: 'Test',
+              version: '1',
+              licence: 'CC-BY-4.0',
+              attribution: 'Test',
+              documentUrl: 'https://example.test',
+            },
+            category: 'origin',
+            prerequisite: { kind: 'none' },
+            benefits: [],
+            repeatable: false,
+            choices: [],
+            spellcasting: {
+              ability: 'wisdom',
+              spellListId: 'srd-2024:spell-list:cleric',
+              entitlements: [
+                {
+                  id: 'mi-cantrips',
+                  kind: 'select',
+                  listId: 'srd-2024:spell-list:cleric',
+                  selectionKind: 'cantrip',
+                  count: { kind: 'fixed', value: 2 },
+                  levelRange: { min: 0, max: 0 },
+                },
+              ],
+            },
+          }),
+        },
+      },
+    )
+
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0]?.label).toBe(
+      'Acolyte: Magic Initiate (Granted by Background)',
+    )
+  })
+
+  it('labels character-feat spellcasting as granted by feat', async () => {
+    const character = createDefaultCharacter({
+      feat: {
+        featId: 'srd-2024:magic-initiate-cleric',
+        choices: {},
+      },
+    })
+
+    const result = await resolveCharacterSpellcasting(
+      createCatalog({}),
+      character,
+      {
+        featCatalog: {
+          listFeats: async () => [],
+          getFeat: async () => ({
+            id: 'srd-2024:magic-initiate-cleric',
+            editionId: 'srd-2024' as const,
+            name: 'Magic Initiate (Cleric)',
+            summary: 'Test',
+            description: 'Test',
+            source: {
+              id: 'test',
+              name: 'Test',
+              version: '1',
+              licence: 'CC-BY-4.0',
+              attribution: 'Test',
+              documentUrl: 'https://example.test',
+            },
+            category: 'origin' as const,
+            prerequisite: { kind: 'none' as const },
+            benefits: [],
+            repeatable: false,
+            choices: [],
+            spellcasting: {
+              ability: 'wisdom' as const,
+              spellListId: 'srd-2024:spell-list:cleric',
+              entitlements: [
+                {
+                  id: 'mi-cantrips',
+                  kind: 'select' as const,
+                  listId: 'srd-2024:spell-list:cleric',
+                  selectionKind: 'cantrip' as const,
+                  count: { kind: 'fixed' as const, value: 2 },
+                  levelRange: { min: 0, max: 0 },
+                },
+              ],
+            },
+          }),
+        },
+      },
+    )
+
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0]?.label).toBe('Magic Initiate (Granted by Feat)')
+  })
 })
