@@ -27,8 +27,8 @@ export type HelpTooltipProps = {
  * Standard contextual help control for Character Forge.
  *
  * Use beside labels and headings to explain D&D terminology without
- * cluttering the page with always-visible copy. Opens on hover and
- * keyboard focus; click/tap pins the panel for touch devices.
+ * cluttering the page with always-visible copy. Opens on click/tap or
+ * keyboard focus — not on hover — so it stays intentional.
  */
 export function HelpTooltip({
   label,
@@ -40,14 +40,13 @@ export function HelpTooltip({
   const panelRef = useRef<HTMLDivElement>(null)
   const blurTimerRef = useRef<number | null>(null)
   const tooltipId = useId()
-  const [hoverOpen, setHoverOpen] = useState(false)
   const [focusOpen, setFocusOpen] = useState(false)
   const [pinnedOpen, setPinnedOpen] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(
     null,
   )
 
-  const open = hoverOpen || focusOpen || pinnedOpen
+  const open = focusOpen || pinnedOpen
 
   const clearBlurTimer = useCallback(() => {
     if (blurTimerRef.current !== null) {
@@ -56,15 +55,10 @@ export function HelpTooltip({
     }
   }, [])
 
-  const closeTransient = useCallback(() => {
-    setHoverOpen(false)
-    setFocusOpen(false)
-  }, [])
-
   const closeAll = useCallback(() => {
     setPinnedOpen(false)
-    closeTransient()
-  }, [closeTransient])
+    setFocusOpen(false)
+  }, [])
 
   const updatePosition = useCallback(() => {
     const trigger = triggerRef.current
@@ -163,21 +157,13 @@ export function HelpTooltip({
         type="button"
         className="help-tooltip__trigger"
         aria-label={label}
-        aria-expanded={pinnedOpen}
+        aria-expanded={pinnedOpen || focusOpen}
         aria-describedby={open ? tooltipId : undefined}
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
           setPinnedOpen((current) => !current)
-          closeTransient()
-        }}
-        onMouseEnter={() => {
-          if (!pinnedOpen) {
-            setHoverOpen(true)
-          }
-        }}
-        onMouseLeave={() => {
-          setHoverOpen(false)
+          setFocusOpen(false)
         }}
         onFocus={() => {
           clearBlurTimer()

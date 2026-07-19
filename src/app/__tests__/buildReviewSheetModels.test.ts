@@ -149,6 +149,83 @@ describe('buildReviewSheetModels', () => {
     expect(models.proficiencyBonusLabel).toBe('+2')
     expect(models.initiativeLabel).toBe('+2')
     expect(models.speedLabel).toBe('30 ft.')
+    // Unarmoured until starting equipment is resolved: 10 + Dex (+2)
+    expect(models.armorClassLabel).toBe('12')
+    expect(models.armorClassBreakdown.armorItemId).toBeNull()
+  })
+
+  it('derives Armour Class from resolved starting armour and shield', async () => {
+    const { character, models: baseModels } = await createChampionSoldierCharacter()
+    const speciesCatalog = createBundledSpeciesCatalog()
+    const classCatalog = createBundledClassCatalog()
+    const backgroundCatalog = createBundledBackgroundCatalog()
+    const featCatalog = createBundledFeatCatalog()
+
+    const speciesDefinition = await speciesCatalog.getSpecies('srd-2024:dwarf')
+    const backgroundDefinition =
+      await backgroundCatalog.getBackground('srd-2024:soldier')
+    const featDefinition = await featCatalog.getFeat('srd-2024:savage-attacker')
+    const fighterDefinition = await classCatalog.getClass('srd-2024:fighter')
+    const classDefinitions = new Map()
+    if (fighterDefinition !== null) {
+      classDefinitions.set(fighterDefinition.id, fighterDefinition)
+    }
+
+    const { SRD_2024_EQUIPMENT_BY_ID } = await import(
+      '../../content/packs/srd-2024/equipment'
+    )
+
+    const models = buildReviewSheetModels({
+      character: {
+        ...character,
+        abilityScores: {
+          ...character.abilityScores,
+          dexterity: 14,
+        },
+        equipment: {
+          ...character.equipment,
+          loadout: {
+            armorItemId: 'srd-2024:chain-mail',
+            mainHandItemId: null,
+            offHandItemId: 'srd-2024:shield',
+            mainHandGrip: null,
+          },
+        },
+      },
+      speciesDefinition,
+      backgroundDefinition,
+      featDefinition,
+      classDefinitions,
+      resolvedEquipment: {
+        sources: [],
+        currency: { goldPieces: 0 },
+        inventory: [
+          {
+            itemId: 'srd-2024:chain-mail',
+            name: 'Chain Mail',
+            quantity: 1,
+            category: 'armor',
+          },
+          {
+            itemId: 'srd-2024:shield',
+            name: 'Shield',
+            quantity: 1,
+            category: 'shield',
+          },
+        ],
+      },
+      equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
+    })
+
+    expect(baseModels.armorClassLabel).toBe('12')
+    expect(models.armorClassLabel).toBe('18') // 16 heavy + 2 shield
+    expect(models.armorClassBreakdown).toMatchObject({
+      base: 16,
+      dexterityBonus: 0,
+      shieldBonus: 2,
+      armorItemId: 'srd-2024:chain-mail',
+      shieldItemId: 'srd-2024:shield',
+    })
   })
 
   it('falls back to the background origin feat when no feat selection exists', async () => {

@@ -56,27 +56,37 @@ export function useAbilityScoresEditor({
     onDraftChange?.()
   }, [onDraftChange])
 
-  const hydrateFromCharacter = useCallback((loaded: Character) => {
-    setStandardArrayDraft(null)
-    setPointBuyDraft(null)
-    setRolledDraft(null)
+  const hydrateFromCharacter = useCallback(
+    (
+      loaded: Character,
+      options?: {
+        /** When true, treat saved scores as already interacted with for step status. */
+        markTouched?: boolean
+      },
+    ) => {
+      setStandardArrayDraft(null)
+      setPointBuyDraft(null)
+      setRolledDraft(null)
+      setAbilityScoresTouched(options?.markTouched === true)
 
-    if (loaded.creationMethod === 'standard-array') {
-      setStandardArrayDraft(
-        abilityScoresToStandardArrayDraft(loaded.abilityScores),
-      )
-    }
-    if (loaded.creationMethod === 'point-buy') {
-      setPointBuyDraft(
-        initializePointBuyDraftFromAbilityScores(loaded.abilityScores),
-      )
-    }
-    if (loaded.creationMethod === 'rolled') {
-      setRolledDraft(
-        initializeRolledDraftFromAbilityScores(loaded.abilityScores),
-      )
-    }
-  }, [])
+      if (loaded.creationMethod === 'standard-array') {
+        setStandardArrayDraft(
+          abilityScoresToStandardArrayDraft(loaded.abilityScores),
+        )
+      }
+      if (loaded.creationMethod === 'point-buy') {
+        setPointBuyDraft(
+          initializePointBuyDraftFromAbilityScores(loaded.abilityScores),
+        )
+      }
+      if (loaded.creationMethod === 'rolled') {
+        setRolledDraft(
+          initializeRolledDraftFromAbilityScores(loaded.abilityScores),
+        )
+      }
+    },
+    [],
+  )
 
   const standardArrayValidation =
     character.creationMethod === 'standard-array' && standardArrayDraft !== null

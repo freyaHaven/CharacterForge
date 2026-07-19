@@ -7,10 +7,13 @@ import type { ClassDefinition } from '../domain/class/types'
 import { classInstanceToSelection } from '../domain/character/characterClassSelection'
 import type { FeatDefinition, FeatSelection } from '../domain/feat/types'
 import type { SpeciesDefinition, SpeciesSelection } from '../domain/species/types'
+import type { EquipmentItemDefinition } from '../domain/equipment/types'
 import { SKILL_IDS, SKILL_LABELS, type SkillId } from '../domain/skills/types'
 import { resolveClassEffects } from '../rules/class/resolveClassEffects'
 import { resolveSpeciesEffects } from '../rules/species/resolveSpeciesEffects'
-import { resolveHitPointMaximum } from '../rules/hit-points/resolveHitPointMaximum'
+import { calculateCharacterHitPoints } from '../rules/hit-points/calculateCharacterHitPoints'
+import { calculateCharacterArmorClass } from '../rules/armor-class/calculateCharacterArmorClass'
+import type { ResolvedEquipment } from '../rules/character/resolveCharacterEquipment'
 import {
   formatAbilityScoreBonusSummary,
   formatBackgroundChoiceSummary,
@@ -114,6 +117,15 @@ export type ReviewSheetModels = {
   initiativeLabel: string
   hitPointMaximum: number | null
   hitPointMaximumLabel: string
+  armorClass: number
+  armorClassLabel: string
+  armorClassBreakdown: {
+    base: number
+    dexterityBonus: number
+    shieldBonus: number
+    armorItemId: string | null
+    shieldItemId: string | null
+  }
 }
 
 function formatSizeLabel(size: SpeciesDefinition['size']): string {
@@ -530,6 +542,13 @@ export type BuildReviewSheetModelsInput = {
   /** Resolved origin feat when `character.feat` is unset. */
   originFeatDefinition?: FeatDefinition | null
   classDefinitions: Map<string, ClassDefinition>
+  /**
+   * Class instances used for Hit Points (committed, optionally overlaid by
+   * eligible drafts). Defaults to `character.classes`.
+   */
+  hitPointClasses?: Character['classes']
+  resolvedEquipment?: ResolvedEquipment
+  equipmentDefinitionsById?: ReadonlyMap<string, EquipmentItemDefinition>
 }
 
 export function buildReviewSheetModels(
@@ -562,8 +581,9 @@ export function buildReviewSheetModels(
     input.speciesDefinition,
     character.species,
   )
-  const hitPoints = resolveHitPointMaximum({
-    classes: character.classes,
+  const hitPointClasses = input.hitPointClasses ?? character.classes
+  const hitPoints = calculateCharacterHitPoints({
+    classes: hitPointClasses,
     startingClassInstanceId: character.startingClassInstanceId,
     classDefinitionsById: input.classDefinitions,
     abilityScores: character.abilityScores,
@@ -571,9 +591,21 @@ export function buildReviewSheetModels(
     speciesSelection: character.species,
   })
   const hitPointMaximum =
-    character.classes.length > 0 && hitPoints.isComplete
+    hitPointClasses.length > 0 && hitPoints.isComplete
       ? hitPoints.maximum
       : null
+
+  const emptyResolvedEquipment: ResolvedEquipment = {
+    sources: [],
+    inventory: [],
+    currency: { goldPieces: 0 },
+  }
+  const armorClass = calculateCharacterArmorClass({
+    abilityScores: character.abilityScores,
+    resolvedEquipment: input.resolvedEquipment ?? emptyResolvedEquipment,
+    loadout: character.equipment.loadout,
+    equipmentDefinitionsById: input.equipmentDefinitionsById ?? new Map(),
+  })
 
   return {
     species: speciesCard,
@@ -621,5 +653,14 @@ export function buildReviewSheetModels(
     hitPointMaximum,
     hitPointMaximumLabel:
       hitPointMaximum === null ? '—' : String(hitPointMaximum),
+    armorClass: armorClass.total,
+    armorClassLabel: String(armorClass.total),
+    armorClassBreakdown: {
+      base: armorClass.base,
+      dexterityBonus: armorClass.dexterityBonus,
+      shieldBonus: armorClass.shieldBonus,
+      armorItemId: armorClass.armorItemId,
+      shieldItemId: armorClass.shieldItemId,
+    },
   }
 }

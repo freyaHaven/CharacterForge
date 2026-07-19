@@ -215,7 +215,9 @@ describe('buildReviewSummaries', () => {
     expect(summaries.class).toEqual(['Not selected'])
     expect(summaries.background).toEqual(['Not selected'])
     expect(summaries.feats).toEqual(['Not selected'])
-    expect(summaries.equipment).toEqual(['Coming soon'])
+    expect(summaries.equipment).toEqual([
+      'Select a class to choose starting equipment',
+    ])
     expect(summaries['character-details']).toEqual([])
   })
 

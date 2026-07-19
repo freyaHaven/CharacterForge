@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { createDefaultCharacter } from '../../domain/character/defaults'
+import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
 import type { Character } from '../../domain/types'
 import {
   getWizardStepButton,
@@ -21,6 +22,10 @@ import { withSingleClassInstance } from '../../domain/character/characterClassSe
 import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import { createLocalStorageCharacterRepository } from '../../adapters/localStorageCharacterRepository'
 import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
+import {
+  PACKAGE_OPTION_ID,
+  STARTING_EQUIPMENT_ENTITLEMENT_ID,
+} from '../../domain/equipment/startingEquipmentHelpers'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -79,6 +84,20 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     species: { ...COMPLETE_DWARF_SELECTION },
     ...withSingleClassInstance(fighterInstance),
     background: null,
+    equipment: {
+      selections: [
+        {
+          source: {
+            kind: 'class-instance',
+            instanceId: fighterInstance.instanceId,
+          },
+          entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+          optionId: 'package-a',
+          choices: [],
+        },
+      ],
+      loadout: EMPTY_EQUIPMENT_LOADOUT,
+    },
     ...overrides,
   })
 }
@@ -186,7 +205,7 @@ describe('Background workflow', () => {
 
     expect(screen.getByText(/Strength \+2/i)).toBeInTheDocument()
     expect(screen.getByText(/Constitution \+1/i)).toBeInTheDocument()
-    expect(screen.getByText(/Spear, Shortbow/i, { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.getByText(/Equipment Package \(A\)/i, { selector: 'dd' })).toBeInTheDocument()
     expect(
       screen.queryByText(/Choose starting equipment/i),
     ).not.toBeInTheDocument()
@@ -285,12 +304,38 @@ describe('Background workflow', () => {
   })
 
   it('prompts to clear background when changing edition', async () => {
+    const fighterInstance = createTestFighterClassInstance()
     const { user } = await renderLoadedApp(
       createStoredCharacter({
+        ...withSingleClassInstance(fighterInstance),
         background: createCompleteSoldierBackground(),
+        equipment: {
+          selections: [
+            {
+              source: {
+                kind: 'class-instance',
+                instanceId: fighterInstance.instanceId,
+              },
+              entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+              optionId: 'package-a',
+              choices: [],
+            },
+            {
+              source: {
+                kind: 'background',
+                backgroundId: 'srd-2024:soldier',
+              },
+              entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+              optionId: PACKAGE_OPTION_ID,
+              choices: [],
+            },
+          ],
+          loadout: EMPTY_EQUIPMENT_LOADOUT,
+        },
       }),
     )
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(
       screen.getByRole('combobox', { name: /rules edition/i }),
       'srd-2014',
@@ -305,12 +350,38 @@ describe('Background workflow', () => {
   })
 
   it('clears background after confirming an edition change', async () => {
+    const fighterInstance = createTestFighterClassInstance()
     const { user } = await renderLoadedApp(
       createStoredCharacter({
+        ...withSingleClassInstance(fighterInstance),
         background: createCompleteSoldierBackground(),
+        equipment: {
+          selections: [
+            {
+              source: {
+                kind: 'class-instance',
+                instanceId: fighterInstance.instanceId,
+              },
+              entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+              optionId: 'package-a',
+              choices: [],
+            },
+            {
+              source: {
+                kind: 'background',
+                backgroundId: 'srd-2024:soldier',
+              },
+              entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+              optionId: PACKAGE_OPTION_ID,
+              choices: [],
+            },
+          ],
+          loadout: EMPTY_EQUIPMENT_LOADOUT,
+        },
       }),
     )
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(
       screen.getByRole('combobox', { name: /rules edition/i }),
       'srd-2014',

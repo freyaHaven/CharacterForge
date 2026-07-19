@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import type { Character } from '../../domain/types'
 import { createDefaultCharacter } from '../../domain/character/defaults'
+import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
 import { serializeCharacterFile } from '../../adapters/characterFile'
 import { CURRENT_SCHEMA_VERSION } from '../../adapters/storage/storedCharacter'
 import {
@@ -14,10 +15,16 @@ import {
   openCharacterEditor,
   waitForAppReady,
 } from '../../testing/characterEditorTestUtils'
+import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import {
   RECENT_CHARACTERS_STORAGE_KEY,
   recentCharactersStore,
 } from '../session/recentCharacters'
+import {
+  PACKAGE_OPTION_ID,
+  STARTING_EQUIPMENT_ENTITLEMENT_ID,
+} from '../../domain/equipment/startingEquipmentHelpers'
+import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
 import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
 
 const { loadMock, saveMock, removeMock } = vi.hoisted(() => ({
@@ -33,6 +40,44 @@ vi.mock('../../adapters/localStorageCharacterRepository', () => ({
     remove: removeMock,
   }),
 }))
+
+function createCompleteSoldierBackground(): NonNullable<Character['background']> {
+  return {
+    backgroundId: 'srd-2024:soldier',
+    abilityScoreIncrease: {
+      mode: 'two-and-one',
+      plusTwo: 'strength',
+      plusOne: 'constitution',
+    },
+    choices: {
+      'gaming-set': 'dice-set',
+    },
+  }
+}
+
+function createCompleteStartingEquipment(
+  classInstanceId: string,
+  backgroundId: string,
+  classOptionId = 'package-a',
+): Character['equipment'] {
+  return {
+    selections: [
+      {
+        source: { kind: 'class-instance', instanceId: classInstanceId },
+        entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+        optionId: classOptionId,
+        choices: [],
+      },
+      {
+        source: { kind: 'background', backgroundId },
+        entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+        optionId: PACKAGE_OPTION_ID,
+        choices: [],
+      },
+    ],
+    loadout: EMPTY_EQUIPMENT_LOADOUT,
+  }
+}
 
 function createStoredCharacter(overrides: Partial<Character> = {}): Character {
   return createDefaultCharacter({
@@ -52,6 +97,47 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     background: null,
     ...overrides,
   })
+}
+
+function createCompleteImportedCharacter(
+  overrides: Partial<Character> = {},
+): Character {
+  const fighter = createTestFighterClassInstance()
+
+  return createStoredCharacter({
+    id: 'char-complete-import',
+    name: 'Complete Import',
+    ...withSingleClassInstance(fighter),
+    background: createCompleteSoldierBackground(),
+    equipment: createCompleteStartingEquipment(
+      fighter.instanceId,
+      'srd-2024:soldier',
+    ),
+    ...overrides,
+  })
+}
+
+function expectCurrentWizardStep(stepLabel: string) {
+  expect(
+    screen.getByRole('button', {
+      name: new RegExp(`^${stepLabel}, .*current step`, 'i'),
+    }),
+  ).toBeInTheDocument()
+}
+
+async function importCharacterFile(
+  user: ReturnType<typeof userEvent.setup>,
+  character: Character,
+  fileName = 'hero.cforge',
+) {
+  await user.click(screen.getByRole('button', { name: /import character/i }))
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement
+  const file = new File([serializeCharacterFile(character)], fileName, {
+    type: 'application/json',
+  })
+  await user.upload(input, file)
 }
 
 async function continueRecentCharacter(
@@ -112,7 +198,7 @@ describe('App entry flow', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('enters the wizard after Create New Character', async () => {
+  it('enters the wizard after Create New Character on Basics', async () => {
     const user = userEvent.setup()
     render(<App />)
     await waitForAppReady()
@@ -128,9 +214,35 @@ describe('App entry flow', () => {
     })
 
     expect(saveMock).toHaveBeenCalled()
+    expectCurrentWizardStep('Basics')
   })
 
-  it('continues a recent character into the editor', async () => {
+  it('continues a complete saved character onto Overview', async () => {
+    const user = userEvent.setup()
+    const character = createCompleteImportedCharacter({
+      id: 'char-1',
+      name: 'Elara',
+    })
+    recentCharactersStore.touch(character.id, Date.now())
+    loadMock.mockImplementation(async (id: string) =>
+      id === character.id ? character : null,
+    )
+
+    render(<App />)
+    await waitForAppReady()
+    await continueRecentCharacter(user, /elara • dwarf/i)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
+
+    expect(loadMock).toHaveBeenCalledWith('char-1')
+    expectCurrentWizardStep('Overview')
+  })
+
+  it('continues an incomplete saved character onto its first incomplete step', async () => {
     const user = userEvent.setup()
     const character = createStoredCharacter()
     recentCharactersStore.touch(character.id, Date.now())
@@ -149,6 +261,7 @@ describe('App entry flow', () => {
     })
 
     expect(loadMock).toHaveBeenCalledWith('char-1')
+    expectCurrentWizardStep('Class')
 
     const brand = document.querySelector('.app-brand')
     expect(brand).not.toBeNull()
@@ -164,21 +277,38 @@ describe('App entry flow', () => {
     ).toBeInTheDocument()
   })
 
+  it('continues a saved character to an earlier incomplete step, not a later complete one', async () => {
+    const user = userEvent.setup()
+    const character = createCompleteImportedCharacter({
+      id: 'char-1',
+      name: '',
+    })
+    recentCharactersStore.touch(character.id, Date.now())
+    loadMock.mockImplementation(async (id: string) =>
+      id === character.id ? character : null,
+    )
+
+    render(<App />)
+    await waitForAppReady()
+    await continueRecentCharacter(user, /unnamed • dwarf/i)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
+
+    expectCurrentWizardStep('Basics')
+  })
+
   it('imports a valid .cforge file into the editor', async () => {
     const user = userEvent.setup()
     const character = createStoredCharacter({ name: 'Imported Hero' })
-    const file = new File([serializeCharacterFile(character)], 'hero.cforge', {
-      type: 'application/json',
-    })
 
     render(<App />)
     await waitForAppReady()
 
-    await user.click(screen.getByRole('button', { name: /import character/i }))
-    const input = document.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement
-    await user.upload(input, file)
+    await importCharacterFile(user, character)
 
     await waitFor(() => {
       expect(
@@ -189,6 +319,44 @@ describe('App entry flow', () => {
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Imported Hero' }),
     )
+    // Name is set but Class is empty — land on the first incomplete step.
+    expectCurrentWizardStep('Class')
+  })
+
+  it('imports a fully completed character onto Overview', async () => {
+    const user = userEvent.setup()
+    const character = createCompleteImportedCharacter()
+
+    render(<App />)
+    await waitForAppReady()
+
+    await importCharacterFile(user, character)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
+
+    expectCurrentWizardStep('Overview')
+  })
+
+  it('imports a character missing Basics onto Basics', async () => {
+    const user = userEvent.setup()
+    const character = createCompleteImportedCharacter({ name: '' })
+
+    render(<App />)
+    await waitForAppReady()
+
+    await importCharacterFile(user, character)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /character creation steps/i }),
+      ).toBeInTheDocument()
+    })
+
+    expectCurrentWizardStep('Basics')
   })
 
   it('adds an imported character to the recent list', async () => {
@@ -196,9 +364,6 @@ describe('App entry flow', () => {
     const character = createStoredCharacter({
       id: 'char-imported',
       name: 'Imported Hero',
-    })
-    const file = new File([serializeCharacterFile(character)], 'hero.cforge', {
-      type: 'application/json',
     })
 
     loadMock.mockImplementation(async (id: string) =>
@@ -208,11 +373,7 @@ describe('App entry flow', () => {
     render(<App />)
     await waitForAppReady()
 
-    await user.click(screen.getByRole('button', { name: /import character/i }))
-    const input = document.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement
-    await user.upload(input, file)
+    await importCharacterFile(user, character)
 
     await waitFor(() => {
       expect(

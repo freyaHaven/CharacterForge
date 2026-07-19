@@ -2,6 +2,7 @@ import type { BackgroundDefinition } from '../../domain/background/types'
 import type { ClassDefinition, SubclassDefinition } from '../../domain/class/types'
 import type { ContentSource } from '../../domain/content/types'
 import type { EditionId } from '../../domain/edition'
+import type { EquipmentItemDefinition } from '../../domain/equipment/types'
 import type { FeatDefinition } from '../../domain/feat/types'
 import type {
   SpellDefinition,
@@ -31,6 +32,5 @@ export type ContentPack = {
   feats?: FeatDefinition[]
   spells?: SpellDefinition[]
   spellLists?: SpellListDefinition[]
-  /** Reserved for future equipment content. */
-  equipment?: unknown[]
+  equipment?: EquipmentItemDefinition[]
 }

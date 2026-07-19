@@ -1,6 +1,7 @@
 import type { BackgroundDefinition } from '../../../../domain/background/types'
-import { createStandardEquipmentChoice } from '../../../../domain/background/standardEquipment'
+import { createBackgroundStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
 import { SRD_2024_SOURCE } from '../source'
+import { SAGE_PACKAGE } from '../equipment/packages'
 
 export const sageSrd2024: BackgroundDefinition = {
   id: 'srd-2024:sage',
@@ -23,8 +24,6 @@ export const sageSrd2024: BackgroundDefinition = {
     toolId: 'calligraphers-supplies',
     label: "Calligrapher's Supplies",
   },
-  equipment: createStandardEquipmentChoice(
-    "Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, 8 GP",
-  ),
+  equipment: createBackgroundStartingEquipment(SAGE_PACKAGE),
   choices: [],
 }

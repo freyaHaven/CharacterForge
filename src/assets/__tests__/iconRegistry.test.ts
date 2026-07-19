@@ -8,8 +8,8 @@ import {
 
 describe('iconRegistry', () => {
   it('resolves race icons by SRD species id suffix', () => {
-    expect(getRaceIcon('srd-2024:dwarf')).toMatch(/dwarf\.svg$/)
-    expect(getRaceIcon('srd-2024:half-elf')).toMatch(/half_elf\.svg$/)
+    expect(getRaceIcon('srd-2024:dwarf')).toMatch(/dwarf\.png$/)
+    expect(getRaceIcon('srd-2024:half-elf')).toMatch(/half_elf\.png$/)
     expect(getRaceIcon('srd-2024:unknown')).toBeNull()
   })
 
@@ -21,9 +21,9 @@ describe('iconRegistry', () => {
   })
 
   it('resolves class insignias for selection cards', () => {
-    expect(getClassInsignia('srd-2024:fighter')).toMatch(/fighter\.svg$/)
-    expect(getClassInsignia('srd-2024:ranger')).toMatch(/archer\.svg$/)
-    expect(getClassInsignia('srd-2024:artificer')).toMatch(/artificier\.svg$/)
+    expect(getClassInsignia('srd-2024:fighter')).toMatch(/fighter\.png$/)
+    expect(getClassInsignia('srd-2024:ranger')).toMatch(/archer\.png$/)
+    expect(getClassInsignia('srd-2024:artificer')).toMatch(/artificier\.png$/)
     expect(getClassInsignia('srd-2024:unknown')).toBeNull()
   })
 

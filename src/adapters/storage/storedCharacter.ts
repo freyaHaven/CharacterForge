@@ -9,7 +9,8 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 12
+export const CURRENT_SCHEMA_VERSION = 14
+
 
 type CharacterIdentity = {
   id: string
@@ -109,10 +110,28 @@ export type StoredCharacterV11 = {
 /** Schema v12: persisted spell source states. */
 export type StoredCharacterV12 = {
   schemaVersion: 12
+  character: Omit<Character, 'equipment'> & {
+    equipment?: Character['equipment']
+  }
+}
+
+/** Schema v13: persisted equipment selections (no loadout yet). */
+export type StoredCharacterV13 = {
+  schemaVersion: 13
+  character: Omit<Character, 'equipment'> & {
+    equipment: {
+      selections: Character['equipment']['selections']
+    }
+  }
+}
+
+/** Schema v14: equipment loadout (worn / wielded slots). */
+export type StoredCharacterV14 = {
+  schemaVersion: 14
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV12
+export type StoredCharacter = StoredCharacterV14
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -136,7 +155,9 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV9
   | StoredCharacterV10
   | StoredCharacterV11
-  | StoredCharacterV12 {
+  | StoredCharacterV12
+  | StoredCharacterV13
+  | StoredCharacterV14 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

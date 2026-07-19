@@ -2,6 +2,7 @@ import type { AbilityId } from '../abilities/types'
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
 import type { SkillId } from '../skills/types'
+import type { StartingEquipmentDefinition } from '../equipment/types'
 import type {
   ClassSpellcasting,
   SpellEntitlement,
@@ -147,6 +148,8 @@ export type ClassDefinition = {
   featureProgression: ClassLevelFeatures[]
   choices: ClassChoice[]
   deferredRequirements: DeferredCharacterRequirement[]
+  /** Starting equipment entitlements resolved on the Equipment wizard step. */
+  startingEquipment: StartingEquipmentDefinition
   /** When preview, the class is shown only in multiclass setup and labelled accordingly. */
   catalogStatus?: ClassCatalogStatus
   /**

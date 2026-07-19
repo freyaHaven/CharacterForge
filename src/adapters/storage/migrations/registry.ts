@@ -11,6 +11,8 @@ import { migrateV8ToV9 } from './migrateV8ToV9'
 import { migrateV9ToV10 } from './migrateV9ToV10'
 import { migrateV10ToV11 } from './migrateV10ToV11'
 import { migrateV11ToV12 } from './migrateV11ToV12'
+import { migrateV12ToV13 } from './migrateV12ToV13'
+import { migrateV13ToV14 } from './migrateV13ToV14'
 
 /**
  * Sequential migrations keyed by source schema version.
@@ -29,4 +31,6 @@ export const MIGRATIONS: Record<number, MigrationFn> = {
   9: migrateV9ToV10,
   10: migrateV10ToV11,
   11: migrateV11ToV12,
+  12: migrateV12ToV13,
+  13: migrateV13ToV14,
 }

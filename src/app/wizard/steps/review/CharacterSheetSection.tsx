@@ -9,6 +9,7 @@ export type CharacterSheetSectionProps = {
   icon?: ReactNode
   status?: StepStatus
   editStepId?: ReviewableStepId
+  editLabel?: string
   onEdit?: (stepId: ReviewableStepId) => void
   children: ReactNode
 }
@@ -19,6 +20,7 @@ export function CharacterSheetSection({
   icon,
   status,
   editStepId,
+  editLabel = 'Edit',
   onEdit,
   children,
 }: CharacterSheetSectionProps) {
@@ -67,7 +69,7 @@ export function CharacterSheetSection({
             className="review-sheet-section__edit"
             onClick={() => onEdit(editStepId)}
           >
-            Edit
+            {editLabel}
           </button>
         ) : null}
       </div>

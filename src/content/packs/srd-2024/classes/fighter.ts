@@ -8,6 +8,11 @@ import {
   formatWeaponMasteryDescription,
   formatWeaponMasteryOptionLabel,
 } from '../../../../domain/weapons/mastery'
+import { createClassPackageOrGoldStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
+import {
+  FIGHTER_PACKAGE_A,
+  FIGHTER_PACKAGE_B,
+} from '../equipment/packages'
 import { SRD_2024_SOURCE } from '../source'
 import { championSrd2024 } from '../subclasses/champion'
 
@@ -451,6 +456,29 @@ export const fighterSrd2024: ClassDefinition = {
     createAsiChoiceDefinition('ability-score-improvement-14', 14),
     createAsiChoiceDefinition('ability-score-improvement-16', 16),
   ],
+  startingEquipment: createClassPackageOrGoldStartingEquipment({
+    completeness: 'complete',
+    options: [
+      {
+        id: 'package-a',
+        label: 'Package A',
+        kind: 'items',
+        items: FIGHTER_PACKAGE_A,
+      },
+      {
+        id: 'package-b',
+        label: 'Package B',
+        kind: 'items',
+        items: FIGHTER_PACKAGE_B,
+      },
+      {
+        id: 'gold-alternative',
+        label: '155 GP',
+        kind: 'gold',
+        goldPieces: 155,
+      },
+    ],
+  }),
   deferredRequirements: [
     {
       id: 'starting-equipment',

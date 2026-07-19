@@ -7,6 +7,7 @@ import { isCharacterDetails } from './details'
 import { isBackgroundSelection } from '../background/isBackgroundSelection'
 import { isCharacterClassSelection } from '../class/isCharacterClassSelection'
 import { isFeatSelection } from '../feat/isFeatSelection'
+import { isCharacterEquipment } from '../equipment/isCharacterEquipment'
 import { isSpellSourceStateArray } from '../spell/isSpellSourceState'
 import { isSpeciesSelection } from '../species/isSpeciesSelection'
 import {
@@ -118,6 +119,7 @@ export function isCharacter(value: unknown): value is Character {
     isBackground(candidate.background) &&
     isFeat(candidate.feat) &&
     isCharacterDetails(candidate.details) &&
-    isSpellSourceStateArray(candidate.spellSourceStates)
+    isSpellSourceStateArray(candidate.spellSourceStates) &&
+    isCharacterEquipment(candidate.equipment)
   )
 }

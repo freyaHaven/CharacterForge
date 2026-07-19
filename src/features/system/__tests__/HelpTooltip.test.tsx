@@ -10,7 +10,7 @@ afterEach(() => {
 })
 
 describe('HelpTooltip', () => {
-  it('opens on hover and keyboard focus', async () => {
+  it('opens on keyboard focus without opening on hover', async () => {
     const user = userEvent.setup()
 
     render(
@@ -21,12 +21,8 @@ describe('HelpTooltip', () => {
 
     const trigger = screen.getByRole('button', { name: /about armor class/i })
     await user.hover(trigger)
+    expect(screen.queryByRole('tooltip', { hidden: true })).not.toBeInTheDocument()
 
-    const tooltip = await screen.findByRole('tooltip', { hidden: true })
-    expect(tooltip).toHaveTextContent('Armor Class')
-    expect(tooltip).toHaveTextContent('How hard you are to hit in combat.')
-
-    await user.unhover(trigger)
     await user.tab()
     expect(trigger).toHaveFocus()
     expect(

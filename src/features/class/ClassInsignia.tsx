@@ -8,6 +8,9 @@ type ClassInsigniaProps = {
   alt?: string
 }
 
+/** Intrinsic pixel size of registered class insignia PNGs. */
+export const CLASS_INSIGNIA_INTRINSIC_SIZE = 192
+
 /**
  * Class crest for primary selection cards.
  * Falls back to the compact glyph when no insignia asset is registered.
@@ -21,6 +24,8 @@ export function ClassInsignia({ classId, className, alt }: ClassInsigniaProps) {
       <img
         className={className}
         src={insigniaSrc}
+        width={CLASS_INSIGNIA_INTRINSIC_SIZE}
+        height={CLASS_INSIGNIA_INTRINSIC_SIZE}
         alt={isDecorative ? '' : alt}
         aria-hidden={isDecorative ? true : undefined}
         draggable={false}

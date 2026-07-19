@@ -61,13 +61,35 @@ export function formatEquipmentSummary(
   definition: BackgroundDefinition,
   _selection?: BackgroundSelection | null,
 ): string {
-  const equipmentPackage = definition.equipment.packages[0]
-
-  return (
-    equipmentPackage?.summary ??
-    equipmentPackage?.label ??
-    'Standard equipment package'
+  const entitlement = definition.equipment.entitlements.find(
+    (entry) => entry.type === 'choose-option',
   )
+
+  if (entitlement === undefined || entitlement.type !== 'choose-option') {
+    return 'Standard equipment package'
+  }
+
+  const packageOption = entitlement.options.find(
+    (option) => option.kind === 'items',
+  )
+
+  if (packageOption === undefined || packageOption.kind !== 'items') {
+    return entitlement.label
+  }
+
+  const itemCount = packageOption.items.filter(
+    (grant) => grant.itemId !== 'srd-2024:gold-pieces',
+  ).length
+  const goldGrant = packageOption.items.find(
+    (grant) => grant.itemId === 'srd-2024:gold-pieces',
+  )
+
+  const parts = [`${itemCount} item${itemCount === 1 ? '' : 's'}`]
+  if (goldGrant !== undefined) {
+    parts.push(`${goldGrant.quantity} GP`)
+  }
+
+  return `${packageOption.label}: ${parts.join(', ')}`
 }
 
 export function formatBackgroundChoiceSummary(

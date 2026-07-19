@@ -1,5 +1,6 @@
 import { createDefaultCharacterDetails } from './details'
 import { DEFAULT_EDITION_ID } from '../edition'
+import { EMPTY_CHARACTER_EQUIPMENT } from '../equipment/types'
 import type { AbilityScores, Character } from '../types'
 import { EMPTY_CLASS_STATE } from './characterClassSelection'
 
@@ -29,6 +30,7 @@ export function createDefaultCharacter(
     feat: null,
     details: createDefaultCharacterDetails(),
     spellSourceStates: [],
+    equipment: EMPTY_CHARACTER_EQUIPMENT,
     ...overrides,
   }
 }

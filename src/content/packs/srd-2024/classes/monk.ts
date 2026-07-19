@@ -4,6 +4,8 @@ import { subclassToChoiceOption } from '../../../../domain/class/subclassDefinit
 import type { SkillId } from '../../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../../domain/skills/types'
 import { createArtisanOrInstrumentToolOptions } from '../../../../domain/tools/types'
+import { createSimplifiedClassStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
+import { MONK_PACKAGE_A } from '../equipment/packages'
 import { SRD_2024_SOURCE } from '../source'
 import { openHandSrd2024 } from '../subclasses/open-hand'
 
@@ -384,6 +386,11 @@ export const monkSrd2024: ClassDefinition = {
     createAsiChoiceDefinition('ability-score-improvement-12', 12),
     createAsiChoiceDefinition('ability-score-improvement-16', 16),
   ],
+  startingEquipment: createSimplifiedClassStartingEquipment({
+    packageLabel: 'Package A',
+    items: MONK_PACKAGE_A,
+    goldPieces: 50,
+  }),
   deferredRequirements: [
     {
       id: 'starting-equipment',

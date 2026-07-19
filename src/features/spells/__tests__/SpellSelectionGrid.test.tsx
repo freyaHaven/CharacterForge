@@ -68,7 +68,7 @@ describe('SpellSelectionCard', () => {
     expect(onToggle).toHaveBeenCalledTimes(1)
   })
 
-  it('shows preview on hover and keyboard focus', async () => {
+  it('does not open preview on card hover or checkbox focus', async () => {
     const user = userEvent.setup()
 
     render(
@@ -84,20 +84,11 @@ describe('SpellSelectionCard', () => {
     expect(card).not.toBeNull()
 
     await user.hover(card!)
-    expect(
-      await screen.findByRole('tooltip', { hidden: true }),
-    ).toHaveTextContent('Add 1d4 to one ability check.')
-    expect(screen.getByRole('tooltip', { hidden: true })).toHaveTextContent(
-      'Casting Time',
-    )
-
-    await user.unhover(card!)
+    expect(screen.queryByRole('tooltip', { hidden: true })).not.toBeInTheDocument()
 
     await user.tab()
     expect(screen.getByRole('checkbox', { name: /guidance/i })).toHaveFocus()
-    expect(
-      await screen.findByRole('tooltip', { hidden: true }),
-    ).toHaveTextContent('Guidance')
+    expect(screen.queryByRole('tooltip', { hidden: true })).not.toBeInTheDocument()
   })
 
   it('opens preview from the info button without toggling selection', async () => {
@@ -210,7 +201,9 @@ describe('SpellSelectionGrid', () => {
     expect(screen.getAllByText('Cantrip • Evocation')).toHaveLength(2)
   })
 
-  it('shows a per-level table only when level rows are provided', () => {
+  it('renders per-level accordions when level rows are provided', async () => {
+    const user = userEvent.setup()
+
     render(
       <SpellSelectionGrid
         idPrefix="prepared"
@@ -220,8 +213,11 @@ describe('SpellSelectionGrid', () => {
           { level: 1, label: '1st level', selected: 2, capacity: 3 },
           { level: 2, label: '2nd level', selected: 1, capacity: 2 },
         ]}
-        selectableSpells={[guidance]}
-        selectedSpellIds={new Set()}
+        selectableSpells={[
+          { ...light, level: 1 },
+          { ...sacredFlame, level: 2, name: 'Aid', id: 'srd-2024:aid' },
+        ]}
+        selectedSpellIds={new Set(['srd-2024:light'])}
         onToggleSpell={() => undefined}
       />,
     )
@@ -229,9 +225,71 @@ describe('SpellSelectionGrid', () => {
     expect(
       screen.getByRole('heading', { name: /prepared spells/i }),
     ).toHaveTextContent('3/5')
-    expect(screen.getByRole('table', { name: /by spell level/i })).toBeInTheDocument()
-    expect(screen.getByRole('row', { name: /1st level 2\/3/i })).toBeInTheDocument()
-    expect(screen.getByRole('row', { name: /2nd level 1\/2/i })).toBeInTheDocument()
+    expect(screen.getByText('1st level')).toBeInTheDocument()
+    expect(screen.getByText('2/3')).toBeInTheDocument()
+    expect(screen.getByText('2nd level')).toBeInTheDocument()
+    expect(screen.getByText('1/2')).toBeInTheDocument()
+
+    // Level with selections starts expanded; empty selection level stays collapsed.
+    expect(screen.getByRole('checkbox', { name: /light/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /hide 1st level spells/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /show 2nd level spells/i }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /aid/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /show 2nd level spells/i }))
+    expect(screen.getByRole('checkbox', { name: /aid/i })).toBeInTheDocument()
+  })
+
+  it('blocks unselected spells when the level capacity is full', () => {
+    render(
+      <SpellSelectionGrid
+        idPrefix="prepared"
+        title="Prepared Spells"
+        countLabel="2/5"
+        levelRows={[{ level: 1, label: '1st level', selected: 2, capacity: 2 }]}
+        selectableSpells={[
+          { ...light, level: 1 },
+          { ...sacredFlame, level: 1 },
+          {
+            ...guidance,
+            id: 'srd-2024:bless',
+            name: 'Bless',
+            level: 1,
+            school: 'Enchantment',
+          },
+        ]}
+        selectedSpellIds={new Set(['srd-2024:light', 'srd-2024:sacred-flame'])}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /light/i })).not.toBeDisabled()
+    expect(
+      screen.getByRole('checkbox', { name: /sacred flame/i }),
+    ).not.toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /bless/i })).toBeDisabled()
+  })
+
+  it('blocks additional picks when the global selection limit is reached', () => {
+    render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="2/2"
+        selectableSpells={[guidance, light, sacredFlame]}
+        selectedSpellIds={new Set(['srd-2024:guidance', 'srd-2024:light'])}
+        atSelectionLimit
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).not.toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /light/i })).not.toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /sacred flame/i })).toBeDisabled()
   })
 
   it('keeps granted spells distinct and non-editable', async () => {

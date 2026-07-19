@@ -10,11 +10,13 @@ import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpellCatalog } from '../../domain/ports/spellCatalog'
+import type { EquipmentCatalog } from '../../domain/ports/equipmentCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import { createBundledClassCatalog } from '../../adapters/bundledClassCatalog'
 import { createBundledBackgroundCatalog } from '../../adapters/bundledBackgroundCatalog'
 import { createBundledFeatCatalog } from '../../adapters/bundledFeatCatalog'
 import { createBundledSpellCatalog } from '../../adapters/bundledSpellCatalog'
+import { createBundledEquipmentCatalog } from '../../adapters/bundledEquipmentCatalog'
 import { buildCharacterForSave } from '../buildCharacterForSave'
 import {
   canSaveCharacter,
@@ -37,10 +39,26 @@ import { useReviewFeatDisplay } from '../useReviewFeatDisplay'
 import { useReviewSpeciesDisplay } from '../useReviewSpeciesDisplay'
 import { useReviewSpellcasting } from '../useReviewSpellcasting'
 import { useSpellsStepValidation } from '../useSpellsStepValidation'
+import { useEquipmentResolution } from '../useEquipmentResolution'
 import { useReviewSheetModels } from '../useReviewSheetModels'
 import { pruneInactiveSpellSourceStates } from '../../rules/spell/pruneInactiveSpellSourceStates'
+import { pruneInactiveEquipmentSelections } from '../../rules/equipment/pruneInactiveEquipmentSelections'
+import { equipmentSelectionKey } from '../../domain/equipment/sourceKey'
 import type { SpellSourceState } from '../../domain/spell/types'
+import type {
+  EquipmentItemDefinition,
+  EquipmentLoadout,
+  EquipmentSelection,
+} from '../../domain/equipment/types'
+import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
+import { reconcileEquipmentLoadout } from '../../domain/equipment/equipmentLoadout'
+import {
+  formatGoldPieces,
+  formatInventoryLine,
+} from '../../features/equipment/formatEquipment'
+import { isClassStartingEquipmentResolved } from '../../rules/character/resolveCharacterEquipment'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
+import { getCharacterOpenDestination } from '../wizard/resolveCharacterStepLanding'
 import { getAllStepStatuses } from '../wizard/stepStatus'
 import type { WizardStepId } from '../wizard/types'
 import { useAbilityScoresEditor } from './useAbilityScoresEditor'
@@ -55,6 +73,7 @@ const defaultClassCatalog = createBundledClassCatalog()
 const defaultBackgroundCatalog = createBundledBackgroundCatalog()
 const defaultFeatCatalog = createBundledFeatCatalog()
 const defaultSpellCatalog = createBundledSpellCatalog()
+const defaultEquipmentCatalog = createBundledEquipmentCatalog()
 
 export type UseCharacterEditorOptions = {
   repository: CharacterRepository
@@ -63,6 +82,7 @@ export type UseCharacterEditorOptions = {
   backgroundCatalog?: BackgroundCatalog
   featCatalog?: FeatCatalog
   spellCatalog?: SpellCatalog
+  equipmentCatalog?: EquipmentCatalog
   randomSource?: () => number
   restoreFromStorage?: boolean
 }
@@ -74,6 +94,7 @@ export function useCharacterEditor({
   backgroundCatalog = defaultBackgroundCatalog,
   featCatalog = defaultFeatCatalog,
   spellCatalog = defaultSpellCatalog,
+  equipmentCatalog = defaultEquipmentCatalog,
   randomSource = Math.random,
   restoreFromStorage = true,
 }: UseCharacterEditorOptions) {
@@ -220,6 +241,17 @@ export function useCharacterEditor({
     spellCatalog,
   )
 
+  const {
+    resolvedEquipment,
+    equipmentValidation,
+    committedEquipmentValid,
+  } = useEquipmentResolution(
+    classCatalog,
+    backgroundCatalog,
+    equipmentCatalog,
+    character,
+  )
+
   const setSpellSourceStates = useCallback(
     (nextStates: SpellSourceState[]) => {
       clearSaveMessage()
@@ -234,6 +266,111 @@ export function useCharacterEditor({
     [clearSaveMessage, spellcastingReview.activeSources],
   )
 
+  const setEquipmentSelections = useCallback(
+    (nextSelections: EquipmentSelection[]) => {
+      clearSaveMessage()
+      const activeKeys = resolvedEquipment.sources.flatMap((source) =>
+        source.entitlements.map((entitlement) =>
+          equipmentSelectionKey(source.source, entitlement.entitlement.id),
+        ),
+      )
+
+      setCharacter((current) => ({
+        ...current,
+        equipment: {
+          ...current.equipment,
+          selections: pruneInactiveEquipmentSelections(
+            {
+              ...current,
+              equipment: {
+                ...current.equipment,
+                selections: nextSelections,
+              },
+            },
+            activeKeys,
+          ),
+        },
+      }))
+    },
+    [clearSaveMessage, resolvedEquipment.sources],
+  )
+
+  const setEquipmentLoadout = useCallback(
+    (nextLoadout: EquipmentLoadout) => {
+      clearSaveMessage()
+      setCharacter((current) => ({
+        ...current,
+        equipment: {
+          ...current.equipment,
+          loadout: nextLoadout,
+        },
+      }))
+    },
+    [clearSaveMessage],
+  )
+
+  const inventoryOwnershipKey = resolvedEquipment.inventory
+    .map((item) => item.itemId)
+    .sort()
+    .join('|')
+
+  useEffect(() => {
+    let isActive = true
+
+    void (async () => {
+      const definitions = new Map<string, EquipmentItemDefinition>()
+
+      await Promise.all(
+        resolvedEquipment.inventory.map(async (entry) => {
+          const definition = await equipmentCatalog.getEquipment(entry.itemId)
+          if (definition !== null) {
+            definitions.set(entry.itemId, definition)
+          }
+        }),
+      )
+
+      if (!isActive) {
+        return
+      }
+
+      const ownedItemIds = new Set(
+        resolvedEquipment.inventory.map((entry) => entry.itemId),
+      )
+
+      setCharacter((current) => {
+        const currentLoadout =
+          current.equipment.loadout ?? EMPTY_EQUIPMENT_LOADOUT
+        const nextLoadout = reconcileEquipmentLoadout(
+          currentLoadout,
+          ownedItemIds,
+          definitions,
+          { inferEmptySlots: true },
+        )
+
+        if (
+          nextLoadout.armorItemId === currentLoadout.armorItemId &&
+          nextLoadout.mainHandItemId === currentLoadout.mainHandItemId &&
+          nextLoadout.offHandItemId === currentLoadout.offHandItemId &&
+          nextLoadout.mainHandGrip === currentLoadout.mainHandGrip
+        ) {
+          return current
+        }
+
+        return {
+          ...current,
+          equipment: {
+            ...current.equipment,
+            loadout: nextLoadout,
+          },
+        }
+      })
+    })()
+
+    return () => {
+      isActive = false
+    }
+  }, [equipmentCatalog, inventoryOwnershipKey, resolvedEquipment.inventory])
+
   // Prune source states when class instances / feat / background identity change.
   const ownershipKey = [
     character.classes.map((entry) => entry.instanceId).join(','),
@@ -243,14 +380,37 @@ export function useCharacterEditor({
 
   useEffect(() => {
     setCharacter((current) => {
-      const pruned = pruneInactiveSpellSourceStates(
+      const prunedSpells = pruneInactiveSpellSourceStates(
         current,
         spellcastingReview.activeSources,
       )
-      if (pruned.length === current.spellSourceStates.length) {
+      const activeEquipmentKeys = resolvedEquipment.sources.flatMap((source) =>
+        source.entitlements.map((entitlement) =>
+          equipmentSelectionKey(source.source, entitlement.entitlement.id),
+        ),
+      )
+      const prunedEquipment = pruneInactiveEquipmentSelections(
+        current,
+        activeEquipmentKeys,
+      )
+
+      const spellsChanged =
+        prunedSpells.length !== current.spellSourceStates.length
+      const equipmentChanged =
+        prunedEquipment.length !== current.equipment.selections.length
+
+      if (!spellsChanged && !equipmentChanged) {
         return current
       }
-      return { ...current, spellSourceStates: pruned }
+
+      return {
+        ...current,
+        spellSourceStates: prunedSpells,
+        equipment: {
+          ...current.equipment,
+          selections: prunedEquipment,
+        },
+      }
     })
     // ownershipKey tracks removed class/feat/background; activeSources read from latest summary.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
@@ -275,6 +435,8 @@ export function useCharacterEditor({
     committedFeatValid: feat.committedFeatValid,
     spellValidation,
     committedSpellsValid,
+    equipmentValidation,
+    committedEquipmentValid,
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
@@ -320,6 +482,11 @@ export function useCharacterEditor({
     classCatalog,
     backgroundCatalog,
     featCatalog,
+    {
+      classDrafts: classEditor.classDrafts,
+      resolvedEquipment,
+      equipmentCatalog,
+    },
   )
 
   const unresolvedDeferredRequirements = useDeferredCharacterRequirements(
@@ -327,12 +494,29 @@ export function useCharacterEditor({
     character,
     classEditor.classDraft,
     classEditor.activeInstanceId,
-  )
+  ).filter((requirement) => {
+    if (requirement.requirementId !== 'starting-equipment') {
+      return true
+    }
+
+    return !isClassStartingEquipmentResolved(
+      resolvedEquipment,
+      requirement.sourceInstanceId,
+    )
+  })
 
   const finishPolicy = getFinishPolicyResult(
     stepStatuses,
     unresolvedDeferredRequirements,
   )
+
+  const equipmentLines = [
+    ...resolvedEquipment.inventory.map((item) => formatInventoryLine(item)),
+    ...(resolvedEquipment.currency.goldPieces > 0
+      ? [formatGoldPieces(resolvedEquipment.currency.goldPieces)]
+      : []),
+  ]
+
   const reviewSummaries = buildReviewSummaries(
     {
       character,
@@ -348,6 +532,7 @@ export function useCharacterEditor({
       standardArrayValidation: abilityScores.standardArrayValidation,
       pointBuyValidation: abilityScores.pointBuyValidation,
       rolledValidation: abilityScores.rolledValidation,
+      equipmentLines,
     },
     {
       basics: stepStatuses.basics,
@@ -497,9 +682,17 @@ export function useCharacterEditor({
   )
 
   const applyCharacterState = useCallback(
-    (nextCharacter: Character) => {
+    (
+      nextCharacter: Character,
+      options?: {
+        activeStepId?: WizardStepId
+        markAbilityScoresTouched?: boolean
+      },
+    ) => {
       setCharacter(nextCharacter)
-      setActiveStepId(DEFAULT_WIZARD_UI_STATE.activeStepId)
+      setActiveStepId(
+        options?.activeStepId ?? DEFAULT_WIZARD_UI_STATE.activeStepId,
+      )
       setBasicsTouched(false)
       setDetailsTouched(false)
       setSaveMessage(null)
@@ -508,7 +701,9 @@ export function useCharacterEditor({
       classEditor.resetClassDraft()
       background.resetBackgroundDraft()
       feat.resetFeatDraft()
-      hydrateFromCharacter(nextCharacter)
+      hydrateFromCharacter(nextCharacter, {
+        markTouched: options?.markAbilityScoresTouched === true,
+      })
       setActiveCharacterId(nextCharacter.id)
     },
     [
@@ -530,10 +725,31 @@ export function useCharacterEditor({
 
   const importCharacter = useCallback(
     async (importedCharacter: Character) => {
-      applyCharacterState(importedCharacter)
+      const landingStep = await getCharacterOpenDestination(importedCharacter, {
+        speciesCatalog,
+        classCatalog,
+        backgroundCatalog,
+        featCatalog,
+        spellCatalog,
+        equipmentCatalog,
+      })
+
+      applyCharacterState(importedCharacter, {
+        activeStepId: landingStep,
+        markAbilityScoresTouched: true,
+      })
       await repository.save(importedCharacter)
     },
-    [applyCharacterState, repository],
+    [
+      applyCharacterState,
+      backgroundCatalog,
+      classCatalog,
+      equipmentCatalog,
+      featCatalog,
+      repository,
+      speciesCatalog,
+      spellCatalog,
+    ],
   )
 
   const openCharacter = useCallback(
@@ -552,8 +768,20 @@ export function useCharacterEditor({
           details: migrateLegacyCharacterDetails(stored.details),
         }
 
+        const landingStep = await getCharacterOpenDestination(
+          hydratedCharacter,
+          {
+            speciesCatalog,
+            classCatalog,
+            backgroundCatalog,
+            featCatalog,
+            spellCatalog,
+            equipmentCatalog,
+          },
+        )
+
         setCharacter(hydratedCharacter)
-        setActiveStepId(DEFAULT_WIZARD_UI_STATE.activeStepId)
+        setActiveStepId(landingStep)
         setBasicsTouched(false)
         setDetailsTouched(false)
         setSaveMessage(null)
@@ -562,7 +790,7 @@ export function useCharacterEditor({
         classEditor.hydrateForCharacter(hydratedCharacter)
         background.resetBackgroundDraft()
         feat.resetFeatDraft()
-        hydrateFromCharacter(hydratedCharacter)
+        hydrateFromCharacter(hydratedCharacter, { markTouched: true })
         setActiveCharacterId(hydratedCharacter.id)
         return true
       } finally {
@@ -571,11 +799,17 @@ export function useCharacterEditor({
     },
     [
       background.resetBackgroundDraft,
+      backgroundCatalog,
+      classCatalog,
       classEditor.hydrateForCharacter,
+      equipmentCatalog,
       feat.resetFeatDraft,
+      featCatalog,
       hydrateFromCharacter,
       repository,
       species.resetSpeciesDraft,
+      speciesCatalog,
+      spellCatalog,
     ],
   )
 
@@ -614,6 +848,10 @@ export function useCharacterEditor({
     spellCatalog,
     spellValidation,
     setSpellSourceStates,
+    resolvedEquipment,
+    equipmentValidation,
+    setEquipmentSelections,
+    setEquipmentLoadout,
     unresolvedDeferredRequirements,
     finishPolicy,
     finishBlockedMessage,
@@ -632,6 +870,7 @@ export function useCharacterEditor({
     classCatalog,
     backgroundCatalog,
     featCatalog,
+    equipmentCatalog,
     editionChange,
     speciesCatalog,
     handleFinish,

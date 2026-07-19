@@ -10,9 +10,14 @@ import { hasCharacterDetailsReviewContent } from '../../reviewSummary'
 import { CharacterDetailsReviewContent } from '../../../features/character-details/CharacterDetailsReviewContent'
 import type {
   AbilityScores,
+  EquipmentLoadout,
   ResolvedDeferredCharacterRequirement,
 } from '../../../domain/types'
+import type { EquipmentCatalog } from '../../../domain/ports/equipmentCatalog'
 import type { ReviewSheetModels } from '../../buildReviewSheetModels'
+import type { ResolvedInventoryItem } from '../../../rules/character/resolveCharacterEquipment'
+import { EquipmentLoadoutManager } from '../../../features/equipment/EquipmentLoadoutManager'
+import { useEquipmentDefinitions } from '../../../features/equipment/useEquipmentDefinitions'
 import type { StepStatus } from '../types'
 import { AbilityScoreCards } from './review/AbilityScoreCards'
 import { CharacterSheetHeader } from './review/CharacterSheetHeader'
@@ -44,6 +49,10 @@ export type ReviewStepProps = {
   stepStatuses: Record<ReviewableStepId, StepStatus>
   summaries: Record<ReviewableStepId, string[]>
   characterDetailsReview: CharacterDetailsReviewSections
+  equipmentInventory: readonly ResolvedInventoryItem[]
+  equipmentLoadout: EquipmentLoadout
+  equipmentCatalog: EquipmentCatalog
+  onChangeEquipmentLoadout: (next: EquipmentLoadout) => void
   finishPolicy: FinishPolicyResult
   finishBlockedMessage: string
   finishMessage: string | null
@@ -89,6 +98,10 @@ export function ReviewStep({
   stepStatuses,
   summaries,
   characterDetailsReview,
+  equipmentInventory,
+  equipmentLoadout,
+  equipmentCatalog,
+  onChangeEquipmentLoadout,
   finishPolicy,
   finishBlockedMessage,
   finishMessage,
@@ -104,7 +117,13 @@ export function ReviewStep({
     unresolvedDeferredRequirements,
     hasSpellcastingCapability,
     spellLines,
+    hasEquipmentInventory: equipmentInventory.length > 0,
   })
+
+  const equipmentDefinitions = useEquipmentDefinitions(
+    equipmentInventory,
+    equipmentCatalog,
+  )
 
   const hasAttentionItems =
     sheet.incompleteSteps.length > 0 || sheet.deferredRequirements.length > 0
@@ -114,7 +133,7 @@ export function ReviewStep({
 
   const combatStats = [
     { label: 'Hit Points', value: sheetModels.hitPointMaximumLabel },
-    { label: 'Armor Class', value: '—' },
+    { label: 'Armor Class', value: sheetModels.armorClassLabel },
     { label: 'Initiative', value: sheetModels.initiativeLabel },
     { label: 'Speed', value: sheetModels.speedLabel ?? '—' },
   ]
@@ -218,9 +237,15 @@ export function ReviewStep({
           title="Equipment"
           status={stepStatuses.equipment}
           editStepId="equipment"
+          editLabel="Manage Equipment"
           onEdit={onEditStep}
         >
-          <DetailLines lines={sheet.equipmentLines} />
+          <EquipmentLoadoutManager
+            inventory={equipmentInventory}
+            loadout={equipmentLoadout}
+            definitionsById={equipmentDefinitions}
+            onChangeLoadout={onChangeEquipmentLoadout}
+          />
         </CharacterSheetSection>
       ) : null}
 

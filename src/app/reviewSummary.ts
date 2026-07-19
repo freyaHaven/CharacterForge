@@ -95,6 +95,8 @@ export type ReviewSummaryContext = {
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
   rolledValidation: RolledAssignmentValidationResult | null
+  /** Derived starting equipment lines for the Overview equipment section. */
+  equipmentLines?: string[]
 }
 
 const ABILITY_SUMMARY_LABELS: { key: keyof AbilityScores; label: string }[] = [
@@ -338,6 +340,25 @@ export function buildCharacterDetailsReviewSections(
 
 export { hasCharacterDetailsReviewContent, type CharacterDetailsReviewSections }
 
+function buildEquipmentSummary(context: ReviewSummaryContext): string[] {
+  if (context.equipmentLines !== undefined && context.equipmentLines.length > 0) {
+    return context.equipmentLines
+  }
+
+  if (context.character.classes.length === 0 && context.character.background === null) {
+    return ['Select a class to choose starting equipment']
+  }
+
+  if (
+    context.equipmentLines !== undefined &&
+    context.equipmentLines.length === 0
+  ) {
+    return ['No equipment selected yet']
+  }
+
+  return ['No equipment selected yet']
+}
+
 function buildPlaceholderSummary(): string[] {
   return ['Coming soon']
 }
@@ -353,7 +374,7 @@ export function buildReviewSummaries(
     'ability-scores': buildAbilityScoresSummary(context),
     class: buildClassSummary(context, stepStatuses.class),
     background: buildBackgroundSummary(context, stepStatuses.background),
-    equipment: buildPlaceholderSummary(),
+    equipment: buildEquipmentSummary(context),
     feats: buildFeatSummary(context, stepStatuses.feats),
     spells: buildPlaceholderSummary(),
   }

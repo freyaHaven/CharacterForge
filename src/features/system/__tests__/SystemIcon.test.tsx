@@ -12,6 +12,8 @@ describe('SystemIcon', () => {
 
     expect(image).not.toBeNull()
     expect(image).toHaveAttribute('src', getSystemIcon('dexterity', 50))
+    expect(image).toHaveAttribute('width', '50')
+    expect(image).toHaveAttribute('height', '50')
     expect(image).toHaveAttribute('aria-hidden', 'true')
   })
 

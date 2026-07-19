@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultCharacter } from '../../../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../../../domain/character/details'
+import { EMPTY_CHARACTER_EQUIPMENT } from '../../../domain/equipment/types'
 import type { Character } from '../../../domain/types'
 import { parseStoredCharacter } from '../parseStoredCharacter'
 import { serializeCharacter } from '../serializeCharacter'
@@ -72,6 +73,7 @@ function withMigratedDefaults(
     feat: feat ?? null,
     details: details ?? createDefaultCharacterDetails(),
     spellSourceStates: [],
+    equipment: EMPTY_CHARACTER_EQUIPMENT,
   }
 }
 

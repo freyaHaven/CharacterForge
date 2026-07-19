@@ -58,7 +58,7 @@ import {
   type ClassSelectionDrafts,
 } from './classSelectionDraft'
 import type { SpeciesDefinition, SpeciesSelection } from '../../domain/species/types'
-import { resolveHitPointMaximum } from '../../rules/hit-points/resolveHitPointMaximum'
+import { calculateCharacterHitPoints } from '../../rules/hit-points/calculateCharacterHitPoints'
 
 type ClassPickerProps = {
   editionId: EditionId
@@ -313,7 +313,7 @@ export function ClassPicker({
       }
     })
 
-    const resolved = resolveHitPointMaximum({
+    const resolved = calculateCharacterHitPoints({
       classes: classesForHp,
       startingClassInstanceId: resolvedStartingClassInstanceId,
       classDefinitionsById: new Map(

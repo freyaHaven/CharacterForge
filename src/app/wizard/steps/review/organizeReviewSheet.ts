@@ -177,6 +177,7 @@ export function organizeReviewSheet(input: {
   sheetModels: Pick<
     ReviewSheetModels,
     | 'hitPointMaximumLabel'
+    | 'armorClassLabel'
     | 'initiativeLabel'
     | 'speedLabel'
     | 'proficiencyBonusLabel'
@@ -184,6 +185,7 @@ export function organizeReviewSheet(input: {
   unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[]
   hasSpellcastingCapability: boolean
   spellLines: string[]
+  hasEquipmentInventory?: boolean
 }): ReviewSheetContent {
   const { skills, features } = buildSkillsAndFeatures(
     input.classDisplay,
@@ -209,7 +211,8 @@ export function organizeReviewSheet(input: {
 
   const sectionVisibility: ReviewSectionVisibility = {
     skills: skills.length > 0,
-    equipment: equipmentLines.length > 0,
+    equipment:
+      (input.hasEquipmentInventory ?? false) || equipmentLines.length > 0,
     features: features.length > 0,
     spells: input.hasSpellcastingCapability || spellLines.length > 0,
     background: hasMeaningfulLines(backgroundLines),
@@ -218,7 +221,7 @@ export function organizeReviewSheet(input: {
   return {
     headerStats: [
       { label: 'Hit Points', value: input.sheetModels.hitPointMaximumLabel },
-      { label: 'Armor Class', value: '—' },
+      { label: 'Armor Class', value: input.sheetModels.armorClassLabel },
       { label: 'Initiative', value: input.sheetModels.initiativeLabel },
     ],
     coreStats: [

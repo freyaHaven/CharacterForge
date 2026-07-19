@@ -136,7 +136,7 @@ describe('Ability Scores wizard integration', () => {
     )
   })
 
-  it('does not mark ability scores as touched when loading saved scores', async () => {
+  it('marks ability scores complete when opening a saved point-buy character', async () => {
     await renderApp(
       createStoredCharacter({
         creationMethod: 'point-buy',
@@ -145,7 +145,7 @@ describe('Ability Scores wizard integration', () => {
     )
 
     expect(getWizardStepButton(screen, 'Abilities')).toHaveAccessibleName(
-      /not started/i,
+      /complete/i,
     )
   })
 

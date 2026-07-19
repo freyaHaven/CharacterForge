@@ -30,6 +30,8 @@ export function SystemIcon({
     <img
       className={className}
       src={iconSrc}
+      width={size}
+      height={size}
       alt={isDecorative ? '' : alt}
       aria-hidden={isDecorative ? true : undefined}
       draggable={false}

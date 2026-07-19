@@ -1,6 +1,7 @@
 import type { AbilityId } from '../abilities/types'
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
+import type { StartingEquipmentDefinition } from '../equipment/types'
 import type { SkillId } from '../skills/types'
 
 export type BackgroundOriginFeat = {
@@ -29,22 +30,6 @@ export type BackgroundToolProficiency =
       options: BackgroundToolOption[]
     }
 
-export type BackgroundEquipmentPackage = {
-  id: string
-  label: string
-  summary: string
-}
-
-export type BackgroundEquipmentDefinition = {
-  choiceId: string
-  prompt: string
-  packages: BackgroundEquipmentPackage[]
-  goldAlternative: {
-    goldPieces: number
-    label: string
-  }
-}
-
 export type BackgroundChoiceOption = {
   id: string
   label: string
@@ -69,7 +54,7 @@ export type BackgroundDefinition = {
   originFeat: BackgroundOriginFeat
   skillProficiencies: SkillId[]
   toolProficiency: BackgroundToolProficiency
-  equipment: BackgroundEquipmentDefinition
+  equipment: StartingEquipmentDefinition
   choices: BackgroundChoice[]
 }
 

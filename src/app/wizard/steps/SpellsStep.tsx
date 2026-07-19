@@ -209,6 +209,30 @@ function SelectEntitlementEditor({
       return
     }
 
+    if (!selected.has(spellId)) {
+      const countingGrants = entitlement.grantedSpells.filter(
+        (grant) => grant.countsAgainstLimit,
+      ).length
+      const used = entitlement.selectedSpellIds.length + countingGrants
+      if (used >= entitlement.limit) {
+        return
+      }
+
+      const spell = selectableSpells.find((entry) => entry.id === spellId)
+      if (spell !== undefined) {
+        const levelRow = countDisplay.levelRows.find(
+          (row) => row.level === spell.level,
+        )
+        if (
+          levelRow?.capacity !== null &&
+          levelRow !== undefined &&
+          levelRow.selected >= levelRow.capacity
+        ) {
+          return
+        }
+      }
+    }
+
     const nextIds = selected.has(spellId)
       ? entitlement.selectedSpellIds.filter((id) => id !== spellId)
       : [...entitlement.selectedSpellIds, spellId]
@@ -219,6 +243,12 @@ function SelectEntitlementEditor({
   }
 
   const idPrefix = `${group.groupId}-${entitlement.entitlementId}`
+  const countingGrants = entitlement.grantedSpells.filter(
+    (grant) => grant.countsAgainstLimit,
+  ).length
+  const used =
+    entitlement.selectedSpellIds.length + countingGrants
+  const atSelectionLimit = used >= entitlement.limit
 
   return (
     <SpellSelectionGrid
@@ -231,6 +261,7 @@ function SelectEntitlementEditor({
       selectedSpellIds={selected}
       invalidSpellIds={invalidSpellIds}
       eligibilityBySpellId={eligibilityBySpellId}
+      atSelectionLimit={atSelectionLimit}
       onToggleSpell={toggle}
     />
   )

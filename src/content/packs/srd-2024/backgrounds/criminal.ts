@@ -1,6 +1,7 @@
 import type { BackgroundDefinition } from '../../../../domain/background/types'
-import { createStandardEquipmentChoice } from '../../../../domain/background/standardEquipment'
+import { createBackgroundStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
 import { SRD_2024_SOURCE } from '../source'
+import { CRIMINAL_PACKAGE } from '../equipment/packages'
 
 export const criminalSrd2024: BackgroundDefinition = {
   id: 'srd-2024:criminal',
@@ -23,8 +24,6 @@ export const criminalSrd2024: BackgroundDefinition = {
     toolId: 'thieves-tools',
     label: "Thieves' Tools",
   },
-  equipment: createStandardEquipmentChoice(
-    "2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes, 16 GP",
-  ),
+  equipment: createBackgroundStartingEquipment(CRIMINAL_PACKAGE),
   choices: [],
 }

@@ -79,7 +79,7 @@ describe('Placeholder wizard steps', () => {
       screen.getByRole('heading', { name: 'Equipment', level: 2 }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/starting weapons, armour, tools, and supplies/i),
+      screen.getByText(/choose the equipment your character starts with/i),
     ).toBeInTheDocument()
   })
 })

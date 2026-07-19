@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import type { Character } from '../../domain/types'
+import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import { withSingleClassInstance } from '../../domain/character/characterClassSelection'
 import { createTestFighterClassInstance } from '../../testing/classFixtures'
@@ -14,6 +15,7 @@ import {
   completeFighterSelection,
   goToClassStep,
   goToSpeciesStep,
+  goToWizardStep,
   waitForClassLoaded,
 } from '../../testing/wizardTestUtils'
 import {
@@ -23,6 +25,9 @@ import {
   seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
 import { clearClassEditorWorkflow } from '../session/classEditorWorkflowStorage'
+import {
+  STARTING_EQUIPMENT_ENTITLEMENT_ID,
+} from '../../domain/equipment/startingEquipmentHelpers'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
   loadMock: vi.fn(),
@@ -56,6 +61,20 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
     species: { ...COMPLETE_DWARF_SELECTION },
     ...withSingleClassInstance(fighterInstance),
     background: null,
+    equipment: {
+      selections: [
+        {
+          source: {
+            kind: 'class-instance',
+            instanceId: fighterInstance.instanceId,
+          },
+          entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+          optionId: 'package-a',
+          choices: [],
+        },
+      ],
+      loadout: EMPTY_EQUIPMENT_LOADOUT,
+    },
     ...overrides,
   })
 }
@@ -287,6 +306,7 @@ describe('Class workflow in App', () => {
   it('prompts before clearing species and class when both are incompatible', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(getEditionSelect(), 'srd-2014')
 
     expect(
@@ -301,6 +321,7 @@ describe('Class workflow in App', () => {
   it('keeps edition, species, and class when the prompt is cancelled', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(getEditionSelect(), 'srd-2014')
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 
@@ -317,6 +338,7 @@ describe('Class workflow in App', () => {
   it('changes edition and clears incompatible species and class on continue', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(getEditionSelect(), 'srd-2014')
     await user.click(screen.getByRole('button', { name: /^continue$/i }))
 

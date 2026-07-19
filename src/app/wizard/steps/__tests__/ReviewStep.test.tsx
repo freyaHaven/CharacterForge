@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { createDefaultCharacter } from '../../../../domain/character/defaults'
+import { EMPTY_EQUIPMENT_LOADOUT } from '../../../../domain/equipment/types'
+import { SRD_2024_EQUIPMENT_BY_ID } from '../../../../content/packs/srd-2024/equipment'
 import { buildReviewSheetModels } from '../../../buildReviewSheetModels'
 import { ReviewStep } from '../ReviewStep'
 
@@ -19,6 +21,11 @@ const emptyCharacterDetailsReview = {
   identity: [],
   personality: [],
   backstoryNotes: null,
+}
+
+const emptyEquipmentCatalog = {
+  getEquipment: async () => null,
+  listEquipment: async () => [],
 }
 
 const defaultStatuses = {
@@ -78,6 +85,10 @@ const defaultProps = {
   hasSpellcastingCapability: false,
   spellLines: [],
   unresolvedDeferredRequirements: [],
+  equipmentInventory: [],
+  equipmentLoadout: EMPTY_EQUIPMENT_LOADOUT,
+  equipmentCatalog: emptyEquipmentCatalog,
+  onChangeEquipmentLoadout: vi.fn(),
 }
 
 describe('ReviewStep', () => {
@@ -410,5 +421,198 @@ describe('ReviewStep', () => {
 
     expect(screen.getByText('Character complete.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /finish character/i })).toBeEnabled()
+  })
+
+  it('shows an interactive Equipment loadout card on Overview', async () => {
+    const user = userEvent.setup()
+    const onChangeEquipmentLoadout = vi.fn()
+    const onEditStep = vi.fn()
+    const catalog = {
+      getEquipment: async (itemId: string) =>
+        SRD_2024_EQUIPMENT_BY_ID.get(itemId) ?? null,
+      listEquipment: async () => [...SRD_2024_EQUIPMENT_BY_ID.values()],
+    }
+    const inventory = [
+      {
+        itemId: 'srd-2024:chain-mail',
+        name: 'Chain Mail',
+        quantity: 1,
+        category: 'armor' as const,
+      },
+      {
+        itemId: 'srd-2024:greatsword',
+        name: 'Greatsword',
+        quantity: 1,
+        category: 'weapon' as const,
+      },
+      {
+        itemId: 'srd-2024:shield',
+        name: 'Shield',
+        quantity: 1,
+        category: 'shield' as const,
+      },
+      {
+        itemId: 'srd-2024:arrows',
+        name: 'Arrows',
+        quantity: 20,
+        category: 'ammunition' as const,
+      },
+    ]
+    const loadout = {
+      armorItemId: 'srd-2024:chain-mail',
+      mainHandItemId: 'srd-2024:greatsword',
+      offHandItemId: null,
+      mainHandGrip: null,
+    }
+    const armoredModels = buildReviewSheetModels({
+      character: createDefaultCharacter({
+        abilityScores: {
+          strength: 15,
+          dexterity: 14,
+          constitution: 13,
+          intelligence: 12,
+          wisdom: 10,
+          charisma: 8,
+        },
+        equipment: {
+          selections: [],
+          loadout,
+        },
+      }),
+      speciesDefinition: null,
+      backgroundDefinition: null,
+      featDefinition: null,
+      classDefinitions: new Map(),
+      resolvedEquipment: {
+        sources: [],
+        inventory,
+        currency: { goldPieces: 0 },
+      },
+      equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
+    })
+
+    const { rerender } = render(
+      <ReviewStep
+        {...defaultProps}
+        sheetModels={armoredModels}
+        equipmentInventory={inventory}
+        equipmentLoadout={loadout}
+        equipmentCatalog={catalog}
+        onChangeEquipmentLoadout={onChangeEquipmentLoadout}
+        stepStatuses={{
+          ...defaultStatuses,
+          equipment: { completion: 'complete', hasValidationErrors: false },
+        }}
+        summaries={{
+          ...defaultSummaries,
+          equipment: ['Starting equipment selected'],
+        }}
+        characterDetailsReview={emptyCharacterDetailsReview}
+        finishPolicy={{
+          canFinish: true,
+          incompleteRequiredSteps: [],
+          unresolvedDeferredRequirements: [],
+        }}
+        finishBlockedMessage=""
+        finishMessage={null}
+        onEditStep={onEditStep}
+        onFinish={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Equipment', level: 3 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Manage Equipment' }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Equipment slots')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByText('Chain Mail')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Greatsword')).toBeInTheDocument()
+    expect(screen.getByText('Shield')).toBeInTheDocument()
+    expect(screen.queryByText(/Arrows/)).not.toBeInTheDocument()
+
+    const combatStats = screen.getByLabelText('Combat summary')
+    expect(within(combatStats).getByText('16')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Unequip Chain Mail' }))
+    expect(onChangeEquipmentLoadout).toHaveBeenCalledWith({
+      armorItemId: null,
+      mainHandItemId: 'srd-2024:greatsword',
+      offHandItemId: null,
+      mainHandGrip: null,
+    })
+
+    const unequippedLoadout = {
+      armorItemId: null,
+      mainHandItemId: 'srd-2024:greatsword',
+      offHandItemId: null,
+      mainHandGrip: null,
+    }
+    const unarmoredModels = buildReviewSheetModels({
+      character: createDefaultCharacter({
+        abilityScores: {
+          strength: 15,
+          dexterity: 14,
+          constitution: 13,
+          intelligence: 12,
+          wisdom: 10,
+          charisma: 8,
+        },
+        equipment: {
+          selections: [],
+          loadout: unequippedLoadout,
+        },
+      }),
+      speciesDefinition: null,
+      backgroundDefinition: null,
+      featDefinition: null,
+      classDefinitions: new Map(),
+      resolvedEquipment: {
+        sources: [],
+        inventory,
+        currency: { goldPieces: 0 },
+      },
+      equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
+    })
+
+    rerender(
+      <ReviewStep
+        {...defaultProps}
+        sheetModels={unarmoredModels}
+        equipmentInventory={inventory}
+        equipmentLoadout={unequippedLoadout}
+        equipmentCatalog={catalog}
+        onChangeEquipmentLoadout={onChangeEquipmentLoadout}
+        stepStatuses={{
+          ...defaultStatuses,
+          equipment: { completion: 'complete', hasValidationErrors: false },
+        }}
+        summaries={{
+          ...defaultSummaries,
+          equipment: ['Starting equipment selected'],
+        }}
+        characterDetailsReview={emptyCharacterDetailsReview}
+        finishPolicy={{
+          canFinish: true,
+          incompleteRequiredSteps: [],
+          unresolvedDeferredRequirements: [],
+        }}
+        finishBlockedMessage=""
+        finishMessage={null}
+        onEditStep={onEditStep}
+        onFinish={vi.fn()}
+      />,
+    )
+
+    expect(
+      within(screen.getByLabelText('Combat summary')).getByText('12'),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Manage Equipment' }))
+    expect(onEditStep).toHaveBeenCalledWith('equipment')
   })
 })

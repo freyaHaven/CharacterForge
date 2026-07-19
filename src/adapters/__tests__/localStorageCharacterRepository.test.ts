@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createLocalStorageCharacterRepository } from '../localStorageCharacterRepository'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../../domain/character/details'
+import { EMPTY_CHARACTER_EQUIPMENT } from '../../domain/equipment/types'
 import type { Character } from '../../domain/types'
 
 const emptyClassState = {
@@ -67,6 +68,7 @@ function withMigratedDefaults(
     feat: feat ?? null,
     details: details ?? createDefaultCharacterDetails(),
     spellSourceStates: [],
+    equipment: EMPTY_CHARACTER_EQUIPMENT,
   }
 }
 
@@ -137,7 +139,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 12,
+      schemaVersion: 14,
       character,
     })
   })

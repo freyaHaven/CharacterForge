@@ -11,7 +11,6 @@ import type { ClassBuildMode } from '../../../../features/class/classBuildMode'
 import { createEmptyClassSelectionDrafts } from '../../../../features/class/classSelectionDraft'
 import { BackgroundStep } from '../BackgroundStep'
 import { ClassStep } from '../ClassStep'
-import { EquipmentStep } from '../EquipmentStep'
 
 function renderClassStep(buildMode: ClassBuildMode | null = 'single-class') {
   render(
@@ -122,27 +121,5 @@ describe('BackgroundStep', () => {
 
     expect(screen.getByRole('button', { name: 'Soldier' })).toBeInTheDocument()
     expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
-  })
-})
-
-describe('EquipmentStep', () => {
-  it('renders the heading, explanation, and coming soon notice', () => {
-    render(<EquipmentStep />)
-
-    expect(
-      screen.getByRole('heading', { name: 'Equipment', level: 2 }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/starting weapons, armour, tools, and supplies/i),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Coming soon')).toBeInTheDocument()
-  })
-
-  it('does not render interactive selection controls', () => {
-    render(<EquipmentStep />)
-
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 })

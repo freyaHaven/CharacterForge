@@ -26,6 +26,7 @@ function createStatuses(
 
 const emptySheetModels = {
   hitPointMaximumLabel: '—',
+  armorClassLabel: '10',
   initiativeLabel: '+0',
   speedLabel: null as string | null,
   proficiencyBonusLabel: '+2',

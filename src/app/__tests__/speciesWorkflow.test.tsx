@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import type { Character } from '../../domain/types'
 import { createDefaultCharacter } from '../../domain/character/defaults'
-import { goToSpeciesStep } from '../../testing/wizardTestUtils'
+import { goToSpeciesStep, goToWizardStep } from '../../testing/wizardTestUtils'
 import {
   clearEditorSession,
   clearRecentCharacters,
@@ -156,6 +156,7 @@ describe('Species workflow in App', () => {
   it('autosaves the stable species selection for Dwarf', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.type(screen.getByRole('textbox', { name: /character name/i }), 'a')
 
     await waitFor(() => {
@@ -290,6 +291,7 @@ describe('Species workflow in App', () => {
   it('prompts before clearing species when changing edition', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(getEditionSelect(), 'srd-2014')
 
     expect(
@@ -306,6 +308,7 @@ describe('Species workflow in App', () => {
   it('keeps the old edition and species when the prompt is cancelled', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(getEditionSelect(), 'srd-2014')
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 
@@ -320,6 +323,7 @@ describe('Species workflow in App', () => {
   it('changes edition and clears species when the prompt is confirmed', async () => {
     const { user } = await renderLoadedApp()
 
+    await goToWizardStep(user, screen, 'Basics')
     await user.selectOptions(getEditionSelect(), 'srd-2014')
     await user.click(screen.getByRole('button', { name: /^continue$/i }))
 

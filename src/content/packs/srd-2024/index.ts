@@ -7,6 +7,7 @@ import { monkSrd2024 } from './classes/monk'
 import { paladinSrd2024 } from './classes/paladin'
 import { rangerSrd2024 } from './classes/ranger'
 import { rogueSrd2024 } from './classes/rogue'
+import { SRD_2024_EQUIPMENT } from './equipment'
 import { SRD_2024_FEATS } from './feats'
 import { srd2024Manifest } from './manifest'
 import { SRD_2024_SPELL_LISTS } from './spell-lists'
@@ -46,4 +47,5 @@ export const srd2024ContentPack: ContentPack = {
   species: [...SRD_2024_SPECIES],
   spells: [...SRD_2024_SPELLS],
   spellLists: [...SRD_2024_SPELL_LISTS],
+  equipment: [...SRD_2024_EQUIPMENT],
 }

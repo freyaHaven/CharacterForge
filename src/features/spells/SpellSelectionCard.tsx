@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { SpellDefinition } from '../../domain/spell/types'
 import type { SpellSelectionEligibility } from '../../rules/spell/spellSelectionEligibility'
 import { formatSpellLevelLabel } from './formatSpellLevelLabel'
@@ -20,7 +20,8 @@ export type SpellSelectionCardProps = {
 }
 
 /**
- * Compact selectable spell card with shared preview popover (hover, focus, touch).
+ * Compact selectable spell card.
+ * Spell details open from the info control (not card hover), matching HelpTooltip.
  */
 export function SpellSelectionCard({
   spell,
@@ -32,34 +33,17 @@ export function SpellSelectionCard({
   eligibility = null,
   onToggle,
 }: SpellSelectionCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null)
   const infoButtonRef = useRef<HTMLButtonElement>(null)
   const previewAnchorRef = useRef<HTMLElement | null>(null)
-  const [hoverOpen, setHoverOpen] = useState(false)
-  const [focusOpen, setFocusOpen] = useState(false)
   const [pinnedOpen, setPinnedOpen] = useState(false)
-  const blurTimerRef = useRef<number | null>(null)
   const descriptionId = useId()
   const eligibilityId = useId()
   const schoolSlug = normalizeSpellSchool(spell.school)
 
-  const previewOpen = hoverOpen || focusOpen || pinnedOpen
   const isDiscouraged = eligibility?.recommendation === 'discouraged'
   const isBlocked = eligibility?.recommendation === 'blocked' && !selected
   const isDisabled = disabled || isBlocked
   const duplicateReason = eligibility?.duplicateReason ?? null
-
-  const clearBlurTimer = useCallback(() => {
-    if (blurTimerRef.current !== null) {
-      window.clearTimeout(blurTimerRef.current)
-      blurTimerRef.current = null
-    }
-  }, [])
-
-  const closeTransientPreview = useCallback(() => {
-    setHoverOpen(false)
-    setFocusOpen(false)
-  }, [])
 
   const classNames = [
     'spell-selection-card',
@@ -88,37 +72,26 @@ export function SpellSelectionCard({
         <span className="spell-selection-card__badge">Always prepared</span>
       ) : null}
       {duplicateReason !== null && !granted ? (
-        <span
-          className={
-            isBlocked
-              ? 'spell-selection-card__badge spell-selection-card__badge--blocked'
-              : 'spell-selection-card__badge spell-selection-card__badge--elsewhere'
-          }
-          id={eligibilityId}
-        >
-          {isBlocked ? 'Already available' : 'Also available elsewhere'}
-        </span>
+        <>
+          <span
+            className={
+              isBlocked
+                ? 'spell-selection-card__badge spell-selection-card__badge--blocked'
+                : 'spell-selection-card__badge spell-selection-card__badge--elsewhere'
+            }
+          >
+            {isBlocked ? 'Already available' : 'Also available elsewhere'}
+          </span>
+          <span id={eligibilityId} className="visually-hidden">
+            {duplicateReason}
+          </span>
+        </>
       ) : null}
     </>
   )
 
   return (
-    <div
-      ref={cardRef}
-      className={classNames}
-      data-school={schoolSlug}
-      title={duplicateReason ?? undefined}
-      onMouseEnter={() => {
-        if (pinnedOpen) {
-          return
-        }
-        previewAnchorRef.current = cardRef.current
-        setHoverOpen(true)
-      }}
-      onMouseLeave={() => {
-        setHoverOpen(false)
-      }}
-    >
+    <div className={classNames} data-school={schoolSlug}>
       <span className="spell-selection-card__school-strip" aria-hidden="true" />
 
       {granted ? (
@@ -138,26 +111,6 @@ export function SpellSelectionCard({
             aria-describedby={describedBy}
             onChange={() => {
               onToggle?.()
-            }}
-            onFocus={() => {
-              clearBlurTimer()
-              if (!pinnedOpen) {
-                previewAnchorRef.current = cardRef.current
-                setFocusOpen(true)
-              }
-            }}
-            onBlur={() => {
-              clearBlurTimer()
-              blurTimerRef.current = window.setTimeout(() => {
-                const active = document.activeElement
-                if (
-                  active === infoButtonRef.current ||
-                  cardRef.current?.contains(active)
-                ) {
-                  return
-                }
-                setFocusOpen(false)
-              }, 0)
             }}
           />
           <SpellSchoolIcon school={spell.school} />
@@ -182,20 +135,6 @@ export function SpellSelectionCard({
           event.stopPropagation()
           previewAnchorRef.current = infoButtonRef.current
           setPinnedOpen((current) => !current)
-          closeTransientPreview()
-        }}
-        onFocus={() => {
-          clearBlurTimer()
-        }}
-        onBlur={() => {
-          clearBlurTimer()
-          blurTimerRef.current = window.setTimeout(() => {
-            const active = document.activeElement
-            if (cardRef.current?.contains(active)) {
-              return
-            }
-            setFocusOpen(false)
-          }, 0)
         }}
       >
         ⓘ
@@ -204,11 +143,10 @@ export function SpellSelectionCard({
       <SpellPreviewPopover
         spell={spell}
         anchor={previewAnchorRef.current}
-        open={previewOpen}
-        dismissible={pinnedOpen}
+        open={pinnedOpen}
+        dismissible
         onClose={() => {
           setPinnedOpen(false)
-          closeTransientPreview()
         }}
       />
     </div>

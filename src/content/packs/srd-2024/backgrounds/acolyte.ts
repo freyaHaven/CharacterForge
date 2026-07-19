@@ -1,6 +1,7 @@
 import type { BackgroundDefinition } from '../../../../domain/background/types'
-import { createStandardEquipmentChoice } from '../../../../domain/background/standardEquipment'
+import { createBackgroundStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
 import { SRD_2024_SOURCE } from '../source'
+import { ACOLYTE_PACKAGE } from '../equipment/packages'
 
 export const acolyteSrd2024: BackgroundDefinition = {
   id: 'srd-2024:acolyte',
@@ -23,8 +24,6 @@ export const acolyteSrd2024: BackgroundDefinition = {
     toolId: 'calligraphers-supplies',
     label: "Calligrapher's Supplies",
   },
-  equipment: createStandardEquipmentChoice(
-    "Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP",
-  ),
+  equipment: createBackgroundStartingEquipment(ACOLYTE_PACKAGE),
   choices: [],
 }

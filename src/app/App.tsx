@@ -323,7 +323,21 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   onCommittedSelectionChange={background.commitBackgroundSelection}
                 />
               ),
-              equipment: <EquipmentStep />,
+              equipment: (
+                <EquipmentStep
+                  resolved={editor.resolvedEquipment}
+                  selections={character.equipment.selections}
+                  loadout={character.equipment.loadout}
+                  equipmentCatalog={editor.equipmentCatalog}
+                  onChangeSelections={editor.setEquipmentSelections}
+                  onChangeLoadout={editor.setEquipmentLoadout}
+                  validationIssues={
+                    editor.equipmentValidation?.ok === false
+                      ? editor.equipmentValidation.issues
+                      : []
+                  }
+                />
+              ),
               feats: (
                 <FeatsStep
                   editionId={character.editionId}
@@ -394,6 +408,10 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   }}
                   summaries={editor.reviewSummaries}
                   characterDetailsReview={editor.characterDetailsReviewSections}
+                  equipmentInventory={editor.resolvedEquipment.inventory}
+                  equipmentLoadout={character.equipment.loadout}
+                  equipmentCatalog={editor.equipmentCatalog}
+                  onChangeEquipmentLoadout={editor.setEquipmentLoadout}
                   finishPolicy={editor.finishPolicy}
                   finishBlockedMessage={editor.finishBlockedMessage}
                   finishMessage={editor.finishMessage}

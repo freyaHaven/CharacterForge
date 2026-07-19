@@ -15,11 +15,26 @@ import type { ClassValidationResult } from '../../rules/class/classRules'
 import type { BackgroundValidationResult } from '../../rules/background/backgroundRules'
 import type { FeatValidationResult } from '../../rules/feat/featRules'
 import type { SpellValidationResult } from '../../rules/spell/validateSpellSourceStates'
+import type { EquipmentValidationResult } from '../../rules/equipment/validateEquipmentSelections'
 import type { SpeciesValidationResult } from '../../rules/species/speciesRules'
 import type { StandardArrayDraftValidationResult } from '../../features/ability-scores/standardArrayDraft'
 import { canSaveCharacter } from '../characterSavePolicy'
 import { WIZARD_STEPS } from './steps'
+import { getVisibleWizardSteps, type WizardStepContext } from './stepVisibility'
 import type { StepStatus, WizardStepId } from './types'
+
+/**
+ * Steps that use {@link getPlaceholderStepStatus} and have no completion
+ * criteria yet. They stay visible in nav but are skipped when choosing the
+ * first incomplete step.
+ */
+export const PLACEHOLDER_WIZARD_STEP_IDS = [] as const satisfies readonly WizardStepId[]
+
+export function isPlaceholderWizardStep(stepId: WizardStepId): boolean {
+  return (PLACEHOLDER_WIZARD_STEP_IDS as readonly WizardStepId[]).includes(
+    stepId,
+  )
+}
 
 /**
  * Inputs for computing wizard step status.
@@ -64,6 +79,11 @@ export type StepValidationContext = {
   spellValidation: SpellValidationResult | null
   /** Whether committed spell source states are valid (or spells step inactive). */
   committedSpellsValid: boolean
+
+  /** Validation of equipment selections; null when Equipment step has no sources. */
+  equipmentValidation: EquipmentValidationResult | null
+  /** Whether committed equipment selections are valid (or no sources active). */
+  committedEquipmentValid: boolean
 
   standardArrayValidation: StandardArrayDraftValidationResult | null
   pointBuyValidation: PointBuyValidationResult | null
@@ -229,6 +249,29 @@ export function getSpellsStepStatus(context: StepValidationContext): StepStatus 
   }
 }
 
+export function getEquipmentStepStatus(
+  context: StepValidationContext,
+): StepStatus {
+  if (context.equipmentValidation === null) {
+    return { completion: 'not-started', hasValidationErrors: false }
+  }
+
+  if (context.equipmentValidation.ok && context.committedEquipmentValid) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  const hasValidationErrors =
+    context.equipmentValidation.ok === false || !context.committedEquipmentValid
+
+  const hasAnySelection = context.character.equipment.selections.length > 0
+
+  return {
+    completion:
+      hasAnySelection || hasValidationErrors ? 'in-progress' : 'not-started',
+    hasValidationErrors,
+  }
+}
+
 export function getPlaceholderStepStatus(): StepStatus {
   return { completion: 'not-started', hasValidationErrors: false }
 }
@@ -282,7 +325,7 @@ export function getNonReviewStepStatuses(
     'ability-scores': getAbilityScoresStepStatus(context),
     class: getClassStepStatus(context),
     background: getBackgroundStepStatus(context),
-    equipment: getPlaceholderStepStatus(),
+    equipment: getEquipmentStepStatus(context),
     feats: getFeatStepStatus(context),
     spells: getSpellsStepStatus(context),
   }
@@ -312,4 +355,27 @@ export function getAllStepStatuses(
 
 export function getRequiredStepIds(): readonly WizardStepId[] {
   return WIZARD_STEPS.filter((step) => step.required).map((step) => step.id)
+}
+
+/**
+ * Returns the first applicable incomplete wizard step in navigation order, or
+ * `review` (Overview) when every visible non-placeholder step is complete.
+ *
+ * Uses the same step statuses and visibility rules as the wizard nav.
+ */
+export function getFirstIncompleteCharacterStep(
+  stepStatuses: Record<WizardStepId, StepStatus>,
+  context: WizardStepContext,
+): WizardStepId {
+  for (const step of getVisibleWizardSteps(context)) {
+    if (step.id === 'review' || isPlaceholderWizardStep(step.id)) {
+      continue
+    }
+
+    if (stepStatuses[step.id].completion !== 'complete') {
+      return step.id
+    }
+  }
+
+  return 'review'
 }

@@ -7,13 +7,16 @@ type SpeciesIconProps = {
   alt?: string
 }
 
+/** Intrinsic pixel size of registered species glyph PNGs (and matching fallback). */
+export const SPECIES_ICON_INTRINSIC_SIZE = 256
+
 function DefaultSpeciesIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
       viewBox="0 0 48 48"
-      width="48"
-      height="48"
+      width={SPECIES_ICON_INTRINSIC_SIZE}
+      height={SPECIES_ICON_INTRINSIC_SIZE}
       aria-hidden="true"
       focusable="false"
     >
@@ -35,6 +38,8 @@ export function SpeciesIcon({ speciesId, className, alt }: SpeciesIconProps) {
       <img
         className={className}
         src={iconSrc}
+        width={SPECIES_ICON_INTRINSIC_SIZE}
+        height={SPECIES_ICON_INTRINSIC_SIZE}
         alt={isDecorative ? '' : alt}
         aria-hidden={isDecorative ? true : undefined}
         draggable={false}

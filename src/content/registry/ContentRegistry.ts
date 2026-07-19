@@ -7,6 +7,7 @@ import type {
   SpellDefinition,
   SpellListDefinition,
 } from '../../domain/spell/types'
+import type { EquipmentItemDefinition } from '../../domain/equipment/types'
 import type { SpeciesDefinition } from '../../domain/species/types'
 import type { ContentPack, ContentPackManifest } from '../types/contentPack'
 
@@ -55,6 +56,8 @@ export class ContentRegistry {
   private readonly featsById = new Map<string, FeatDefinition>()
   private readonly spellsById = new Map<string, SpellDefinition>()
   private readonly spellListsById = new Map<string, SpellListDefinition>()
+  private readonly equipmentById = new Map<string, EquipmentItemDefinition>()
+  private readonly equipmentByEdition = new Map<EditionId, EquipmentItemDefinition[]>()
   private readonly classesByEdition = new Map<EditionId, ClassDefinition[]>()
   private readonly featsByEdition = new Map<EditionId, FeatDefinition[]>()
   private readonly backgroundsByEdition = new Map<EditionId, BackgroundDefinition[]>()
@@ -117,6 +120,14 @@ export class ContentRegistry {
 
     for (const spellList of pack.spellLists ?? []) {
       this.indexById(this.spellListsById, spellList.id, spellList, 'spell list')
+    }
+
+    for (const equipment of pack.equipment ?? []) {
+      this.indexById(this.equipmentById, equipment.id, equipment, 'equipment')
+      const editionEquipment =
+        this.equipmentByEdition.get(equipment.editionId) ?? []
+      editionEquipment.push(equipment)
+      this.equipmentByEdition.set(equipment.editionId, editionEquipment)
     }
   }
 
@@ -188,8 +199,12 @@ export class ContentRegistry {
     return [...this.spellListsById.values()]
   }
 
-  getEquipment(_equipmentId: string): null {
-    return null
+  getEquipment(equipmentId: string): EquipmentItemDefinition | null {
+    return this.equipmentById.get(equipmentId) ?? null
+  }
+
+  listEquipment(editionId: EditionId): EquipmentItemDefinition[] {
+    return this.equipmentByEdition.get(editionId) ?? []
   }
 
   private indexById<T>(

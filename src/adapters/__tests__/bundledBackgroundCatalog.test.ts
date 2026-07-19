@@ -28,9 +28,21 @@ describe('createBundledBackgroundCatalog', () => {
       id: 'savage-attacker',
       featId: 'srd-2024:savage-attacker',
     })
-    expect(soldier?.equipment.choiceId).toBe('starting-equipment')
-    expect(soldier?.equipment.packages[0]?.id).toBe('equipment-package')
-    expect(soldier?.equipment.goldAlternative.goldPieces).toBe(50)
+    expect(soldier?.equipment.completeness).toBe('complete')
+    expect(soldier?.equipment.entitlements[0]).toMatchObject({
+      type: 'choose-option',
+      id: 'starting-equipment',
+    })
+    const entitlement = soldier?.equipment.entitlements[0]
+    expect(entitlement?.type).toBe('choose-option')
+    if (entitlement?.type === 'choose-option') {
+      expect(entitlement.options.map((option) => option.id)).toEqual([
+        'equipment-package',
+        'gold-alternative',
+      ])
+      const gold = entitlement.options.find((option) => option.kind === 'gold')
+      expect(gold).toMatchObject({ kind: 'gold', goldPieces: 50 })
+    }
   })
 
   it('returns null for an unknown background id', async () => {

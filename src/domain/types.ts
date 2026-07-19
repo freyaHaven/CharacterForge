@@ -4,6 +4,7 @@ import type { BackgroundSelection } from './background/types'
 import type { CharacterClassSelection, CharacterLevel } from './class/types'
 import type { FeatSelection } from './feat/types'
 import type { SpeciesSelection } from './species/types'
+import type { CharacterEquipment } from './equipment/types'
 import type { SpellSourceState } from './spell/types'
 
 export type { AlignmentId } from './character/alignment'
@@ -82,12 +83,28 @@ export type {
   BackgroundChoice,
   BackgroundChoiceOption,
   BackgroundDefinition,
-  BackgroundEquipmentDefinition,
-  BackgroundEquipmentPackage,
   BackgroundOriginFeat,
   BackgroundSelection,
   BackgroundToolProficiency,
 } from './background/types'
+export {
+  EMPTY_CHARACTER_EQUIPMENT,
+  EMPTY_EQUIPMENT_LOADOUT,
+  GOLD_PIECES_ITEM_ID,
+  SELECTED_GAMING_SET_ITEM_ID,
+} from './equipment/types'
+export type {
+  CharacterEquipment,
+  EquipmentEntitlement,
+  EquipmentGrant,
+  EquipmentHandUsage,
+  EquipmentItemDefinition,
+  EquipmentItemSelection,
+  EquipmentLoadout,
+  EquipmentSelection,
+  EquipmentSourceRef,
+  StartingEquipmentDefinition,
+} from './equipment/types'
 export type {
   FeatBenefit,
   FeatCategory,
@@ -155,4 +172,6 @@ export type Character = {
   details: CharacterDetails
   /** Persisted player-owned spell state, keyed by spellcasting source. */
   spellSourceStates: SpellSourceState[]
+  /** Persisted player-owned equipment selections, keyed by source + entitlement. */
+  equipment: CharacterEquipment
 }

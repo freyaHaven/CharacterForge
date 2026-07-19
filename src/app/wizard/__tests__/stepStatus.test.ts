@@ -39,6 +39,8 @@ function createContext(
     committedFeatValid: false,
     spellValidation: null,
     committedSpellsValid: true,
+    equipmentValidation: null,
+    committedEquipmentValid: true,
     standardArrayValidation: null,
     pointBuyValidation: null,
     rolledValidation: null,
