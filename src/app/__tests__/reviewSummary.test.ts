@@ -85,7 +85,7 @@ describe('buildReviewSummaries', () => {
     const summaries = buildReviewSummaries(
       createContext({
         speciesDisplay: {
-          speciesName: 'Dragonborn',
+          speciesName: 'Red Dragonborn',
           ancestryLabel: 'Red (Fire)',
         },
       }),
@@ -95,7 +95,7 @@ describe('buildReviewSummaries', () => {
     )
 
     expect(summaries.species).toEqual([
-      'Species: Dragonborn',
+      'Species: Red Dragonborn',
       'Ancestry: Red (Fire)',
     ])
   })

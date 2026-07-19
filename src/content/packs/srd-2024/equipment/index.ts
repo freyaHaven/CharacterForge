@@ -15,7 +15,7 @@ function def(
 const id = (slug: string) => `srd-2024:${slug}`
 
 /** Items referenced by SRD 2024 starting equipment packages. */
-export const SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
+const RAW_SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
   def({
     id: GOLD_PIECES_ITEM_ID,
     name: 'Gold Pieces',
@@ -158,7 +158,18 @@ export const SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
 
   // Ammunition / containers
   def({ id: id('arrows'), name: 'Arrows', category: 'ammunition' }),
-  def({ id: id('quiver'), name: 'Quiver', category: 'gear' }),
+  def({
+    id: id('quiver'),
+    name: 'Quiver',
+    category: 'container',
+    isContainer: true,
+  }),
+  def({
+    id: id('crossbow-bolt-case'),
+    name: 'Crossbow Bolt Case',
+    category: 'container',
+    isContainer: true,
+  }),
 
   // Tools
   def({
@@ -201,7 +212,12 @@ export const SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
   }),
 
   // Gear
-  def({ id: id('backpack'), name: 'Backpack', category: 'gear' }),
+  def({
+    id: id('backpack'),
+    name: 'Backpack',
+    category: 'container',
+    isContainer: true,
+  }),
   def({ id: id('bedroll'), name: 'Bedroll', category: 'gear' }),
   def({ id: id('blanket'), name: 'Blanket', category: 'gear' }),
   def({ id: id('rope'), name: 'Rope', category: 'gear' }),
@@ -218,7 +234,12 @@ export const SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
   def({ id: id('hooded-lantern'), name: 'Hooded Lantern', category: 'gear' }),
   def({ id: id('lamp'), name: 'Lamp', category: 'gear' }),
   def({ id: id('holy-water'), name: 'Holy Water', category: 'gear' }),
-  def({ id: id('pouch'), name: 'Pouch', category: 'gear' }),
+  def({
+    id: id('pouch'),
+    name: 'Pouch',
+    category: 'container',
+    isContainer: true,
+  }),
   def({
     id: id('travelers-clothes'),
     name: "Traveler's Clothes",
@@ -299,6 +320,96 @@ export const SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
     ],
   }),
 ]
+
+/** SRD 2024 weight (lb) and cost (gp) for catalog items. */
+const EQUIPMENT_STATS: Record<
+  string,
+  Pick<
+    EquipmentItemDefinition,
+    'weightLb' | 'costGp' | 'tags' | 'notes'
+  >
+> = {
+  [id('greatsword')]: { weightLb: 6, costGp: 50, tags: ['Heavy', 'Two-Handed'] },
+  [id('flail')]: { weightLb: 2, costGp: 10 },
+  [id('javelin')]: { weightLb: 2, costGp: 0.5 },
+  [id('scimitar')]: { weightLb: 3, costGp: 25, tags: ['Finesse', 'Light'] },
+  [id('shortsword')]: { weightLb: 2, costGp: 10, tags: ['Finesse', 'Light'] },
+  [id('longbow')]: {
+    weightLb: 2,
+    costGp: 50,
+    tags: ['Ammunition', 'Heavy', 'Two-Handed'],
+    notes: 'Ammunition',
+  },
+  [id('greataxe')]: { weightLb: 7, costGp: 30, tags: ['Heavy', 'Two-Handed'] },
+  [id('handaxe')]: { weightLb: 2, costGp: 5, tags: ['Light', 'Thrown'] },
+  [id('mace')]: { weightLb: 4, costGp: 5 },
+  [id('spear')]: { weightLb: 3, costGp: 1, tags: ['Thrown', 'Versatile'] },
+  [id('dagger')]: { weightLb: 1, costGp: 2, tags: ['Finesse', 'Light', 'Thrown'] },
+  [id('longsword')]: { weightLb: 3, costGp: 15, tags: ['Versatile'] },
+  [id('shortbow')]: {
+    weightLb: 2,
+    costGp: 25,
+    tags: ['Ammunition', 'Two-Handed'],
+    notes: 'Ammunition',
+  },
+  [id('quarterstaff')]: { weightLb: 4, costGp: 0.2, tags: ['Versatile'] },
+  [id('chain-mail')]: { weightLb: 55, costGp: 75, notes: 'Heavy Armour' },
+  [id('studded-leather-armor')]: { weightLb: 13, costGp: 45, notes: 'Light Armour' },
+  [id('leather-armor')]: { weightLb: 10, costGp: 10, notes: 'Light Armour' },
+  [id('chain-shirt')]: { weightLb: 20, costGp: 50, notes: 'Medium Armour' },
+  [id('shield')]: { weightLb: 6, costGp: 10 },
+  [id('arrows')]: { weightLb: 0.05, costGp: 0.05, notes: 'Ammunition' },
+  [id('quiver')]: { weightLb: 1, costGp: 1 },
+  [id('crossbow-bolt-case')]: { weightLb: 1, costGp: 1 },
+  [id('calligraphers-supplies')]: { weightLb: 5, costGp: 10 },
+  [id('thieves-tools')]: { weightLb: 1, costGp: 25 },
+  [id('healers-kit')]: { weightLb: 3, costGp: 5 },
+  [id('holy-symbol')]: { weightLb: 1, costGp: 5 },
+  [id('druidic-focus-mistletoe')]: { weightLb: 0, costGp: 0 },
+  [id('artisans-tools')]: { weightLb: 5, costGp: 10 },
+  [id('dice-set')]: { weightLb: 0, costGp: 0.1 },
+  [id('dragonchess-set')]: { weightLb: 0.5, costGp: 1 },
+  [id('playing-card-set')]: { weightLb: 0, costGp: 0.5 },
+  [id('three-dragon-ante-set')]: { weightLb: 0, costGp: 1 },
+  [id('backpack')]: { weightLb: 5, costGp: 2 },
+  [id('bedroll')]: { weightLb: 7, costGp: 1 },
+  [id('blanket')]: { weightLb: 3, costGp: 0.5 },
+  [id('rope')]: { weightLb: 5, costGp: 1 },
+  [id('tinderbox')]: { weightLb: 1, costGp: 0.5 },
+  [id('torch')]: { weightLb: 1, costGp: 0.01 },
+  [id('rations')]: { weightLb: 2, costGp: 0.5 },
+  [id('waterskin')]: { weightLb: 5, costGp: 0.2 },
+  [id('oil')]: { weightLb: 1, costGp: 0.1 },
+  [id('crowbar')]: { weightLb: 5, costGp: 2 },
+  [id('caltrops')]: { weightLb: 2, costGp: 1 },
+  [id('ball-bearings')]: { weightLb: 2, costGp: 1 },
+  [id('bell')]: { weightLb: 0, costGp: 1 },
+  [id('candle')]: { weightLb: 0, costGp: 0.01 },
+  [id('hooded-lantern')]: { weightLb: 2, costGp: 5 },
+  [id('lamp')]: { weightLb: 1, costGp: 0.5 },
+  [id('holy-water')]: { weightLb: 1, costGp: 25 },
+  [id('pouch')]: { weightLb: 1, costGp: 0.5 },
+  [id('travelers-clothes')]: { weightLb: 4, costGp: 2 },
+  [id('robe')]: { weightLb: 4, costGp: 1 },
+  [id('book-prayers')]: { weightLb: 5, costGp: 25 },
+  [id('book-history')]: { weightLb: 5, costGp: 25 },
+  [id('parchment')]: { weightLb: 0, costGp: 0.1 },
+}
+
+export const SRD_2024_EQUIPMENT: EquipmentItemDefinition[] =
+  RAW_SRD_2024_EQUIPMENT.map((item) => {
+    const stats = EQUIPMENT_STATS[item.id]
+    if (stats === undefined) {
+      return item
+    }
+
+    return {
+      ...item,
+      ...stats,
+      tags: [...(item.tags ?? []), ...(stats.tags ?? [])],
+      notes: stats.notes ?? item.notes,
+    }
+  })
 
 export const SRD_2024_EQUIPMENT_BY_ID = new Map(
   SRD_2024_EQUIPMENT.map((entry) => [entry.id, entry]),

@@ -1,6 +1,7 @@
 import type { CharacterRepository } from '../../domain/ports/characterRepository'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
+import { getSpeciesDisplayName } from '../../features/species/getSpeciesDisplayName'
 import type { RecentCharactersStore } from './recentCharacters'
 import type { RecentCharacterSummary } from './recentCharacterDisplay'
 
@@ -30,7 +31,10 @@ export async function loadRecentCharacterSummaries(
       const speciesDefinition = await options.speciesCatalog.getSpecies(
         character.species.speciesId,
       )
-      speciesName = speciesDefinition?.name ?? null
+      speciesName =
+        speciesDefinition === null
+          ? null
+          : getSpeciesDisplayName(speciesDefinition, character.species.choices)
     }
 
     const classes: RecentCharacterSummary['classes'] = []

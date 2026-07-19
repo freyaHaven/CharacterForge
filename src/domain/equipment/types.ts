@@ -30,6 +30,25 @@ export type EquipmentItemCategory =
   | 'container'
   | 'currency'
 
+/**
+ * Where an inventory entry is located.
+ * Containers are referenced by instance id so two backpacks stay distinct.
+ */
+export type InventoryLocation =
+  | { kind: 'carried' }
+  | { kind: 'container'; containerInstanceId: string }
+
+/**
+ * One owned stack or item instance in the character's inventory.
+ * Derived from starting-equipment grants for now; may become persisted later.
+ */
+export type InventoryEntry = {
+  instanceId: string
+  itemId: string
+  quantity: number
+  location: InventoryLocation
+}
+
 /** How a weapon or shield occupies the character's hands. */
 export type EquipmentHandUsage = 'one-handed' | 'two-handed' | 'versatile'
 
@@ -131,8 +150,24 @@ export type EquipmentItemDefinition = {
   name: string
   category: EquipmentItemCategory
   source: ContentSource
-  /** When set, owning this item expands into these grants in derived inventory. */
+  /**
+   * When set on a kit/pack, owning this item expands into these grants.
+   * The pack itself is not kept as an inventory line.
+   */
   expandsTo?: EquipmentGrant[]
+  /**
+   * When true, this item can hold other entries (backpack, quiver, pouch).
+   * Distinct from kit packs that use `expandsTo`.
+   */
+  isContainer?: boolean
+  /** Weight of one unit in pounds. */
+  weightLb?: number
+  /** Market cost of one unit in gold pieces. */
+  costGp?: number
+  /** Searchable tags (e.g. heavy, two-handed, ammunition). */
+  tags?: string[]
+  /** Short display note when no richer note is derived. */
+  notes?: string
   /** Present on armour items used for Armour Class. */
   armor?: ArmorProperties
   /** Present on shield items used for Armour Class. */

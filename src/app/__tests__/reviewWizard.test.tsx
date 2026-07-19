@@ -218,12 +218,15 @@ describe('Review wizard integration', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: 'Species · Dragonborn', level: 4 }),
+        screen.getByRole('heading', {
+          name: 'Species · Red Dragonborn',
+          level: 4,
+        }),
       ).toBeInTheDocument()
     })
 
     const speciesGroup = screen
-      .getByRole('heading', { name: 'Species · Dragonborn', level: 4 })
+      .getByRole('heading', { name: 'Species · Red Dragonborn', level: 4 })
       .closest('.character-sheet__feature-group') as HTMLElement
     expect(within(speciesGroup).getByText('Ancestry')).toBeInTheDocument()
     expect(within(speciesGroup).getByText('Red (Fire)')).toBeInTheDocument()

@@ -245,4 +245,23 @@ describe('CharacterContextSummary', () => {
       expect(screen.getByText('Elara • Dragonborn')).toBeInTheDocument()
     })
   })
+
+  it('includes selected ancestry in the species display name', async () => {
+    renderSummary({
+      character: createDefaultCharacter({
+        name: 'Elara',
+        species: {
+          speciesId: 'srd-2024:dragonborn',
+          choices: {
+            'draconic-ancestry': 'black',
+            'standard-languages': ['draconic', 'common-sign'],
+          },
+        },
+      }),
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Elara • Black Dragonborn')).toBeInTheDocument()
+    })
+  })
 })

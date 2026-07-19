@@ -3,6 +3,10 @@ import type { SpeciesCatalog } from '../domain/ports/speciesCatalog'
 import type { EditionId } from '../domain/types'
 import type { SpeciesSelection } from '../domain/species/types'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
+import {
+  getSpeciesDisplayName,
+  resolveSelectedLineageOption,
+} from '../features/species/getSpeciesDisplayName'
 import type { SpeciesReviewDisplay } from './reviewSummary'
 
 const EMPTY_DISPLAY: SpeciesReviewDisplay = {
@@ -47,25 +51,14 @@ export function useReviewSpeciesDisplay(
         return
       }
 
-      let ancestryLabel: string | null = null
-
-      for (const choice of definition.choices) {
-        const selectedOptionId = activeSelection.choices[choice.id]
-        if (selectedOptionId === undefined) {
-          continue
-        }
-
-        const option = choice.options.find(
-          (candidate) => candidate.id === selectedOptionId,
-        )
-        if (option !== undefined) {
-          ancestryLabel = option.label
-        }
-      }
-
       setDisplay({
-        speciesName: definition.name,
-        ancestryLabel,
+        speciesName: getSpeciesDisplayName(
+          definition,
+          activeSelection.choices,
+        ),
+        ancestryLabel:
+          resolveSelectedLineageOption(definition, activeSelection.choices)
+            ?.label ?? null,
       })
     })
 

@@ -15,9 +15,14 @@ import type {
 } from '../../../domain/types'
 import type { EquipmentCatalog } from '../../../domain/ports/equipmentCatalog'
 import type { ReviewSheetModels } from '../../buildReviewSheetModels'
-import type { ResolvedInventoryItem } from '../../../rules/character/resolveCharacterEquipment'
-import { EquipmentLoadoutManager } from '../../../features/equipment/EquipmentLoadoutManager'
+import type {
+  ResolvedInventoryEntry,
+  ResolvedInventoryItem,
+} from '../../../rules/character/resolveCharacterEquipment'
+import { InventoryPanel } from '../../../features/equipment/InventoryPanel'
+import { EquipmentStatusPanel } from '../../../features/equipment/EquipmentStatusPanel'
 import { useEquipmentDefinitions } from '../../../features/equipment/useEquipmentDefinitions'
+import { deriveEquipmentStatusWarnings } from '../../../domain/equipment/equipmentStatusWarnings'
 import type { StepStatus } from '../types'
 import { AbilityScoreCards } from './review/AbilityScoreCards'
 import { CharacterSheetHeader } from './review/CharacterSheetHeader'
@@ -49,7 +54,10 @@ export type ReviewStepProps = {
   stepStatuses: Record<ReviewableStepId, StepStatus>
   summaries: Record<ReviewableStepId, string[]>
   characterDetailsReview: CharacterDetailsReviewSections
+  equipmentEntries: readonly ResolvedInventoryEntry[]
   equipmentInventory: readonly ResolvedInventoryItem[]
+  equipmentWeightCarriedLb: number
+  equipmentGoldPieces: number
   equipmentLoadout: EquipmentLoadout
   equipmentCatalog: EquipmentCatalog
   onChangeEquipmentLoadout: (next: EquipmentLoadout) => void
@@ -98,7 +106,10 @@ export function ReviewStep({
   stepStatuses,
   summaries,
   characterDetailsReview,
+  equipmentEntries,
   equipmentInventory,
+  equipmentWeightCarriedLb,
+  equipmentGoldPieces,
   equipmentLoadout,
   equipmentCatalog,
   onChangeEquipmentLoadout,
@@ -117,12 +128,19 @@ export function ReviewStep({
     unresolvedDeferredRequirements,
     hasSpellcastingCapability,
     spellLines,
-    hasEquipmentInventory: equipmentInventory.length > 0,
+    hasEquipmentInventory:
+      equipmentEntries.length > 0 || equipmentGoldPieces > 0,
   })
 
   const equipmentDefinitions = useEquipmentDefinitions(
     equipmentInventory,
     equipmentCatalog,
+  )
+
+  const equipmentStatusWarnings = deriveEquipmentStatusWarnings(
+    equipmentInventory.map((item) => item.itemId),
+    equipmentLoadout,
+    equipmentDefinitions,
   )
 
   const hasAttentionItems =
@@ -234,15 +252,19 @@ export function ReviewStep({
       {sheet.sectionVisibility.equipment ? (
         <CharacterSheetSection
           id="overview-equipment"
-          title="Equipment"
+          title="Inventory"
           status={stepStatuses.equipment}
           editStepId="equipment"
           editLabel="Manage Equipment"
           onEdit={onEditStep}
         >
-          <EquipmentLoadoutManager
-            inventory={equipmentInventory}
+          <EquipmentStatusPanel warnings={equipmentStatusWarnings} />
+          <InventoryPanel
+            entries={equipmentEntries}
             loadout={equipmentLoadout}
+            weightCarriedLb={equipmentWeightCarriedLb}
+            goldPieces={equipmentGoldPieces}
+            abilityScores={abilityScores}
             definitionsById={equipmentDefinitions}
             onChangeLoadout={onChangeEquipmentLoadout}
           />

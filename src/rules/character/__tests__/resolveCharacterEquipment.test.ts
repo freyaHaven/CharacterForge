@@ -114,9 +114,106 @@ describe('resolveCharacterEquipment', () => {
       resolved.inventory.find((item) => item.itemId === 'srd-2024:torch')
         ?.quantity,
     ).toBe(10)
+    expect(resolved.mergedInventory).toEqual(resolved.inventory)
+
+    const quiver = resolved.entries.find(
+      (entry) => entry.itemId === 'srd-2024:quiver',
+    )
+    expect(quiver).toMatchObject({
+      isContainer: true,
+      location: { kind: 'carried' },
+    })
+
+    const arrows = resolved.entries.filter(
+      (entry) => entry.itemId === 'srd-2024:arrows',
+    )
+    expect(arrows).toHaveLength(1)
+    expect(arrows[0]).toMatchObject({
+      quantity: 20,
+      location: {
+        kind: 'container',
+        containerInstanceId: quiver?.instanceId,
+      },
+    })
+
+    const backpack = resolved.entries.find(
+      (entry) => entry.itemId === 'srd-2024:backpack',
+    )
+    expect(backpack?.isContainer).toBe(true)
+
+    const torch = resolved.entries.find(
+      (entry) => entry.itemId === 'srd-2024:torch',
+    )
+    expect(torch).toMatchObject({
+      quantity: 10,
+      location: {
+        kind: 'container',
+        containerInstanceId: backpack?.instanceId,
+      },
+    })
+
+    const chainMail = resolved.entries.find(
+      (entry) => entry.itemId === 'srd-2024:chain-mail',
+    )
+    expect(chainMail).toMatchObject({
+      location: { kind: 'carried' },
+      weightLb: 55,
+      costGp: 75,
+    })
+
+    expect(resolved.weightCarriedLb).toBeGreaterThan(50)
     expect(isClassStartingEquipmentResolved(resolved, fighter.instanceId)).toBe(
       true,
     )
+  })
+
+  it('keeps same itemId in separate containers as distinct entries', async () => {
+    const fighter = createTestFighterClassInstance()
+    const character = createDefaultCharacter({
+      ...withSingleClassInstance(fighter),
+      equipment: {
+        selections: [
+          {
+            source: {
+              kind: 'class-instance',
+              instanceId: fighter.instanceId,
+            },
+            entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            optionId: 'package-b',
+            choices: [],
+          },
+        ],
+        loadout: EMPTY_EQUIPMENT_LOADOUT,
+      },
+    })
+
+    const resolved = await resolveCharacterEquipment(
+      classCatalog,
+      backgroundCatalog,
+      equipmentCatalog,
+      character,
+    )
+
+    const arrows = resolved.entries.filter(
+      (entry) => entry.itemId === 'srd-2024:arrows',
+    )
+    const quiver = resolved.entries.find(
+      (entry) => entry.itemId === 'srd-2024:quiver',
+    )
+    const backpack = resolved.entries.find(
+      (entry) => entry.itemId === 'srd-2024:backpack',
+    )
+
+    expect(arrows).toHaveLength(1)
+    expect(arrows[0]?.location).toEqual({
+      kind: 'container',
+      containerInstanceId: quiver?.instanceId,
+    })
+    expect(backpack).toBeDefined()
+    expect(
+      resolved.mergedInventory.find((item) => item.itemId === 'srd-2024:arrows')
+        ?.quantity,
+    ).toBe(20)
   })
 
   it('marks incomplete choices and prunes removed sources only', async () => {

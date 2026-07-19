@@ -85,7 +85,10 @@ const defaultProps = {
   hasSpellcastingCapability: false,
   spellLines: [],
   unresolvedDeferredRequirements: [],
+  equipmentEntries: [],
   equipmentInventory: [],
+  equipmentWeightCarriedLb: 0,
+  equipmentGoldPieces: 0,
   equipmentLoadout: EMPTY_EQUIPMENT_LOADOUT,
   equipmentCatalog: emptyEquipmentCatalog,
   onChangeEquipmentLoadout: vi.fn(),
@@ -423,7 +426,7 @@ describe('ReviewStep', () => {
     expect(screen.getByRole('button', { name: /finish character/i })).toBeEnabled()
   })
 
-  it('shows an interactive Equipment loadout card on Overview', async () => {
+  it('shows an interactive Inventory panel on Overview', async () => {
     const user = userEvent.setup()
     const onChangeEquipmentLoadout = vi.fn()
     const onEditStep = vi.fn()
@@ -458,6 +461,60 @@ describe('ReviewStep', () => {
         category: 'ammunition' as const,
       },
     ]
+    const entries = [
+      {
+        instanceId: 'inst:chain-mail',
+        itemId: 'srd-2024:chain-mail',
+        name: 'Chain Mail',
+        quantity: 1,
+        category: 'armor' as const,
+        location: { kind: 'carried' as const },
+        weightLb: 55,
+        costGp: 75,
+        notes: 'Heavy Armour',
+        tags: ['armor'],
+        isContainer: false,
+      },
+      {
+        instanceId: 'inst:greatsword',
+        itemId: 'srd-2024:greatsword',
+        name: 'Greatsword',
+        quantity: 1,
+        category: 'weapon' as const,
+        location: { kind: 'carried' as const },
+        weightLb: 6,
+        costGp: 50,
+        notes: 'Two-Handed',
+        tags: ['weapon'],
+        isContainer: false,
+      },
+      {
+        instanceId: 'inst:shield',
+        itemId: 'srd-2024:shield',
+        name: 'Shield',
+        quantity: 1,
+        category: 'shield' as const,
+        location: { kind: 'carried' as const },
+        weightLb: 6,
+        costGp: 10,
+        notes: 'Shield',
+        tags: ['shield'],
+        isContainer: false,
+      },
+      {
+        instanceId: 'inst:arrows',
+        itemId: 'srd-2024:arrows',
+        name: 'Arrows',
+        quantity: 20,
+        category: 'ammunition' as const,
+        location: { kind: 'carried' as const },
+        weightLb: 0.05,
+        costGp: 0.05,
+        notes: 'Ammunition',
+        tags: ['ammunition'],
+        isContainer: false,
+      },
+    ]
     const loadout = {
       armorItemId: 'srd-2024:chain-mail',
       mainHandItemId: 'srd-2024:greatsword',
@@ -485,8 +542,11 @@ describe('ReviewStep', () => {
       classDefinitions: new Map(),
       resolvedEquipment: {
         sources: [],
+        entries,
         inventory,
-        currency: { goldPieces: 0 },
+        mergedInventory: inventory,
+        currency: { goldPieces: 18 },
+        weightCarriedLb: 68,
       },
       equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
     })
@@ -495,7 +555,10 @@ describe('ReviewStep', () => {
       <ReviewStep
         {...defaultProps}
         sheetModels={armoredModels}
+        equipmentEntries={entries}
         equipmentInventory={inventory}
+        equipmentWeightCarriedLb={68}
+        equipmentGoldPieces={18}
         equipmentLoadout={loadout}
         equipmentCatalog={catalog}
         onChangeEquipmentLoadout={onChangeEquipmentLoadout}
@@ -521,24 +584,30 @@ describe('ReviewStep', () => {
     )
 
     expect(
-      screen.getByRole('heading', { name: 'Equipment', level: 3 }),
+      screen.getByRole('heading', { name: 'Inventory', level: 3 }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Manage Equipment' }),
     ).toBeInTheDocument()
-    expect(screen.getByLabelText('Equipment slots')).toBeInTheDocument()
+    expect(screen.getByText(/weight carried: 68 lb/i)).toBeInTheDocument()
+    expect(screen.getByText('18 GP')).toBeInTheDocument()
+    expect(screen.queryByText('Equipment Status')).not.toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByText('Chain Mail')).toBeInTheDocument()
     })
     expect(screen.getByText('Greatsword')).toBeInTheDocument()
-    expect(screen.getByText('Shield')).toBeInTheDocument()
-    expect(screen.queryByText(/Arrows/)).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: 'Equip Shield' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Arrows')).toBeInTheDocument()
 
     const combatStats = screen.getByLabelText('Combat summary')
     expect(within(combatStats).getByText('16')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Unequip Chain Mail' }))
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Equip Chain Mail' }),
+    )
     expect(onChangeEquipmentLoadout).toHaveBeenCalledWith({
       armorItemId: null,
       mainHandItemId: 'srd-2024:greatsword',
@@ -548,7 +617,7 @@ describe('ReviewStep', () => {
 
     const unequippedLoadout = {
       armorItemId: null,
-      mainHandItemId: 'srd-2024:greatsword',
+      mainHandItemId: null,
       offHandItemId: null,
       mainHandGrip: null,
     }
@@ -573,8 +642,11 @@ describe('ReviewStep', () => {
       classDefinitions: new Map(),
       resolvedEquipment: {
         sources: [],
+        entries,
         inventory,
-        currency: { goldPieces: 0 },
+        mergedInventory: inventory,
+        currency: { goldPieces: 18 },
+        weightCarriedLb: 68,
       },
       equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
     })
@@ -583,7 +655,10 @@ describe('ReviewStep', () => {
       <ReviewStep
         {...defaultProps}
         sheetModels={unarmoredModels}
+        equipmentEntries={entries}
         equipmentInventory={inventory}
+        equipmentWeightCarriedLb={68}
+        equipmentGoldPieces={18}
         equipmentLoadout={unequippedLoadout}
         equipmentCatalog={catalog}
         onChangeEquipmentLoadout={onChangeEquipmentLoadout}
@@ -610,6 +685,24 @@ describe('ReviewStep', () => {
 
     expect(
       within(screen.getByLabelText('Combat summary')).getByText('12'),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Equipment Status' }),
+      ).toBeInTheDocument()
+    })
+    expect(screen.getByText('No armour equipped')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'You own Chain Mail, but none is currently equipped.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('No weapon equipped')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'You own a Greatsword, but none is currently equipped.',
+      ),
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Manage Equipment' }))

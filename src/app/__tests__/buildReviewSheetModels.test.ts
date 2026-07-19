@@ -204,6 +204,7 @@ describe('buildReviewSheetModels', () => {
       classDefinitions,
       resolvedEquipment: {
         sources: [],
+        entries: [],
         currency: { goldPieces: 0 },
         inventory: [
           {
@@ -219,6 +220,21 @@ describe('buildReviewSheetModels', () => {
             category: 'shield',
           },
         ],
+        mergedInventory: [
+          {
+            itemId: 'srd-2024:chain-mail',
+            name: 'Chain Mail',
+            quantity: 1,
+            category: 'armor',
+          },
+          {
+            itemId: 'srd-2024:shield',
+            name: 'Shield',
+            quantity: 1,
+            category: 'shield',
+          },
+        ],
+        weightCarriedLb: 0,
       },
       equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
     })

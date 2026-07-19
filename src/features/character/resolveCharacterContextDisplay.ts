@@ -5,6 +5,7 @@ import type { Character } from '../../domain/types'
 import type { WizardStepId } from '../../app/wizard/types'
 import type { ClassSelectionDrafts } from '../class/classSelectionDraft'
 import type { SpeciesSelectionDraft } from '../species/speciesSelectionDraft'
+import { getSpeciesDisplayName } from '../species/getSpeciesDisplayName'
 import { getSubclassLabelFromDefinition } from './getSubclassLabel'
 import {
   buildCharacterContextDisplay,
@@ -42,7 +43,13 @@ export async function resolveCharacterContextDisplay(
     const speciesDefinition = await input.speciesCatalog.getSpecies(
       activeSpeciesSelection.speciesId,
     )
-    speciesName = speciesDefinition?.name ?? null
+    speciesName =
+      speciesDefinition === null
+        ? null
+        : getSpeciesDisplayName(
+            speciesDefinition,
+            activeSpeciesSelection.choices,
+          )
   }
 
   // Global Character Context reflects committed classes only. Browsing a

@@ -1,39 +1,24 @@
 import type {
-  EquipmentLoadout,
   EquipmentSelection,
 } from '../../../domain/equipment/types'
-import type { EquipmentCatalog } from '../../../domain/ports/equipmentCatalog'
 import type { ResolvedEquipment } from '../../../rules/character/resolveCharacterEquipment'
 import type { EquipmentValidationIssue } from '../../../rules/equipment/validateEquipmentSelections'
 import { EquipmentSourceSection } from '../../../features/equipment/EquipmentSourceSection'
-import { EquipmentLoadoutManager } from '../../../features/equipment/EquipmentLoadoutManager'
-import { formatGoldPieces } from '../../../features/equipment/formatEquipment'
-import { useEquipmentDefinitions } from '../../../features/equipment/useEquipmentDefinitions'
 
 type EquipmentStepProps = {
   resolved: ResolvedEquipment
   selections: EquipmentSelection[]
-  loadout: EquipmentLoadout
-  equipmentCatalog: EquipmentCatalog
   onChangeSelections: (next: EquipmentSelection[]) => void
-  onChangeLoadout: (next: EquipmentLoadout) => void
   validationIssues: EquipmentValidationIssue[]
 }
 
 export function EquipmentStep({
   resolved,
   selections,
-  loadout,
-  equipmentCatalog,
   onChangeSelections,
-  onChangeLoadout,
   validationIssues,
 }: EquipmentStepProps) {
   const hasSources = resolved.sources.length > 0
-  const definitionsById = useEquipmentDefinitions(
-    resolved.inventory,
-    equipmentCatalog,
-  )
 
   return (
     <section
@@ -73,37 +58,6 @@ export function EquipmentStep({
           />
         ))}
       </div>
-
-      {hasSources ? (
-        <section
-          className="equipment-step__summary"
-          aria-labelledby="starting-equipment-summary-heading"
-        >
-          <h3 id="starting-equipment-summary-heading">Starting Equipment</h3>
-          {resolved.inventory.length === 0 &&
-          resolved.currency.goldPieces === 0 ? (
-            <p className="equipment-step__summary-empty">
-              No equipment selected yet.
-            </p>
-          ) : (
-            <>
-              <EquipmentLoadoutManager
-                inventory={resolved.inventory}
-                loadout={loadout}
-                definitionsById={definitionsById}
-                onChangeLoadout={onChangeLoadout}
-                showNonEquippableItems
-              />
-              {resolved.currency.goldPieces > 0 ? (
-                <p className="equipment-step__summary-gold">
-                  <span aria-hidden="true">✓ </span>
-                  {formatGoldPieces(resolved.currency.goldPieces)}
-                </p>
-              ) : null}
-            </>
-          )}
-        </section>
-      ) : null}
     </section>
   )
 }

@@ -17,12 +17,18 @@ import type {
 } from '../../domain/equipment/types'
 import {
   GOLD_PIECES_ITEM_ID,
-  SELECTED_GAMING_SET_ITEM_ID,
 } from '../../domain/equipment/types'
 import {
   equipmentSelectionKey,
   equipmentSourcesEqual,
 } from '../../domain/equipment/sourceKey'
+import {
+  assignDefaultLocations,
+  materializeInventoryEntries,
+  mergeInventoryQuantities,
+  totalWeightLb,
+  type MaterializedInventoryEntry,
+} from '../../domain/equipment/materializeInventory'
 
 export type ResolvedInventoryItem = {
   itemId: string
@@ -30,6 +36,10 @@ export type ResolvedInventoryItem = {
   quantity: number
   category: EquipmentItemDefinition['category']
 }
+
+export type ResolvedInventoryEntry = MaterializedInventoryEntry
+
+export type MergedInventoryLine = ResolvedInventoryItem
 
 export type ResolvedEquipmentEntitlement = {
   entitlement: EquipmentEntitlement
@@ -43,6 +53,9 @@ export type ResolvedEquipmentSource = {
   sourceKindLabel: EquipmentSourceKindLabel
   completeness: StartingEquipmentDefinition['completeness']
   entitlements: ResolvedEquipmentEntitlement[]
+  /** Location-aware instances granted by this source. */
+  entries: ResolvedInventoryEntry[]
+  /** Quantity-merged view for this source (summary cards). */
   items: ResolvedInventoryItem[]
   currency: { goldPieces: number }
   isComplete: boolean
@@ -50,8 +63,17 @@ export type ResolvedEquipmentSource = {
 
 export type ResolvedEquipment = {
   sources: ResolvedEquipmentSource[]
+  /** Instance + location aware inventory (source of truth for Inventory UI). */
+  entries: ResolvedInventoryEntry[]
+  /**
+   * Quantity-merged totals by itemId (Starting Equipment summary / loadout).
+   * Does not preserve container locations.
+   */
   inventory: ResolvedInventoryItem[]
+  /** Alias of `inventory` for callers that prefer the dual-view naming. */
+  mergedInventory: MergedInventoryLine[]
   currency: { goldPieces: number }
+  weightCarriedLb: number
 }
 
 function findSelection(
@@ -122,59 +144,6 @@ function resolveEntitlementGrants(
   }))
 }
 
-function resolveGamingSetItemId(
-  character: Character,
-  itemId: string,
-): string {
-  if (itemId !== SELECTED_GAMING_SET_ITEM_ID) {
-    return itemId
-  }
-
-  const selected = character.background?.choices['gaming-set']
-  if (typeof selected !== 'string' || selected.length === 0) {
-    return SELECTED_GAMING_SET_ITEM_ID
-  }
-
-  return selected.startsWith('srd-2024:') ? selected : `srd-2024:${selected}`
-}
-
-function expandAndNormalizeGrants(
-  grants: readonly EquipmentGrant[],
-  catalogById: Map<string, EquipmentItemDefinition>,
-  character: Character,
-): { items: Map<string, number>; goldPieces: number } {
-  const quantities = new Map<string, number>()
-  let goldPieces = 0
-
-  const addGrant = (grant: EquipmentGrant) => {
-    const resolvedId = resolveGamingSetItemId(character, grant.itemId)
-
-    if (resolvedId === GOLD_PIECES_ITEM_ID) {
-      goldPieces += grant.quantity
-      return
-    }
-
-    const definition = catalogById.get(resolvedId)
-    if (definition?.expandsTo !== undefined && definition.expandsTo.length > 0) {
-      for (const nested of definition.expandsTo) {
-        addGrant(nested)
-      }
-      return
-    }
-
-    quantities.set(
-      resolvedId,
-      (quantities.get(resolvedId) ?? 0) + grant.quantity,
-    )
-  }
-
-  for (const grant of grants) {
-    addGrant(grant)
-  }
-
-  return { items: quantities, goldPieces }
-}
-
 function toInventoryItems(
   quantities: Map<string, number>,
   catalogById: Map<string, EquipmentItemDefinition>,
@@ -193,20 +162,6 @@ function toInventoryItems(
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-function mergeQuantityMaps(
-  maps: readonly Map<string, number>[],
-): Map<string, number> {
-  const merged = new Map<string, number>()
-
-  for (const map of maps) {
-    for (const [itemId, quantity] of map) {
-      merged.set(itemId, (merged.get(itemId) ?? 0) + quantity)
-    }
-  }
-
-  return merged
-}
-
 async function loadCatalogMap(
   equipmentCatalog: EquipmentCatalog,
   editionId: Character['editionId'],
@@ -222,7 +177,8 @@ function resolveSource(input: {
   definition: StartingEquipmentDefinition
   character: Character
   catalogById: Map<string, EquipmentItemDefinition>
-}): ResolvedEquipmentSource {
+  ordinalStart: number
+}): ResolvedEquipmentSource & { nextOrdinal: number } {
   const entitlements: ResolvedEquipmentEntitlement[] =
     input.definition.entitlements.map((entitlement) => {
       const selection = findSelection(
@@ -242,10 +198,12 @@ function resolveSource(input: {
     resolveEntitlementGrants(entry.entitlement, entry.selection),
   )
 
-  const normalized = expandAndNormalizeGrants(
+  const materialized = materializeInventoryEntries(
     grants,
     input.catalogById,
     input.character,
+    input.source,
+    input.ordinalStart,
   )
 
   return {
@@ -254,9 +212,14 @@ function resolveSource(input: {
     sourceKindLabel: input.sourceKindLabel,
     completeness: input.definition.completeness,
     entitlements,
-    items: toInventoryItems(normalized.items, input.catalogById),
-    currency: { goldPieces: normalized.goldPieces },
+    entries: materialized.entries,
+    items: toInventoryItems(
+      mergeInventoryQuantities(materialized.entries),
+      input.catalogById,
+    ),
+    currency: { goldPieces: materialized.goldPieces },
     isComplete: entitlements.every((entry) => entry.isComplete),
+    nextOrdinal: materialized.nextOrdinal,
   }
 }
 
@@ -268,6 +231,7 @@ export async function resolveCharacterEquipment(
 ): Promise<ResolvedEquipment> {
   const catalogById = await loadCatalogMap(equipmentCatalog, character.editionId)
   const sources: ResolvedEquipmentSource[] = []
+  let ordinal = 0
 
   for (const classSelection of character.classes) {
     const classDefinition = await classCatalog.getClass(classSelection.classId)
@@ -275,19 +239,21 @@ export async function resolveCharacterEquipment(
       continue
     }
 
-    sources.push(
-      resolveSource({
-        source: {
-          kind: 'class-instance',
-          instanceId: classSelection.instanceId,
-        },
-        label: classDefinition.name,
-        sourceKindLabel: 'Class',
-        definition: classDefinition.startingEquipment,
-        character,
-        catalogById,
-      }),
-    )
+    const resolved = resolveSource({
+      source: {
+        kind: 'class-instance',
+        instanceId: classSelection.instanceId,
+      },
+      label: classDefinition.name,
+      sourceKindLabel: 'Class',
+      definition: classDefinition.startingEquipment,
+      character,
+      catalogById,
+      ordinalStart: ordinal,
+    })
+    ordinal = resolved.nextOrdinal
+    const { nextOrdinal: _next, ...source } = resolved
+    sources.push(source)
   }
 
   if (character.background !== null) {
@@ -296,30 +262,28 @@ export async function resolveCharacterEquipment(
     )
 
     if (backgroundDefinition !== null) {
-      sources.push(
-        resolveSource({
-          source: {
-            kind: 'background',
-            backgroundId: character.background.backgroundId,
-          },
-          label: backgroundDefinition.name,
-          sourceKindLabel: 'Background',
-          definition: backgroundDefinition.equipment,
-          character,
-          catalogById,
-        }),
-      )
+      const resolved = resolveSource({
+        source: {
+          kind: 'background',
+          backgroundId: character.background.backgroundId,
+        },
+        label: backgroundDefinition.name,
+        sourceKindLabel: 'Background',
+        definition: backgroundDefinition.equipment,
+        character,
+        catalogById,
+        ordinalStart: ordinal,
+      })
+      const { nextOrdinal: _next, ...source } = resolved
+      sources.push(source)
     }
   }
 
+  const entries = assignDefaultLocations(
+    sources.flatMap((source) => source.entries),
+  )
   const inventory = toInventoryItems(
-    mergeQuantityMaps(sources.map((source) => {
-      const map = new Map<string, number>()
-      for (const item of source.items) {
-        map.set(item.itemId, item.quantity)
-      }
-      return map
-    })),
+    mergeInventoryQuantities(entries),
     catalogById,
   )
 
@@ -330,8 +294,11 @@ export async function resolveCharacterEquipment(
 
   return {
     sources,
+    entries,
     inventory,
+    mergedInventory: inventory,
     currency: { goldPieces },
+    weightCarriedLb: totalWeightLb(entries),
   }
 }
 

@@ -327,10 +327,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                 <EquipmentStep
                   resolved={editor.resolvedEquipment}
                   selections={character.equipment.selections}
-                  loadout={character.equipment.loadout}
-                  equipmentCatalog={editor.equipmentCatalog}
                   onChangeSelections={editor.setEquipmentSelections}
-                  onChangeLoadout={editor.setEquipmentLoadout}
                   validationIssues={
                     editor.equipmentValidation?.ok === false
                       ? editor.equipmentValidation.issues
@@ -408,7 +405,14 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   }}
                   summaries={editor.reviewSummaries}
                   characterDetailsReview={editor.characterDetailsReviewSections}
+                  equipmentEntries={editor.resolvedEquipment.entries}
                   equipmentInventory={editor.resolvedEquipment.inventory}
+                  equipmentWeightCarriedLb={
+                    editor.resolvedEquipment.weightCarriedLb
+                  }
+                  equipmentGoldPieces={
+                    editor.resolvedEquipment.currency.goldPieces
+                  }
                   equipmentLoadout={character.equipment.loadout}
                   equipmentCatalog={editor.equipmentCatalog}
                   onChangeEquipmentLoadout={editor.setEquipmentLoadout}

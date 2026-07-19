@@ -3955,16 +3955,19 @@ html {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
+  color: var(--text);
   box-shadow: 0 12px 40px rgb(0 0 0 / 20%);
 }
 
 .dialog h2 {
   margin: 0 0 0.75rem;
   font-size: 1.2rem;
+  color: var(--text-h);
 }
 
 .dialog p {
   margin: 0 0 1rem;
+  color: var(--text);
 }
 
 .dialog__character-identity {

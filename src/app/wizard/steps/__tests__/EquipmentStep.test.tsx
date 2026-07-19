@@ -1,19 +1,16 @@
 // @vitest-environment jsdom
 
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { EMPTY_EQUIPMENT_LOADOUT } from '../../../../domain/equipment/types'
+import { describe, expect, it } from 'vitest'
 import { EquipmentStep } from '../EquipmentStep'
 
 const emptyResolved = {
   sources: [],
+  entries: [],
   inventory: [],
+  mergedInventory: [],
   currency: { goldPieces: 0 },
-}
-
-const equipmentCatalog = {
-  getEquipment: vi.fn(async () => null),
-  listEquipment: vi.fn(async () => []),
+  weightCarriedLb: 0,
 }
 
 describe('EquipmentStep', () => {
@@ -22,10 +19,7 @@ describe('EquipmentStep', () => {
       <EquipmentStep
         resolved={emptyResolved}
         selections={[]}
-        loadout={EMPTY_EQUIPMENT_LOADOUT}
-        equipmentCatalog={equipmentCatalog}
         onChangeSelections={() => {}}
-        onChangeLoadout={() => {}}
         validationIssues={[]}
       />,
     )
@@ -39,6 +33,8 @@ describe('EquipmentStep', () => {
     expect(
       screen.getByText(/select a class \(and optionally a background\)/i),
     ).toBeInTheDocument()
+    expect(screen.queryByText('Starting Equipment')).not.toBeInTheDocument()
+    expect(screen.queryByText('Inventory')).not.toBeInTheDocument()
     expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
   })
 })

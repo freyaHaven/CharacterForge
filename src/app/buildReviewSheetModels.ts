@@ -30,6 +30,10 @@ import {
 import { getBackgroundChoiceIds } from '../rules/background/backgroundRules'
 import { resolveSpeciesKnownLanguageLabels } from '../domain/species/standardLanguages'
 import {
+  getSpeciesDisplayName,
+  resolveSelectedLineageOption,
+} from '../features/species/getSpeciesDisplayName'
+import {
   ABILITY_ABBREVIATIONS,
   formatSignedModifier,
   getPassiveScore,
@@ -218,21 +222,9 @@ function buildSpeciesCard(
     return null
   }
 
-  let ancestryLabel: string | null = null
-  for (const choice of definition.choices) {
-    const selectedId = selection.choices[choice.id]
-    if (selectedId === undefined) {
-      continue
-    }
-    const option = choice.options.find((entry) => entry.id === selectedId)
-    if (option !== undefined) {
-      ancestryLabel = option.label
-    }
-  }
-
   return {
     speciesId: definition.id,
-    name: definition.name,
+    name: getSpeciesDisplayName(definition, selection.choices),
     sizeLabel: formatSizeLabel(definition.size),
     speedFeet: definition.speed.walk,
     traits: definition.traits.map((trait) => ({
@@ -240,7 +232,8 @@ function buildSpeciesCard(
       name: trait.name,
       description: trait.description,
     })),
-    ancestryLabel,
+    ancestryLabel:
+      resolveSelectedLineageOption(definition, selection.choices)?.label ?? null,
   }
 }
 
@@ -609,8 +602,11 @@ export function buildReviewSheetModels(
 
   const emptyResolvedEquipment: ResolvedEquipment = {
     sources: [],
+    entries: [],
     inventory: [],
+    mergedInventory: [],
     currency: { goldPieces: 0 },
+    weightCarriedLb: 0,
   }
   const armorClass = calculateCharacterArmorClass({
     abilityScores: character.abilityScores,

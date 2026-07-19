@@ -14,8 +14,11 @@ import {
 
 const EMPTY_RESOLVED: ResolvedEquipment = {
   sources: [],
+  entries: [],
   inventory: [],
+  mergedInventory: [],
   currency: { goldPieces: 0 },
+  weightCarriedLb: 0,
 }
 
 export function useEquipmentResolution(

@@ -15,18 +15,23 @@ const BASE_SCORES: AbilityScores = {
 }
 
 function inventory(...itemIds: string[]): ResolvedEquipment {
+  const lines = itemIds.map((itemId) => {
+    const definition = SRD_2024_EQUIPMENT_BY_ID.get(itemId)
+    return {
+      itemId,
+      name: definition?.name ?? itemId,
+      quantity: 1,
+      category: definition?.category ?? ('gear' as const),
+    }
+  })
+
   return {
     sources: [],
+    entries: [],
     currency: { goldPieces: 0 },
-    inventory: itemIds.map((itemId) => {
-      const definition = SRD_2024_EQUIPMENT_BY_ID.get(itemId)
-      return {
-        itemId,
-        name: definition?.name ?? itemId,
-        quantity: 1,
-        category: definition?.category ?? 'gear',
-      }
-    }),
+    inventory: lines,
+    mergedInventory: lines,
+    weightCarriedLb: 0,
   }
 }
 

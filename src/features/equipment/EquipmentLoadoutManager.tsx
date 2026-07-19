@@ -243,25 +243,32 @@ export function EquipmentLoadoutManager({
       ) : null}
 
       {pendingEquip !== null ? (
-        <div
-          className="equipment-loadout__confirm"
-          role="alertdialog"
-          aria-labelledby="equipment-equip-confirm-title"
-          aria-describedby="equipment-equip-confirm-message"
-        >
-          <h4 id="equipment-equip-confirm-title">Replace equipped item?</h4>
-          <p id="equipment-equip-confirm-message">
-            {pendingEquip.preview.message}
-          </p>
-          <div className="equipment-loadout__confirm-actions">
-            <button type="button" onClick={confirmPendingEquip}>
-              Equip{' '}
-              {definitionsById.get(pendingEquip.itemId)?.name ??
-                pendingEquip.itemId}
-            </button>
-            <button type="button" onClick={() => setPendingEquip(null)}>
-              Cancel
-            </button>
+        <div className="dialog-backdrop" role="presentation">
+          <div
+            className="dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="equipment-equip-confirm-title"
+            aria-describedby="equipment-equip-confirm-message"
+          >
+            <h2 id="equipment-equip-confirm-title">Replace equipped item?</h2>
+            <p id="equipment-equip-confirm-message">
+              {pendingEquip.preview.message}
+            </p>
+            <div className="dialog__actions">
+              <button type="button" onClick={() => setPendingEquip(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="dialog__action--primary"
+                onClick={confirmPendingEquip}
+              >
+                Equip{' '}
+                {definitionsById.get(pendingEquip.itemId)?.name ??
+                  pendingEquip.itemId}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
