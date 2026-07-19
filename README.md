@@ -68,7 +68,7 @@ step UI correctly.
 
 **SRD 2024**
 
-- Species: Dwarf, Dragonborn
+- Species: Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling
 - Classes:
   - **Fighter** — levels 1–20, fighting style, skill proficiencies, martial
     archetype (Champion) at level 3, feature progression through level 20
@@ -192,7 +192,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | Dwarf, Dragonborn | Fighter; Barbarian; Rogue; Monk; Ranger; Paladin |
+| `srd-2024` | D&D 5e 2024 | Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling | Fighter; Barbarian; Rogue; Monk; Ranger; Paladin |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See

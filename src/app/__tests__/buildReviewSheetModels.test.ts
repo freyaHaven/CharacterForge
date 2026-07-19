@@ -8,6 +8,7 @@ import { createTestFighterClassInstance } from '../../testing/classFixtures'
 import { createDefaultCharacter } from '../../domain/character/defaults'
 import { createDefaultCharacterDetails } from '../../domain/character/details'
 import type { Character } from '../../domain/types'
+import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
 import { buildReviewSheetModels } from '../buildReviewSheetModels'
 
 async function createChampionSoldierCharacter(): Promise<{
@@ -25,7 +26,7 @@ async function createChampionSoldierCharacter(): Promise<{
 
   const character = createDefaultCharacter({
     name: 'Freya',
-    species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    species: { ...COMPLETE_DWARF_SELECTION },
     background: {
       backgroundId: 'srd-2024:soldier',
       abilityScoreIncrease: {
@@ -146,6 +147,11 @@ describe('buildReviewSheetModels', () => {
       expect.arrayContaining(['Simple', 'Martial']),
     )
     expect(models.proficiencies.tools).toEqual(['Dice Set'])
+    expect(models.proficiencies.languages).toEqual([
+      'Common',
+      'Dwarvish',
+      'Elvish',
+    ])
     expect(models.proficiencyBonusLabel).toBe('+2')
     expect(models.initiativeLabel).toBe('+2')
     expect(models.speedLabel).toBe('30 ft.')

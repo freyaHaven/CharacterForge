@@ -1,6 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { DRACONIC_ANCESTRIES, dragonbornSrd2024 } from '../dragonborn'
 import { dwarfSrd2024 } from '../dwarf'
+import { elfSrd2024 } from '../elf'
+import { gnomeSrd2024 } from '../gnome'
+import { goliathSrd2024 } from '../goliath'
+import { halflingSrd2024 } from '../halfling'
+import { humanSrd2024 } from '../human'
+import { orcSrd2024 } from '../orc'
+import { tieflingSrd2024 } from '../tiefling'
+import { SRD_2024_SPECIES } from '../index'
+
+describe('SRD_2024_SPECIES', () => {
+  it('lists all nine species in alphabetical order', () => {
+    expect(SRD_2024_SPECIES.map((species) => species.id)).toEqual([
+      'srd-2024:dragonborn',
+      'srd-2024:dwarf',
+      'srd-2024:elf',
+      'srd-2024:gnome',
+      'srd-2024:goliath',
+      'srd-2024:halfling',
+      'srd-2024:human',
+      'srd-2024:orc',
+      'srd-2024:tiefling',
+    ])
+  })
+})
 
 describe('dwarfSrd2024', () => {
   it('defines creature type, origin languages, and Darkvision as a trait-owned effect', () => {
@@ -100,5 +124,125 @@ describe('dragonbornSrd2024', () => {
       dragonbornSrd2024.traits.find((trait) => trait.id === 'darkvision')
         ?.effects,
     ).toEqual([{ kind: 'darkvision', rangeFeet: 60 }])
+  })
+})
+
+describe('elfSrd2024', () => {
+  it('requires lineage, keen senses, and spellcasting ability choices', () => {
+    expect(elfSrd2024.choices.map((choice) => choice.id)).toEqual([
+      'elven-lineage',
+      'keen-senses',
+      'spellcasting-ability',
+    ])
+    expect(
+      elfSrd2024.choices
+        .find((choice) => choice.id === 'elven-lineage')
+        ?.options.map((option) => option.id),
+    ).toEqual(['drow', 'high-elf', 'wood-elf'])
+  })
+
+  it('grants Fey Ancestry save advantage and Drow Darkvision upgrade', () => {
+    expect(
+      elfSrd2024.traits.find((trait) => trait.id === 'fey-ancestry')?.effects,
+    ).toEqual([{ kind: 'save-advantage', condition: 'charmed' }])
+    expect(
+      elfSrd2024.choices
+        .find((choice) => choice.id === 'elven-lineage')
+        ?.options.find((option) => option.id === 'drow')?.effects,
+    ).toEqual([{ kind: 'darkvision', rangeFeet: 120 }])
+  })
+})
+
+describe('gnomeSrd2024', () => {
+  it('is Small with lineage choices and 60 ft Darkvision', () => {
+    expect(gnomeSrd2024.size).toBe('small')
+    expect(gnomeSrd2024.choices.map((choice) => choice.id)).toEqual([
+      'gnomish-lineage',
+      'spellcasting-ability',
+    ])
+    expect(
+      gnomeSrd2024.traits.find((trait) => trait.id === 'darkvision')?.effects,
+    ).toEqual([{ kind: 'darkvision', rangeFeet: 60 }])
+  })
+})
+
+describe('goliathSrd2024', () => {
+  it('walks at 35 feet and offers six Giant Ancestry benefits', () => {
+    expect(goliathSrd2024.speed).toEqual({ walk: 35 })
+    expect(
+      goliathSrd2024.choices
+        .find((choice) => choice.id === 'giant-ancestry')
+        ?.options.map((option) => option.id),
+    ).toEqual([
+      'clouds-jaunt',
+      'fires-burn',
+      'frosts-chill',
+      'hills-tumble',
+      'stones-endurance',
+      'storms-thunder',
+    ])
+  })
+})
+
+describe('halflingSrd2024', () => {
+  it('is Small with Brave save advantage and no required choices', () => {
+    expect(halflingSrd2024.size).toBe('small')
+    expect(halflingSrd2024.choices).toEqual([])
+    expect(
+      halflingSrd2024.traits.find((trait) => trait.id === 'brave')?.effects,
+    ).toEqual([{ kind: 'save-advantage', condition: 'frightened' }])
+  })
+})
+
+describe('humanSrd2024', () => {
+  it('requires a size choice and keeps Skillful/Versatile descriptive', () => {
+    expect(humanSrd2024.choices.map((choice) => choice.id)).toEqual(['size'])
+    expect(humanSrd2024.traits.map((trait) => trait.id)).toEqual([
+      'resourceful',
+      'skillful',
+      'versatile',
+    ])
+  })
+})
+
+describe('orcSrd2024', () => {
+  it('grants 120 ft Darkvision with no required choices', () => {
+    expect(orcSrd2024.choices).toEqual([])
+    expect(
+      orcSrd2024.traits.find((trait) => trait.id === 'darkvision')?.effects,
+    ).toEqual([{ kind: 'darkvision', rangeFeet: 120 }])
+    expect(orcSrd2024.traits.map((trait) => trait.id)).toEqual([
+      'adrenaline-rush',
+      'darkvision',
+      'relentless-endurance',
+    ])
+  })
+})
+
+describe('tieflingSrd2024', () => {
+  it('requires size, legacy, and spellcasting ability with resistance effects', () => {
+    expect(tieflingSrd2024.choices.map((choice) => choice.id)).toEqual([
+      'size',
+      'fiendish-legacy',
+      'spellcasting-ability',
+    ])
+
+    const legacy = tieflingSrd2024.choices.find(
+      (choice) => choice.id === 'fiendish-legacy',
+    )
+    expect(legacy?.options.map((option) => option.id)).toEqual([
+      'abyssal',
+      'chthonic',
+      'infernal',
+    ])
+    expect(
+      legacy?.options.find((option) => option.id === 'abyssal')?.effects,
+    ).toEqual([{ kind: 'damage-resistance', damageType: 'poison' }])
+    expect(
+      legacy?.options.find((option) => option.id === 'chthonic')?.effects,
+    ).toEqual([{ kind: 'damage-resistance', damageType: 'necrotic' }])
+    expect(
+      legacy?.options.find((option) => option.id === 'infernal')?.effects,
+    ).toEqual([{ kind: 'damage-resistance', damageType: 'fire' }])
   })
 })

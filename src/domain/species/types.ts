@@ -27,8 +27,9 @@ export type DamageTypeId =
   | 'cold'
   | 'fire'
   | 'lightning'
+  | 'necrotic'
 
-export type ConditionId = 'poisoned'
+export type ConditionId = 'poisoned' | 'charmed' | 'frightened'
 
 export type SpeciesEffect =
   | { kind: 'darkvision'; rangeFeet: number }

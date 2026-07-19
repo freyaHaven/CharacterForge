@@ -189,11 +189,17 @@ describe('SpeciesPicker', () => {
       expect(screen.queryByText(/loading species/i)).not.toBeInTheDocument()
     })
 
-    await user.type(screen.getByRole('searchbox', { name: /search species/i }), 'elf')
+    await user.type(
+      screen.getByRole('searchbox', { name: /search species/i }),
+      'zzzz-no-match',
+    )
 
-    expect(screen.getByRole('status')).toHaveTextContent(/no species match.*elf/i)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /no species match.*zzzz-no-match/i,
+    )
     expect(screen.queryByRole('button', { name: 'Dwarf' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Dragonborn' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Elf' })).not.toBeInTheDocument()
   })
 
   it('restores selected card styling after clearing search', async () => {

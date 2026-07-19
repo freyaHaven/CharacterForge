@@ -4,13 +4,20 @@ import { createBundledSpeciesCatalog } from '../bundledSpeciesCatalog'
 describe('createBundledSpeciesCatalog', () => {
   const catalog = createBundledSpeciesCatalog()
 
-  it('lists dwarf for srd-2024', async () => {
+  it('lists all SRD 2024 species alphabetically', async () => {
     const species = await catalog.listSpecies('srd-2024')
 
-    expect(species).toHaveLength(2)
+    expect(species).toHaveLength(9)
     expect(species.map((entry) => entry.id)).toEqual([
-      'srd-2024:dwarf',
       'srd-2024:dragonborn',
+      'srd-2024:dwarf',
+      'srd-2024:elf',
+      'srd-2024:gnome',
+      'srd-2024:goliath',
+      'srd-2024:halfling',
+      'srd-2024:human',
+      'srd-2024:orc',
+      'srd-2024:tiefling',
     ])
   })
 

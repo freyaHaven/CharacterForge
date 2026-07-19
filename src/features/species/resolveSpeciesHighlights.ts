@@ -82,16 +82,22 @@ export function resolveSpeciesHighlights(
     choices: selectionChoices,
   })
 
-  const senses: SpeciesHighlightSense[] = []
+  let darkvision: SpeciesHighlightSense | null = null
+  let darkvisionRangeFeet = -1
+
   for (const effect of effects) {
-    const sense = senseFromEffect(effect)
-    if (sense !== null) {
-      senses.push(sense)
+    if (effect.kind !== 'darkvision') {
+      continue
+    }
+
+    if (effect.rangeFeet > darkvisionRangeFeet) {
+      darkvisionRangeFeet = effect.rangeFeet
+      darkvision = senseFromEffect(effect)
     }
   }
 
   return {
-    senses,
+    senses: darkvision === null ? [] : [darkvision],
     movement: movementFromSpeed(definition.speed),
   }
 }

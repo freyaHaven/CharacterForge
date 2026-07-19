@@ -78,4 +78,41 @@ describe('resolveSpeciesHighlights', () => {
     expect(highlights).toEqual({ senses: [], movement: [] })
     expect(hasSpeciesHighlights(highlights)).toBe(false)
   })
+
+  it('keeps the longest Darkvision range when a lineage upgrades it', () => {
+    const definition = createFixture({
+      traits: [
+        {
+          id: 'darkvision',
+          name: 'Darkvision',
+          description: 'You have Darkvision.',
+          effects: [{ kind: 'darkvision', rangeFeet: 60 }],
+        },
+      ],
+      choices: [
+        {
+          id: 'lineage',
+          prompt: 'Choose a lineage',
+          type: 'single-select',
+          required: true,
+          options: [
+            {
+              id: 'drow',
+              label: 'Drow',
+              effects: [{ kind: 'darkvision', rangeFeet: 120 }],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(
+      resolveSpeciesHighlights(definition, { lineage: 'drow' }),
+    ).toEqual({
+      senses: [
+        { kind: 'darkvision', label: 'Darkvision', detail: '120 ft.' },
+      ],
+      movement: [],
+    })
+  })
 })

@@ -15,6 +15,7 @@ import {
   openStoredCharacterEditor,
   seedRecentCharacter,
 } from '../../testing/characterEditorTestUtils'
+import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
 import { goToWizardStep } from '../../testing/wizardTestUtils'
 
 const { loadMock, saveMock } = vi.hoisted(() => ({
@@ -43,7 +44,7 @@ function createReviewTestCharacter(): Character {
   return createDefaultCharacter({
     id: 'char-review-1',
     name: 'Freya',
-    species: { speciesId: 'srd-2024:dwarf', choices: {} },
+    species: { ...COMPLETE_DWARF_SELECTION },
     background: {
       backgroundId: 'srd-2024:soldier',
       abilityScoreIncrease: {
@@ -185,6 +186,10 @@ describe('Overview character sheet content', () => {
     expect(within(proficiencies).getByText(/Simple, Martial/)).toBeInTheDocument()
     expect(within(proficiencies).getByText('Tools')).toBeInTheDocument()
     expect(within(proficiencies).getByText('Dice Set')).toBeInTheDocument()
+    expect(within(proficiencies).getByText('Languages')).toBeInTheDocument()
+    expect(
+      within(proficiencies).getByText(/Common, Dwarvish, Elvish/),
+    ).toBeInTheDocument()
 
     expect(screen.queryByRole('heading', { name: 'Spellcasting', level: 3 })).not.toBeInTheDocument()
   })

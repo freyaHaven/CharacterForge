@@ -154,13 +154,24 @@ describe('ContentRegistry (bundled)', () => {
     const registry = createBundledContentRegistry()
 
     expect(registry.listSpecies('srd-2024').map((entry) => entry.id)).toEqual([
-      'srd-2024:dwarf',
       'srd-2024:dragonborn',
+      'srd-2024:dwarf',
+      'srd-2024:elf',
+      'srd-2024:gnome',
+      'srd-2024:goliath',
+      'srd-2024:halfling',
+      'srd-2024:human',
+      'srd-2024:orc',
+      'srd-2024:tiefling',
     ])
     expect(registry.listSpecies('srd-2014')).toEqual([])
     expect(registry.getSpecies('srd-2024:dwarf')?.name).toBe('Dwarf')
     expect(
       registry.getSpecies('srd-2024:dragonborn')?.choices[0]?.id,
     ).toBe('draconic-ancestry')
+    expect(registry.getSpecies('srd-2024:elf')?.name).toBe('Elf')
+    expect(registry.getSpecies('srd-2024:tiefling')?.choices.map((c) => c.id)).toEqual(
+      ['size', 'fiendish-legacy', 'spellcasting-ability'],
+    )
   })
 })

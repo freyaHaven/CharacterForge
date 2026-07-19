@@ -28,6 +28,7 @@ import {
   formatFeatCategoryBadge,
 } from '../features/feat/formatFeatDetails'
 import { getBackgroundChoiceIds } from '../rules/background/backgroundRules'
+import { resolveSpeciesKnownLanguageLabels } from '../domain/species/standardLanguages'
 import {
   ABILITY_ABBREVIATIONS,
   formatSignedModifier,
@@ -470,11 +471,18 @@ function buildProficiencies(
   classDefinitions: Map<string, ClassDefinition>,
   backgroundDefinition: BackgroundDefinition | null,
   backgroundSelection: BackgroundSelection | null,
+  speciesDefinition: SpeciesDefinition | null,
 ): ReviewProficienciesModel {
   const armor = new Set<string>()
   const weapons = new Set<string>()
   const tools = new Set<string>()
-  const languages: string[] = []
+  const languages =
+    speciesDefinition === null
+      ? []
+      : resolveSpeciesKnownLanguageLabels(
+          speciesDefinition.languages,
+          character.species,
+        )
 
   for (const instance of character.classes) {
     const definition = classDefinitions.get(instance.classId)
@@ -524,11 +532,15 @@ function buildSavingThrowNotes(
     speciesDefinition,
     speciesSelection,
   )) {
-    if (effect.kind === 'save-advantage' && effect.condition === 'poisoned') {
-      notes.push(
-        'Advantage on saving throws to avoid or end the Poisoned condition.',
-      )
+    if (effect.kind !== 'save-advantage') {
+      continue
     }
+
+    const conditionLabel =
+      effect.condition.charAt(0).toUpperCase() + effect.condition.slice(1)
+    notes.push(
+      `Advantage on saving throws to avoid or end the ${conditionLabel} condition.`,
+    )
   }
 
   return notes
@@ -642,6 +654,7 @@ export function buildReviewSheetModels(
       input.classDefinitions,
       input.backgroundDefinition,
       character.background,
+      input.speciesDefinition,
     ),
     proficiencyBonus,
     proficiencyBonusLabel: formatSignedModifier(proficiencyBonus),
