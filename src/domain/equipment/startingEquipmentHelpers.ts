@@ -75,6 +75,33 @@ export function createSimplifiedClassStartingEquipment(input: {
   }
 }
 
+/**
+ * SRD 2024 class starting equipment: Package A (items) vs gold (option B in the SRD).
+ */
+export function createCompleteClassPackageOrGoldStartingEquipment(input: {
+  packageLabel?: string
+  items: readonly EquipmentGrant[]
+  goldPieces: number
+}): StartingEquipmentDefinition {
+  return createClassPackageOrGoldStartingEquipment({
+    completeness: 'complete',
+    options: [
+      {
+        id: 'package-a',
+        label: input.packageLabel ?? 'Package A',
+        kind: 'items',
+        items: input.items,
+      },
+      {
+        id: 'gold-alternative',
+        label: `${input.goldPieces} GP`,
+        kind: 'gold',
+        goldPieces: input.goldPieces,
+      },
+    ],
+  })
+}
+
 export function createClassPackageOrGoldStartingEquipment(input: {
   completeness: StartingEquipmentDefinition['completeness']
   options: Array<

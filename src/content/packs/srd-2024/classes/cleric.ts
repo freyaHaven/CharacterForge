@@ -3,7 +3,7 @@ import { createAsiChoiceDefinition } from '../../../../domain/class/abilityScore
 import { subclassToChoiceOption } from '../../../../domain/class/subclassDefinition'
 import type { SkillId } from '../../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../../domain/skills/types'
-import { createSimplifiedClassStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
+import { createCompleteClassPackageOrGoldStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
 import { CLERIC_PACKAGE_A } from '../equipment/packages'
 import { SRD_2024_SOURCE } from '../source'
 import {
@@ -313,8 +313,7 @@ export const clericSrd2024: ClassDefinition = {
     createAsiChoiceDefinition('ability-score-improvement-12', 12),
     createAsiChoiceDefinition('ability-score-improvement-16', 16),
   ],
-  startingEquipment: createSimplifiedClassStartingEquipment({
-    packageLabel: 'Package A',
+  startingEquipment: createCompleteClassPackageOrGoldStartingEquipment({
     items: CLERIC_PACKAGE_A,
     goldPieces: 110,
   }),

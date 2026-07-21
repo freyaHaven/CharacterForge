@@ -133,7 +133,6 @@ function createCompleteClericCharacter(
     equipment: createCompleteStartingEquipment(
       clericInstanceId,
       'srd-2024:soldier',
-      PACKAGE_OPTION_ID,
     ),
     ...overrides,
   })

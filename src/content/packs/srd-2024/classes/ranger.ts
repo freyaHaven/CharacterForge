@@ -8,7 +8,7 @@ import {
   formatWeaponMasteryDescription,
   formatWeaponMasteryOptionLabel,
 } from '../../../../domain/weapons/mastery'
-import { createSimplifiedClassStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
+import { createCompleteClassPackageOrGoldStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
 import { RANGER_PACKAGE_A } from '../equipment/packages'
 import { SRD_2024_SOURCE } from '../source'
 import {
@@ -417,8 +417,7 @@ export const rangerSrd2024: ClassDefinition = {
     createAsiChoiceDefinition('ability-score-improvement-12', 12),
     createAsiChoiceDefinition('ability-score-improvement-16', 16),
   ],
-  startingEquipment: createSimplifiedClassStartingEquipment({
-    packageLabel: 'Package A',
+  startingEquipment: createCompleteClassPackageOrGoldStartingEquipment({
     items: RANGER_PACKAGE_A,
     goldPieces: 150,
   }),

@@ -28,7 +28,7 @@ localStorage with explicit schema versioning.
 | Class | Required — see [Class step](#class-step) below |
 | Ability Scores | Required — manual, standard array, point buy, rolled |
 | Background | Placeholder |
-| Equipment | Placeholder |
+| Equipment | Optional — class/background starting gear, inventory, loadout |
 | Review | Summary cards, finish policy |
 
 ### Class step
@@ -84,6 +84,16 @@ step UI correctly.
   - **Paladin** — levels 1–20, Lay On Hands, Spellcasting, Fighting Style,
     weapon mastery, Oath of Devotion at level 3, feature progression through
     level 20
+  - **Cleric** — levels 1–20, Spellcasting, Divine Order, Life Domain at
+    level 3, feature progression through level 20
+
+**Starting equipment (SRD 2024)**
+
+- All bundled classes: complete Package A (and Package B for Fighter) vs gold
+  options on the Equipment step
+- Backgrounds: Acolyte, Criminal, Sage, Soldier package vs gold
+- Equipment catalog: items referenced by those starting packages only (not a
+  full SRD compendium or shop)
 
 **SRD 2014**
 
@@ -229,8 +239,7 @@ Icons are decorative; class names in the UI provide accessible labels.
 - **Class icons:** Register remaining PNG emblems as artwork is finalized
 - **Species:** 2014 SRD species in a future `srd-2014` content pack
 - **Background step:** edition-specific picker polish
-- **Equipment step:** starting gear, weapon mastery choices (deferred from
-  Fighter level-1 feature text)
+- **Equipment:** weapon mastery gear choices deferred from Fighter level-1 text
 - **Review polish:** richer summaries as more steps ship
 - **Out of scope for now:** automatic cross-edition conversion, non-SRD book
   content
