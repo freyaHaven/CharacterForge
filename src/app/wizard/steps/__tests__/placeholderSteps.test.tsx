@@ -7,6 +7,7 @@ import { createBundledClassCatalog } from '../../../../adapters/bundledClassCata
 import { createBundledFeatCatalog } from '../../../../adapters/bundledFeatCatalog'
 import { createBundledSpeciesCatalog } from '../../../../adapters/bundledSpeciesCatalog'
 import { DEFAULT_ABILITY_SCORES } from '../../../../domain/character/defaults'
+import { createDefaultCharacterDetails } from '../../../../domain/character/details'
 import type { ClassBuildMode } from '../../../../features/class/classBuildMode'
 import { createEmptyClassSelectionDrafts } from '../../../../features/class/classSelectionDraft'
 import { BackgroundStep } from '../BackgroundStep'
@@ -99,7 +100,7 @@ describe('ClassStep', () => {
 })
 
 describe('BackgroundStep', () => {
-  it('renders the background picker catalogue', async () => {
+  it('renders the background picker catalogue and Character Details section', async () => {
     render(
       <BackgroundStep
         editionId="srd-2024"
@@ -108,11 +109,19 @@ describe('BackgroundStep', () => {
         catalog={createBundledBackgroundCatalog()}
         onDraftChange={() => {}}
         onCommittedSelectionChange={() => {}}
+        speciesSelection={null}
+        details={createDefaultCharacterDetails()}
+        speciesCatalog={createBundledSpeciesCatalog()}
+        onDetailsChange={() => {}}
+        onDetailsTouched={() => {}}
       />,
     )
 
     expect(
       screen.getByRole('heading', { name: 'Background', level: 2 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Character Details', level: 2 }),
     ).toBeInTheDocument()
 
     await waitFor(() => {

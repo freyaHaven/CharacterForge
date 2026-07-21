@@ -4,7 +4,6 @@ import { WIZARD_STEPS } from '../steps'
 import {
   createWizardStepContext,
   getVisibleWizardSteps,
-  hasCharacterDetailsStep,
   hasFeatChoices,
   hasSpellContent,
   isWizardStepVisible,
@@ -14,7 +13,6 @@ describe('wizard step visibility', () => {
   const context = createWizardStepContext(createDefaultCharacter())
 
   it('shows the primary flow and hides deferred steps', () => {
-    expect(hasCharacterDetailsStep(context)).toBe(false)
     expect(hasFeatChoices(context)).toBe(false)
     expect(hasSpellContent(context)).toBe(false)
 
@@ -42,17 +40,11 @@ describe('wizard step visibility', () => {
     ).toContain('spells')
   })
 
-  it('keeps character details, feats, and spells conditional', () => {
-    const characterDetailsStep = WIZARD_STEPS.find(
-      (step) => step.id === 'character-details',
-    )
+  it('keeps feats and spells conditional', () => {
     const featsStep = WIZARD_STEPS.find((step) => step.id === 'feats')
     const spellsStep = WIZARD_STEPS.find((step) => step.id === 'spells')
 
-    expect(characterDetailsStep?.visibility).toEqual({
-      kind: 'conditional',
-      when: 'character-details',
-    })
+    expect(WIZARD_STEPS.find((step) => step.id === 'character-details')).toBeUndefined()
     expect(featsStep?.visibility).toEqual({
       kind: 'conditional',
       when: 'feats',
@@ -61,7 +53,6 @@ describe('wizard step visibility', () => {
       kind: 'conditional',
       when: 'spells',
     })
-    expect(isWizardStepVisible(characterDetailsStep!, context)).toBe(false)
     expect(isWizardStepVisible(featsStep!, context)).toBe(false)
     expect(isWizardStepVisible(spellsStep!, context)).toBe(false)
   })

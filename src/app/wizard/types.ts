@@ -1,7 +1,6 @@
 export type WizardStepId =
   | 'basics'
   | 'species'
-  | 'character-details'
   | 'ability-scores'
   | 'class'
   | 'background'
@@ -20,7 +19,7 @@ export type StepStatus = {
 
 export type WizardStepVisibility =
   | { kind: 'always' }
-  | { kind: 'conditional'; when: 'character-details' | 'feats' | 'spells' }
+  | { kind: 'conditional'; when: 'feats' | 'spells' }
 
 export type WizardStepDefinition = {
   id: WizardStepId

@@ -13,7 +13,6 @@ describe('WIZARD_STEPS', () => {
       'species',
       'ability-scores',
       'equipment',
-      'character-details',
       'feats',
       'spells',
       'review',
@@ -43,7 +42,6 @@ describe('WIZARD_STEPS', () => {
       WIZARD_STEPS.map((step) => [step.id, step.required]),
     ) as Record<WizardStepId, boolean>
 
-    expect(requiredById['character-details']).toBe(false)
     expect(requiredById.background).toBe(false)
     expect(requiredById.equipment).toBe(false)
     expect(requiredById.feats).toBe(false)

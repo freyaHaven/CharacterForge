@@ -94,12 +94,71 @@ describe('Character Details workflow', () => {
     saveMock.mockResolvedValue(undefined)
   })
 
-  it('hides Character Details from wizard navigation for now', async () => {
-    await renderLoadedApp()
+  it('renders Character Details on the Background page, not as a nav step', async () => {
+    const { user } = await renderLoadedApp()
 
     expect(
       screen.queryByRole('button', { name: /^Character Details,/i }),
     ).not.toBeInTheDocument()
+
+    await goToWizardStep(user, screen, 'Background')
+
+    expect(
+      screen.getByRole('heading', { name: 'Background', level: 2 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Character Details', level: 2 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/optional\. descriptive information/i),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Identity', level: 3 })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Personality', level: 3 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Backstory & Notes', level: 3 }),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps Character Details when the background selection changes', async () => {
+    const { user } = await renderLoadedApp(
+      createStoredCharacter({
+        details: {
+          ...createDefaultCharacterDetails(),
+          age: '50',
+          backstoryNotes: 'Keep me.',
+        },
+        background: {
+          backgroundId: 'srd-2024:soldier',
+          abilityScoreIncrease: {
+            mode: 'two-and-one',
+            plusTwo: 'strength',
+            plusOne: 'constitution',
+          },
+          choices: {
+            'gaming-set': 'dice-set',
+          },
+        },
+      }),
+    )
+
+    await goToWizardStep(user, screen, 'Background')
+    await waitFor(() => {
+      expect(screen.queryByText(/loading backgrounds/i)).not.toBeInTheDocument()
+    })
+
+    const ageInput = screen.getByLabelText('Age')
+    expect(ageInput).toHaveValue('50')
+
+    await user.click(screen.getByRole('button', { name: 'Acolyte' }))
+
+    expect(screen.getByLabelText('Age')).toHaveValue('50')
+    expect(
+      screen.getByPlaceholderText(
+        /write your character's backstory, goals, important memories/i,
+      ),
+    ).toHaveValue('Keep me.')
   })
 
   it('shows sectioned review content only for populated fields', async () => {

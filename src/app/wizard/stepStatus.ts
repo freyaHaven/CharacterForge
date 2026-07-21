@@ -214,7 +214,7 @@ export function getFeatStepStatus(context: StepValidationContext): StepStatus {
 }
 
 export function getCharacterDetailsStepStatus(
-  context: StepValidationContext,
+  context: Pick<StepValidationContext, 'character' | 'detailsTouched'>,
 ): StepStatus {
   if (hasCharacterDetailsContent(context.character.details)) {
     return { completion: 'complete', hasValidationErrors: false }
@@ -321,7 +321,6 @@ export function getNonReviewStepStatuses(
   return {
     basics: getBasicsStepStatus(context),
     species: getSpeciesStepStatus(context),
-    'character-details': getCharacterDetailsStepStatus(context),
     'ability-scores': getAbilityScoresStepStatus(context),
     class: getClassStepStatus(context),
     background: getBackgroundStepStatus(context),

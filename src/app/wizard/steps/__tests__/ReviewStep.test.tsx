@@ -31,10 +31,6 @@ const emptyEquipmentCatalog = {
 const defaultStatuses = {
   basics: { completion: 'complete' as const, hasValidationErrors: false },
   species: { completion: 'in-progress' as const, hasValidationErrors: true },
-  'character-details': {
-    completion: 'not-started' as const,
-    hasValidationErrors: false,
-  },
   class: { completion: 'not-started' as const, hasValidationErrors: false },
   'ability-scores': { completion: 'complete' as const, hasValidationErrors: false },
   background: { completion: 'not-started' as const, hasValidationErrors: false },
@@ -46,7 +42,6 @@ const defaultStatuses = {
 const defaultSummaries = {
   basics: ['Name: Aldric', 'Edition: D&D 5e 2024'],
   species: ['Species: Dragonborn', 'Choice incomplete'],
-  'character-details': [],
   class: ['Coming soon'],
   'ability-scores': ['Method: Manual', 'STR 10 (+0)'],
   background: ['Not selected'],
@@ -85,6 +80,10 @@ const defaultProps = {
   hasSpellcastingCapability: false,
   spellLines: [],
   unresolvedDeferredRequirements: [],
+  characterDetailsStatus: {
+    completion: 'not-started' as const,
+    hasValidationErrors: false,
+  },
   equipmentEntries: [],
   equipmentInventory: [],
   equipmentWeightCarriedLb: 0,
@@ -164,14 +163,12 @@ describe('ReviewStep', () => {
         {...defaultProps}
         age="42"
         alignmentLabel="Neutral Good"
-        stepStatuses={{
-          ...defaultStatuses,
-          'character-details': {
-            completion: 'complete',
-            hasValidationErrors: false,
-          },
-        }}
+        stepStatuses={defaultStatuses}
         summaries={defaultSummaries}
+        characterDetailsStatus={{
+          completion: 'complete',
+          hasValidationErrors: false,
+        }}
         characterDetailsReview={{
           identity: ['Gender: Male'],
           personality: ['Flaws: Stubborn'],
@@ -210,6 +207,45 @@ describe('ReviewStep', () => {
     ).toBeInTheDocument()
   })
 
+  it('routes Character Details Edit to the Background step', async () => {
+    const user = userEvent.setup()
+    const onEditStep = vi.fn()
+
+    render(
+      <ReviewStep
+        {...defaultProps}
+        stepStatuses={defaultStatuses}
+        summaries={defaultSummaries}
+        characterDetailsStatus={{
+          completion: 'complete',
+          hasValidationErrors: false,
+        }}
+        characterDetailsReview={{
+          identity: ['Gender: Male'],
+          personality: [],
+          backstoryNotes: null,
+        }}
+        finishPolicy={{
+          canFinish: true,
+          incompleteRequiredSteps: [],
+          unresolvedDeferredRequirements: [],
+        }}
+        finishBlockedMessage=""
+        finishMessage={null}
+        onEditStep={onEditStep}
+        onFinish={vi.fn()}
+      />,
+    )
+
+    const section = screen.getByRole('heading', {
+      name: 'Character Details',
+      level: 3,
+    }).closest('section')
+    expect(section).not.toBeNull()
+    await user.click(within(section!).getByRole('button', { name: 'Edit' }))
+    expect(onEditStep).toHaveBeenCalledWith('background')
+  })
+
   it('shows pronouns, age, and alignment in the header and omits them from Character Details', () => {
     render(
       <ReviewStep
@@ -217,14 +253,12 @@ describe('ReviewStep', () => {
         pronounsLabel="He/Him"
         age="42"
         alignmentLabel="Neutral Good"
-        stepStatuses={{
-          ...defaultStatuses,
-          'character-details': {
-            completion: 'complete',
-            hasValidationErrors: false,
-          },
-        }}
+        stepStatuses={defaultStatuses}
         summaries={defaultSummaries}
+        characterDetailsStatus={{
+          completion: 'complete',
+          hasValidationErrors: false,
+        }}
         characterDetailsReview={{
           identity: ['Gender: Male'],
           personality: ['Flaws: Stubborn'],

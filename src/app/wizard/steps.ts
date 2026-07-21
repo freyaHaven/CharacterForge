@@ -8,12 +8,6 @@ export const WIZARD_STEPS: readonly WizardStepDefinition[] = [
   { id: 'ability-scores', label: 'Abilities', required: true },
   { id: 'equipment', label: 'Equipment', required: false },
   {
-    id: 'character-details',
-    label: 'Character Details',
-    required: false,
-    visibility: { kind: 'conditional', when: 'character-details' },
-  },
-  {
     id: 'feats',
     label: 'Feats',
     required: false,

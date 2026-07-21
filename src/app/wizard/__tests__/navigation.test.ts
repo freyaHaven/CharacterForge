@@ -127,7 +127,6 @@ describe('canNavigateToStep', () => {
   })
 
   it('rejects hidden conditional steps', () => {
-    expect(canNavigateToStep('character-details', DEFAULT_CONTEXT)).toBe(false)
     expect(canNavigateToStep('feats', DEFAULT_CONTEXT)).toBe(false)
     expect(canNavigateToStep('spells', DEFAULT_CONTEXT)).toBe(false)
   })
@@ -135,16 +134,13 @@ describe('canNavigateToStep', () => {
   it('rejects unknown step IDs', () => {
     expect(canNavigateToStep('invalid-step', DEFAULT_CONTEXT)).toBe(false)
     expect(canNavigateToStep('', DEFAULT_CONTEXT)).toBe(false)
+    expect(canNavigateToStep('character-details', DEFAULT_CONTEXT)).toBe(false)
   })
 
   it('does not depend on completion status', () => {
     const statusesWithErrors: Record<WizardStepId, StepStatus> = {
       basics: { completion: 'in-progress', hasValidationErrors: true },
       species: { completion: 'not-started', hasValidationErrors: false },
-      'character-details': {
-        completion: 'not-started',
-        hasValidationErrors: false,
-      },
       class: { completion: 'not-started', hasValidationErrors: false },
       'ability-scores': {
         completion: 'in-progress',

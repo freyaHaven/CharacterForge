@@ -15,9 +15,7 @@ type WizardNavProps = {
 /** Two-line nav labels that should never collapse onto one line. */
 const WIZARD_NAV_LABEL_LINES: Partial<
   Record<WizardStepId, readonly [string, string]>
-> = {
-  'character-details': ['Character', 'Details'],
-}
+> = {}
 
 function WizardNavLabel({
   stepId,

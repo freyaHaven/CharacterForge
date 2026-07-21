@@ -3,6 +3,20 @@
   gap: 1.5rem;
 }
 
+.character-details-section {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.character-details-section__intro {
+  margin-bottom: 1.5rem;
+}
+
+.character-details-section__intro h2 {
+  margin: 0 0 0.5rem;
+}
+
 .character-details-fields {
   display: grid;
   gap: 2rem;

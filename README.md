@@ -36,10 +36,13 @@ Ten steps are defined in the catalog; navigation shows only steps that are
 | Species | Yes | Nine SRD 2024 species with choices |
 | Ability Scores | Yes | Manual, standard array, point buy, rolled |
 | Equipment | No | Class/background starting gear (package vs gold) |
-| Character Details | No | Built but **hidden** from nav |
 | Feats | No | Built but **hidden** from nav |
 | Spells | No | **Conditional** — casters and feat-granted spells |
 | Overview (Review) | No | Character sheet, inventory loadout, finish policy |
+
+The **Background** step also hosts optional **Character Details** (identity,
+personality, backstory) below background selection. Those fields live on the
+character model, never block step completion, and are not a separate nav step.
 
 ### Class step
 

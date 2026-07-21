@@ -13,7 +13,6 @@ function createStatuses(
   return {
     basics: defaultStatus,
     species: defaultStatus,
-    'character-details': defaultStatus,
     class: defaultStatus,
     'ability-scores': defaultStatus,
     background: defaultStatus,
@@ -38,7 +37,6 @@ describe('organizeReviewSheet', () => {
       summaries: {
         basics: ['Name: Aldric', 'Edition: D&D 5e 2024'],
         species: ['Species: Dwarf'],
-        'character-details': [],
         class: [
           'Class: Fighter',
           'Level: 1',
@@ -124,7 +122,6 @@ describe('organizeReviewSheet', () => {
       summaries: {
         basics: [],
         species: [],
-        'character-details': [],
         class: [
           'Class: Fighter',
           'Level: 3',
@@ -196,7 +193,6 @@ describe('organizeReviewSheet', () => {
       summaries: {
         basics: [],
         species: [],
-        'character-details': [],
         class: [],
         'ability-scores': [],
         background: [],
@@ -276,7 +272,6 @@ describe('organizeReviewSheet', () => {
       summaries: {
         basics: [],
         species: [],
-        'character-details': [],
         class: [],
         'ability-scores': [],
         background: [],
@@ -354,7 +349,6 @@ describe('organizeReviewSheet', () => {
       summaries: {
         basics: [],
         species: ['Species: Dragonborn'],
-        'character-details': [],
         class: ['Not selected'],
         'ability-scores': ['Method: Manual'],
         background: ['Coming soon'],

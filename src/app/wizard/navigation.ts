@@ -11,7 +11,6 @@ export type { WizardStepContext } from './stepVisibility'
 export {
   createWizardStepContext,
   getVisibleWizardSteps,
-  hasCharacterDetailsStep,
   hasFeatChoices,
   hasSpellContent,
   isWizardStepVisible,

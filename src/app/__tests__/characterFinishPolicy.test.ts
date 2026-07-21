@@ -18,7 +18,6 @@ function createStatuses(
   return {
     basics: defaultStatus,
     species: defaultStatus,
-    'character-details': defaultStatus,
     class: defaultStatus,
     'ability-scores': defaultStatus,
     background: defaultStatus,

@@ -4,7 +4,7 @@ import type { ClassSelectionDraft } from '../features/class/classSelectionDraft'
 import type { BackgroundSelectionDraft } from '../features/background/backgroundSelectionDraft'
 import type { FeatSelectionDraft } from '../features/feat/featSelectionDraft'
 import type { SpeciesSelectionDraft } from '../features/species/speciesSelectionDraft'
-import { formatCharacterDetailsReviewLines, formatCharacterDetailsReviewSections, hasCharacterDetailsReviewContent, type CharacterDetailsReviewSections } from '../features/character-details/formatCharacterDetailsReview'
+import { formatCharacterDetailsReviewSections, hasCharacterDetailsReviewContent, type CharacterDetailsReviewSections } from '../features/character-details/formatCharacterDetailsReview'
 import { CREATION_METHOD_OPTIONS } from '../features/creation-method/creationMethodOptions'
 import { EDITION_OPTIONS } from '../features/edition-picker/editionOptions'
 import type { PointBuyValidationResult } from '../rules/point-buy'
@@ -328,10 +328,6 @@ function buildAbilityScoresSummary(context: ReviewSummaryContext): string[] {
   return lines
 }
 
-function buildCharacterDetailsSummary(context: ReviewSummaryContext): string[] {
-  return formatCharacterDetailsReviewLines(context.character.details)
-}
-
 export function buildCharacterDetailsReviewSections(
   context: ReviewSummaryContext,
 ): CharacterDetailsReviewSections {
@@ -370,7 +366,6 @@ export function buildReviewSummaries(
   return {
     basics: buildBasicsSummary(context),
     species: buildSpeciesSummary(context, stepStatuses.species),
-    'character-details': buildCharacterDetailsSummary(context),
     'ability-scores': buildAbilityScoresSummary(context),
     class: buildClassSummary(context, stepStatuses.class),
     background: buildBackgroundSummary(context, stepStatuses.background),

@@ -315,10 +315,6 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'not-started', hasValidationErrors: false },
         species: { completion: 'not-started', hasValidationErrors: false },
-        'character-details': {
-          completion: 'not-started',
-          hasValidationErrors: false,
-        },
         class: { completion: 'not-started', hasValidationErrors: false },
         'ability-scores': { completion: 'not-started', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },
@@ -337,7 +333,6 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'complete', hasValidationErrors: false },
         species: { completion: 'complete', hasValidationErrors: false },
-        'character-details': { completion: 'complete', hasValidationErrors: false },
         class: { completion: 'complete', hasValidationErrors: false },
         'ability-scores': { completion: 'complete', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },
@@ -356,7 +351,6 @@ describe('getReviewStepStatus', () => {
       getReviewStepStatus({
         basics: { completion: 'in-progress', hasValidationErrors: true },
         species: { completion: 'complete', hasValidationErrors: false },
-        'character-details': { completion: 'complete', hasValidationErrors: false },
         class: { completion: 'not-started', hasValidationErrors: false },
         'ability-scores': { completion: 'complete', hasValidationErrors: false },
         background: { completion: 'not-started', hasValidationErrors: false },

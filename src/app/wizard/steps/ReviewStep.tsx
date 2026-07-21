@@ -54,6 +54,8 @@ export type ReviewStepProps = {
   stepStatuses: Record<ReviewableStepId, StepStatus>
   summaries: Record<ReviewableStepId, string[]>
   characterDetailsReview: CharacterDetailsReviewSections
+  /** Optional details completeness for Overview display (not a wizard step). */
+  characterDetailsStatus: StepStatus
   equipmentEntries: readonly ResolvedInventoryEntry[]
   equipmentInventory: readonly ResolvedInventoryItem[]
   equipmentWeightCarriedLb: number
@@ -106,6 +108,7 @@ export function ReviewStep({
   stepStatuses,
   summaries,
   characterDetailsReview,
+  characterDetailsStatus,
   equipmentEntries,
   equipmentInventory,
   equipmentWeightCarriedLb,
@@ -280,8 +283,8 @@ export function ReviewStep({
         <CharacterSheetSection
           id="overview-character-details"
           title="Character Details"
-          status={stepStatuses['character-details']}
-          editStepId="character-details"
+          status={characterDetailsStatus}
+          editStepId="background"
           onEdit={onEditStep}
         >
           <CharacterDetailsReviewContent sections={characterDetailsReview} />

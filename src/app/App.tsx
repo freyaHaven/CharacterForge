@@ -27,7 +27,6 @@ import { AbilityScoresStep } from './wizard/steps/AbilityScoresStep'
 import { BackgroundStep } from './wizard/steps/BackgroundStep'
 import { BasicsStep } from './wizard/steps/BasicsStep'
 import { ClassStep } from './wizard/steps/ClassStep'
-import { CharacterDetailsStep } from './wizard/steps/CharacterDetailsStep'
 import { EquipmentStep } from './wizard/steps/EquipmentStep'
 import { FeatsStep } from './wizard/steps/FeatsStep'
 import { SpellsStep } from './wizard/steps/SpellsStep'
@@ -247,15 +246,6 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   onCommittedSelectionChange={species.commitSpeciesSelection}
                 />
               ),
-              'character-details': (
-                <CharacterDetailsStep
-                  speciesSelection={character.species}
-                  details={character.details}
-                  catalog={editor.speciesCatalog}
-                  onDetailsChange={editor.updateDetails}
-                  onDetailsTouched={() => editor.setDetailsTouched(true)}
-                />
-              ),
               'ability-scores': (
                 <AbilityScoresStep
                   creationMethod={character.creationMethod}
@@ -321,6 +311,11 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   catalog={editor.backgroundCatalog}
                   onDraftChange={background.setBackgroundDraft}
                   onCommittedSelectionChange={background.commitBackgroundSelection}
+                  speciesSelection={character.species}
+                  details={character.details}
+                  speciesCatalog={editor.speciesCatalog}
+                  onDetailsChange={editor.updateDetails}
+                  onDetailsTouched={() => editor.setDetailsTouched(true)}
                 />
               ),
               equipment: (
@@ -395,7 +390,6 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   stepStatuses={{
                     basics: editor.stepStatuses.basics,
                     species: editor.stepStatuses.species,
-                    'character-details': editor.stepStatuses['character-details'],
                     'ability-scores': editor.stepStatuses['ability-scores'],
                     class: editor.stepStatuses.class,
                     background: editor.stepStatuses.background,
@@ -405,6 +399,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   }}
                   summaries={editor.reviewSummaries}
                   characterDetailsReview={editor.characterDetailsReviewSections}
+                  characterDetailsStatus={editor.characterDetailsStatus}
                   equipmentEntries={editor.resolvedEquipment.entries}
                   equipmentInventory={editor.resolvedEquipment.inventory}
                   equipmentWeightCarriedLb={

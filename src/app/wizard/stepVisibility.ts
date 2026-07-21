@@ -9,14 +9,6 @@ export type WizardStepContext = {
 }
 
 /**
- * Character Details stays in the step catalog but is hidden from the wizard nav
- * until it is incorporated into another flow.
- */
-export function hasCharacterDetailsStep(_context: WizardStepContext): boolean {
-  return false
-}
-
-/**
  * Reserved for future entitlement-driven visibility (background origin feat
  * grants, class ASI feat slots). Feats stays in the catalog but is hidden from
  * the wizard nav until it is incorporated into another flow.
@@ -36,10 +28,6 @@ export function isWizardStepVisible(
 ): boolean {
   if (step.visibility === undefined || step.visibility.kind === 'always') {
     return true
-  }
-
-  if (step.visibility.when === 'character-details') {
-    return hasCharacterDetailsStep(context)
   }
 
   if (step.visibility.when === 'feats') {

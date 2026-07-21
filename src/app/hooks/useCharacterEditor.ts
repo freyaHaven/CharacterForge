@@ -59,7 +59,7 @@ import {
 import { isClassStartingEquipmentResolved } from '../../rules/character/resolveCharacterEquipment'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
 import { getCharacterOpenDestination } from '../wizard/resolveCharacterStepLanding'
-import { getAllStepStatuses } from '../wizard/stepStatus'
+import { getAllStepStatuses, getCharacterDetailsStepStatus } from '../wizard/stepStatus'
 import type { WizardStepId } from '../wizard/types'
 import { useAbilityScoresEditor } from './useAbilityScoresEditor'
 import { useBackgroundEditor } from './useBackgroundEditor'
@@ -537,7 +537,6 @@ export function useCharacterEditor({
     {
       basics: stepStatuses.basics,
       species: stepStatuses.species,
-      'character-details': stepStatuses['character-details'],
       'ability-scores': stepStatuses['ability-scores'],
       class: stepStatuses.class,
       background: stepStatuses.background,
@@ -560,6 +559,10 @@ export function useCharacterEditor({
     standardArrayValidation: abilityScores.standardArrayValidation,
     pointBuyValidation: abilityScores.pointBuyValidation,
     rolledValidation: abilityScores.rolledValidation,
+  })
+  const characterDetailsStatus = getCharacterDetailsStepStatus({
+    character,
+    detailsTouched,
   })
   const finishBlockedMessage = formatFinishBlockedMessage(finishPolicy)
 
@@ -841,6 +844,7 @@ export function useCharacterEditor({
     stepStatuses,
     reviewSummaries,
     characterDetailsReviewSections,
+    characterDetailsStatus,
     speciesReviewDisplay,
     classReviewDisplay,
     reviewSheetModels,

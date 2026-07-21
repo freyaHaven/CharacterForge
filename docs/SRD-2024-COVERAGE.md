@@ -82,7 +82,7 @@ spells are text-only (no `spellEntitlements`).
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
 | Content | 🟡 | 4 backgrounds: Acolyte, Criminal, Sage, Soldier |
-| UI | ✅ | `BackgroundStep` → `BackgroundPicker` |
+| UI | ✅ | `BackgroundStep` → `BackgroundPicker` + optional `CharacterDetailsSection` |
 | Persistence | ✅ | `character.background`; schema v4+ |
 | Validation | ✅ | `backgroundRules.ts` — ability scores, skills, tool, feat |
 | Derived | ✅ | ASI bonuses, skills, origin feat, starting equipment entitlements |
@@ -386,10 +386,12 @@ not computed. Passive scores use class/background skills only.
 | Species | Yes | Yes |
 | Abilities | Yes | Yes |
 | Equipment | No | Yes |
-| Character Details | No | **Hidden** (`hasCharacterDetailsStep` → false) |
 | Feats | No | **Hidden** (`hasFeatChoices` → false) |
 | Spells | No | **When** `hasSpellContent` |
 | Overview | No | Yes |
+
+Optional **Character Details** (identity, personality, backstory) are edited on
+the Background page below background selection — not a separate wizard step.
 
 ---
 
@@ -435,7 +437,6 @@ code (documents through v11 at time of audit).
 - [ ] **Remaining 5 classes:** Bard, Druid, Sorcerer, Warlock, Wizard (with subclasses)
 - [ ] **Species mechanical gaps:** Human Skillful/Versatile, Elf Keen Senses skill, lineage speed/spells
 - [ ] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 configuration (currently excluded from grant pickers)
-- [ ] **Character Details step** — enable nav or fold into Overview editing
 - [ ] **Additional SRD backgrounds** beyond the bundled four
 - [ ] **Multiclass ability score prerequisites**
 - [ ] **Champion Additional Fighting Style** (L7)

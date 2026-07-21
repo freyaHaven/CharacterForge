@@ -59,7 +59,6 @@ function createStepStatuses(
     species: completeStatus,
     'ability-scores': completeStatus,
     equipment: completeStatus,
-    'character-details': incompleteStatus,
     feats: incompleteStatus,
     spells: incompleteStatus,
     review: inProgressStatus,
