@@ -60,7 +60,7 @@ export const goliathSrd2024: SpeciesDefinition = {
       id: 'giant-ancestry',
       name: 'Giant Ancestry',
       description:
-        'You are descended from Giants. Choose one supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.',
+        'You are descended from Giants. Choose one supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest. (Active-use ancestry abilities are tracked as selected options in Phase 1; mechanical execution awaits the play-sheet.)',
     },
     {
       id: 'large-form',

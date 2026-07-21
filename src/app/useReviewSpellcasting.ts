@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { BackgroundCatalog } from '../domain/ports/backgroundCatalog'
 import type { ClassCatalog } from '../domain/ports/classCatalog'
 import type { FeatCatalog } from '../domain/ports/featCatalog'
+import type { SpeciesCatalog } from '../domain/ports/speciesCatalog'
 import type { SpellCatalog } from '../domain/ports/spellCatalog'
 import type { Character } from '../domain/types'
 import {
@@ -25,6 +26,7 @@ export function useReviewSpellcasting(
     featCatalog?: FeatCatalog
     backgroundCatalog?: BackgroundCatalog
     spellCatalog?: SpellCatalog
+    speciesCatalog?: SpeciesCatalog
   },
 ): CharacterSpellcastingSummary {
   const [summary, setSummary] = useState<CharacterSpellcastingSummary>(
@@ -51,6 +53,7 @@ export function useReviewSpellcasting(
     options?.featCatalog,
     options?.backgroundCatalog,
     options?.spellCatalog,
+    options?.speciesCatalog,
   ])
 
   return summary

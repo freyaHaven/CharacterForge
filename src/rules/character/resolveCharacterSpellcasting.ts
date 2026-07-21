@@ -11,6 +11,7 @@ import {
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
+import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { SpellCatalog } from '../../domain/ports/spellCatalog'
 import { spellSourceKey } from '../../domain/spell/sourceKey'
 import type {
@@ -23,6 +24,10 @@ import type {
   SpellSourceState,
 } from '../../domain/spell/types'
 import type { Character } from '../../domain/types'
+import {
+  collectSpeciesSpellcastingBlocks,
+  getSpeciesSpellcastingAbility,
+} from '../../domain/species/resolveSpeciesDerived'
 import { resolveSpellCount } from '../spell/resolveSpellCount'
 import {
   collectSlotContributors,
@@ -371,6 +376,36 @@ function buildResolvedEntitlement(
   }
 }
 
+function collectSpeciesActiveEntitlements(
+  speciesId: string,
+  speciesName: string,
+  traitId: string,
+  traitLabel: string,
+  ability: AbilityId,
+  characterLevel: number,
+  spellcasting: {
+    entitlements: SpellEntitlement[]
+  },
+): ActiveEntitlement[] {
+  const groupId = `species-trait:${speciesId}:${traitId}`
+  const groupLabel = `${speciesName}: ${traitLabel}`
+
+  return spellcasting.entitlements.map((entitlement) => ({
+    source: {
+      kind: 'species-trait' as const,
+      speciesId,
+      traitId,
+      entitlementId: entitlement.id,
+    },
+    entitlement,
+    label: entitlementLabel(entitlement, groupLabel),
+    ability,
+    sourceLevel: characterLevel,
+    groupId,
+    groupLabel,
+  }))
+}
+
 export async function resolveCharacterSpellcasting(
   classCatalog: ClassCatalog,
   character: Character,
@@ -378,6 +413,7 @@ export async function resolveCharacterSpellcasting(
     featCatalog?: FeatCatalog
     backgroundCatalog?: BackgroundCatalog
     spellCatalog?: SpellCatalog
+    speciesCatalog?: SpeciesCatalog
   },
 ): Promise<CharacterSpellcastingSummary> {
   const definitionsById = new Map<string, ClassDefinition>()
@@ -424,6 +460,7 @@ export async function resolveCharacterSpellcasting(
         classCatalog,
         backgroundCatalog: options.backgroundCatalog,
         featCatalog: options.featCatalog,
+        speciesCatalog: options.speciesCatalog,
       })
 
       for (const grant of resolvedFeats.grants) {
@@ -461,6 +498,25 @@ export async function resolveCharacterSpellcasting(
               formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
             ),
           )
+        } else if (grant.source.kind === 'species-feat-grant') {
+          activeEntitlements.push(
+            ...collectFeatActiveEntitlements(
+              feat.spellcasting,
+              {
+                kind: 'feat',
+                slot: 'class-choice',
+                featId: feat.id,
+                instanceId: grant.source.speciesId,
+                choiceId: grant.source.choiceId,
+              },
+              `feat:class-choice:${grant.source.speciesId}:${grant.source.choiceId}:${feat.id}`,
+              formatGrantedFeatSpellcastingLabel(
+                feat.name,
+                grant.source.grantLabel,
+                grant.source.speciesDisplayName,
+              ),
+            ),
+          )
         } else {
           activeEntitlements.push(
             ...collectFeatActiveEntitlements(
@@ -495,6 +551,36 @@ export async function resolveCharacterSpellcasting(
             },
             `feat:character-feat:${feat.id}`,
             formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
+          ),
+        )
+      }
+    }
+  }
+
+  if (
+    character.species !== null &&
+    options?.speciesCatalog !== undefined
+  ) {
+    const speciesDefinition = await options.speciesCatalog.getSpecies(
+      character.species.speciesId,
+    )
+    if (speciesDefinition !== null) {
+      const ability = getSpeciesSpellcastingAbility(character.species)
+      const blocks = collectSpeciesSpellcastingBlocks(
+        speciesDefinition,
+        character.species,
+      )
+
+      for (const block of blocks) {
+        activeEntitlements.push(
+          ...collectSpeciesActiveEntitlements(
+            speciesDefinition.id,
+            speciesDefinition.name,
+            block.traitId,
+            block.label,
+            ability,
+            character.targetLevel,
+            block.spellcasting,
           ),
         )
       }

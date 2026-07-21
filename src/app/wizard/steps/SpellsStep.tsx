@@ -69,6 +69,12 @@ function findSourceForEntitlement(
     if (candidate.kind === 'background-origin') {
       return group.groupId === `background-origin:${candidate.backgroundId}`
     }
+    if (candidate.kind === 'species-trait') {
+      return (
+        group.groupId ===
+        `species-trait:${candidate.speciesId}:${candidate.traitId}`
+      )
+    }
     return false
   })
 }

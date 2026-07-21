@@ -2,6 +2,7 @@ import type {
   SpeciesChoiceOption,
   SpeciesDefinition,
 } from '../../../../domain/species/types'
+import { SPELL_LIST_IDS } from '../spell-lists'
 import { SRD_2024_SOURCE } from '../source'
 import { SRD_2024_ORIGIN_LANGUAGES } from './originLanguages'
 import { SRD_2024_SPELLCASTING_ABILITY_CHOICE } from './sharedChoices'
@@ -16,18 +17,79 @@ const ELVEN_LINEAGE_OPTIONS: SpeciesChoiceOption[] = [
     description:
       'Level 1: Darkvision range increases to 120 feet; you know the Dancing Lights cantrip. Level 3: Faerie Fire. Level 5: Darkness.',
     effects: [{ kind: 'darkvision', rangeFeet: 120 }],
+    spellcasting: {
+      entitlements: [
+        {
+          id: 'drow-cantrip',
+          kind: 'granted',
+          spells: [{ spellId: 'srd-2024:dancing-lights', minLevel: 1 }],
+          countsAgainstLimit: false,
+        },
+        {
+          id: 'drow-spells',
+          kind: 'granted',
+          spells: [
+            { spellId: 'srd-2024:faerie-fire', minLevel: 3 },
+            { spellId: 'srd-2024:darkness', minLevel: 5 },
+          ],
+          countsAgainstLimit: false,
+        },
+      ],
+    },
   },
   {
     id: 'high-elf',
     label: 'High Elf',
     description:
       'Level 1: You know Prestidigitation (replaceable with another Wizard cantrip when you finish a Long Rest). Level 3: Detect Magic. Level 5: Misty Step.',
+    spellcasting: {
+      spellListId: SPELL_LIST_IDS.wizard,
+      entitlements: [
+        {
+          id: 'high-elf-cantrip',
+          kind: 'select',
+          listId: SPELL_LIST_IDS.wizard,
+          selectionKind: 'cantrip',
+          count: { kind: 'fixed', value: 1 },
+          levelRange: { min: 0, max: 0 },
+        },
+        {
+          id: 'high-elf-spells',
+          kind: 'granted',
+          spells: [
+            { spellId: 'srd-2024:detect-magic', minLevel: 3 },
+            { spellId: 'srd-2024:misty-step', minLevel: 5 },
+          ],
+          countsAgainstLimit: false,
+        },
+      ],
+    },
   },
   {
     id: 'wood-elf',
     label: 'Wood Elf',
     description:
       'Level 1: Your Speed increases to 35 feet; you know the Druidcraft cantrip. Level 3: Longstrider. Level 5: Pass without Trace.',
+    effects: [{ kind: 'speed-walk', feet: 35 }],
+    spellcasting: {
+      entitlements: [
+        {
+          id: 'wood-elf-cantrip',
+          kind: 'granted',
+          spells: [{ spellId: 'srd-2024:druidcraft', minLevel: 1 }],
+          countsAgainstLimit: false,
+        },
+        {
+          id: 'wood-elf-spells',
+          kind: 'granted',
+          spells: [
+            { spellId: 'srd-2024:longstrider', minLevel: 3 },
+            { spellId: 'srd-2024:pass-without-trace', minLevel: 5 },
+          ],
+          countsAgainstLimit: false,
+        },
+      ],
+    },
   },
 ]
 
@@ -92,9 +154,21 @@ export const elfSrd2024: SpeciesDefinition = {
       type: 'single-select',
       required: true,
       options: [
-        { id: 'insight', label: 'Insight' },
-        { id: 'perception', label: 'Perception' },
-        { id: 'survival', label: 'Survival' },
+        {
+          id: 'insight',
+          label: 'Insight',
+          effects: [{ kind: 'skill-proficiency', skillId: 'insight' }],
+        },
+        {
+          id: 'perception',
+          label: 'Perception',
+          effects: [{ kind: 'skill-proficiency', skillId: 'perception' }],
+        },
+        {
+          id: 'survival',
+          label: 'Survival',
+          effects: [{ kind: 'skill-proficiency', skillId: 'survival' }],
+        },
       ],
     },
     SRD_2024_SPELLCASTING_ABILITY_CHOICE,

@@ -1029,6 +1029,30 @@ export const SRD_2024_SPELLS: SpellDefinition[] = [
       'A beam of crackling, blue energy lances out toward a creature within range. On a hit, the target takes lightning damage, and on each of your later turns you can use an Action to deal lightning damage to the target automatically.',
   }),
 
+  defineSrd2024Spell({
+    slug: 'faerie-fire',
+    name: 'Faerie Fire',
+    level: 1,
+    school: 'Evocation',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'Objects in a 20-foot Cube within range are outlined in blue, green, or violet light. Creatures in the area when the spell is cast must succeed on a Dexterity saving throw or also be outlined. Attack rolls against outlined targets have Advantage, and outlined targets cannot benefit from Invisibility.',
+  }),
+  defineSrd2024Spell({
+    slug: 'hellish-rebuke',
+    name: 'Hellish Rebuke',
+    level: 1,
+    school: 'Evocation',
+    castingTime: 'Reaction',
+    range: '60 feet',
+    components: 'V, S',
+    duration: 'Instantaneous',
+    description:
+      'You point at a creature that damaged you and temporarily surround it in hellish flames. The creature must make a Dexterity saving throw, taking fire damage on a failed save or half as much on a successful one.',
+  }),
   // Level 2
   defineSrd2024Spell({
     slug: 'aid',
@@ -1065,6 +1089,42 @@ export const SRD_2024_SPELLS: SpellDefinition[] = [
     duration: '1 minute',
     description:
       'One creature that you can see within range must succeed on a Constitution saving throw or be struck Blinded or Deafened (your choice) for the duration. At the end of each of its turns, the target can repeat the save.',
+  }),
+  defineSrd2024Spell({
+    slug: 'darkness',
+    name: 'Darkness',
+    level: 2,
+    school: 'Evocation',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V, M',
+    duration: 'Concentration, up to 10 minutes',
+    description:
+      'Magical darkness spreads from a point you choose within range to fill a 15-foot-radius Sphere. Darkvision cannot see through this darkness, and nonmagical light cannot illuminate it.',
+  }),
+  defineSrd2024Spell({
+    slug: 'misty-step',
+    name: 'Misty Step',
+    level: 2,
+    school: 'Conjuration',
+    castingTime: 'Bonus Action',
+    range: 'Self',
+    components: 'V',
+    duration: 'Instantaneous',
+    description:
+      'Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.',
+  }),
+  defineSrd2024Spell({
+    slug: 'ray-of-enfeeblement',
+    name: 'Ray of Enfeeblement',
+    level: 2,
+    school: 'Necromancy',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V, S',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'A black beam of enervating energy springs from your finger toward a creature within range. On a hit, the target deals only half damage with Strength-based weapon attacks until the spell ends. At the end of each of its turns, the target can make a Constitution saving throw to end the spell.',
   }),
   defineSrd2024Spell({
     slug: 'calm-emotions',

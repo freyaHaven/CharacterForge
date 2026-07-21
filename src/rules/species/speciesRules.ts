@@ -1,3 +1,4 @@
+import type { FeatDefinition } from '../../domain/feat/types'
 import type {
   SpeciesDefinition,
   SpeciesEffect,
@@ -6,6 +7,8 @@ import type {
 } from '../../domain/species/types'
 import type { EditionId } from '../../domain/types'
 import { resolveLanguageChoicePool } from '../../domain/species/standardLanguages'
+import { evaluateFeatEligibility } from '../../domain/feat/eligibility'
+import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { resolveSpeciesEffects } from './resolveSpeciesEffects'
 
 export type SpeciesValidationIssueCode =
@@ -14,6 +17,7 @@ export type SpeciesValidationIssueCode =
   | 'missing-required-choice'
   | 'invalid-choice'
   | 'unknown-choice'
+  | 'duplicate-feat'
 
 export type SpeciesValidationIssue = {
   code: SpeciesValidationIssueCode
@@ -23,6 +27,13 @@ export type SpeciesValidationIssue = {
 export type SpeciesValidationResult =
   | { ok: true }
   | { ok: false; issues: SpeciesValidationIssue[] }
+
+export type SpeciesValidationOptions = {
+  featById?: ReadonlyMap<string, FeatDefinition>
+  /** Feat ids already granted outside this species selection (background, class, legacy). */
+  takenFeatIds?: readonly string[]
+  eligibilityContext?: FeatEligibilityContext
+}
 
 function getSelectedIds(
   value: SpeciesSelectionChoiceValue | undefined,
@@ -48,6 +59,7 @@ export function validateSpeciesSelection(
   selection: SpeciesSelection,
   editionId: EditionId,
   definition: SpeciesDefinition | null,
+  options?: SpeciesValidationOptions,
 ): SpeciesValidationResult {
   if (definition === null) {
     return { ok: false, issues: [{ code: 'species-not-found' }] }
@@ -73,6 +85,39 @@ export function validateSpeciesSelection(
 
     if (typeof selectedValue !== 'string') {
       issues.push({ code: 'invalid-choice', choiceId: choice.id })
+      continue
+    }
+
+    if (choice.type === 'feat-grant') {
+      const feat = options?.featById?.get(selectedValue)
+      if (feat === undefined) {
+        issues.push({ code: 'invalid-choice', choiceId: choice.id })
+        continue
+      }
+
+      if (
+        choice.featCategory !== undefined &&
+        feat.category !== choice.featCategory
+      ) {
+        issues.push({ code: 'invalid-choice', choiceId: choice.id })
+        continue
+      }
+
+      if (options?.takenFeatIds?.includes(feat.id) && !feat.repeatable) {
+        issues.push({ code: 'duplicate-feat', choiceId: choice.id })
+        continue
+      }
+
+      if (options?.eligibilityContext !== undefined) {
+        const eligibility = evaluateFeatEligibility(feat, {
+          ...options.eligibilityContext,
+          takenFeatIds: options.takenFeatIds ?? [],
+        })
+        if (!eligibility.eligible) {
+          issues.push({ code: 'invalid-choice', choiceId: choice.id })
+        }
+      }
+
       continue
     }
 

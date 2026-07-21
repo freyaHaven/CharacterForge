@@ -86,6 +86,7 @@ export async function buildCommittedStepValidationContext(
       character.species,
       character.editionId,
       speciesDefinition,
+      { featById },
     ).ok
 
   const committedClassValid =

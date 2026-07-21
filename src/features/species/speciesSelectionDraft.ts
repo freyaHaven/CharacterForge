@@ -6,6 +6,7 @@ import type {
 import type { EditionId } from '../../domain/types'
 import {
   validateSpeciesSelection,
+  type SpeciesValidationOptions,
   type SpeciesValidationResult,
 } from '../../rules/species/speciesRules'
 
@@ -66,6 +67,7 @@ export function tryCommitSpeciesDraft(
   draft: SpeciesSelectionDraft,
   editionId: EditionId,
   definition: SpeciesDefinition | null,
+  options?: SpeciesValidationOptions,
 ): {
   committed: SpeciesSelection | null
   validation: SpeciesValidationResult
@@ -75,6 +77,7 @@ export function tryCommitSpeciesDraft(
     selection,
     editionId,
     definition,
+    options,
   )
 
   if (!validation.ok) {

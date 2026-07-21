@@ -30,3 +30,32 @@ export const COMPLETE_DRAGONBORN_RED_SELECTION = {
     'standard-languages': ['draconic', 'common-sign'],
   },
 } as const
+
+/** Pre-Phase-1 Human: size + languages only (missing Skillful / Versatile). */
+export const PRE_PHASE1_HUMAN_SELECTION = {
+  speciesId: 'srd-2024:human',
+  choices: {
+    size: 'medium',
+    'standard-languages': ['dwarvish', 'elvish'],
+  },
+} as const
+
+export const COMPLETE_HUMAN_SELECTION = {
+  speciesId: 'srd-2024:human',
+  choices: {
+    size: 'medium',
+    skillful: 'perception',
+    versatile: 'srd-2024:skilled',
+    'standard-languages': ['dwarvish', 'elvish'],
+  },
+} as const
+
+export const COMPLETE_WOOD_ELF_SELECTION = {
+  speciesId: 'srd-2024:elf',
+  choices: {
+    'elven-lineage': 'wood-elf',
+    'keen-senses': 'perception',
+    'spellcasting-ability': 'wisdom',
+    'standard-languages': ['elvish', 'dwarvish'],
+  },
+} as const

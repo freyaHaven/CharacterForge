@@ -127,6 +127,8 @@ export function useCharacterEditor({
     character,
     setCharacter,
     speciesCatalog,
+    featCatalog,
+    backgroundCatalog,
     onDraftChange: clearSaveMessage,
   })
 
@@ -233,6 +235,7 @@ export function useCharacterEditor({
     featCatalog,
     backgroundCatalog,
     spellCatalog,
+    speciesCatalog,
   })
 
   const { spellValidation, committedSpellsValid } = useSpellsStepValidation(
@@ -371,11 +374,16 @@ export function useCharacterEditor({
     }
   }, [equipmentCatalog, inventoryOwnershipKey, resolvedEquipment.inventory])
 
-  // Prune source states when class instances / feat / background identity change.
+  // Prune source states when class / feat / background / species identity change.
   const ownershipKey = [
     character.classes.map((entry) => entry.instanceId).join(','),
     character.feat?.featId ?? '',
     character.background?.backgroundId ?? '',
+    character.species?.speciesId ?? '',
+    character.species !== null
+      ? JSON.stringify(character.species.choices)
+      : '',
+    String(character.targetLevel),
   ].join('|')
 
   useEffect(() => {

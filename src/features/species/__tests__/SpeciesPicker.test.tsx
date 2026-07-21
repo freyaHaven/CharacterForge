@@ -7,6 +7,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
+import { createBundledFeatCatalog } from '../../../adapters/bundledFeatCatalog'
 import { createBundledSpeciesCatalog } from '../../../adapters/bundledSpeciesCatalog'
 import type { SpeciesSelection } from '../../../domain/species/types'
 import {
@@ -30,6 +31,7 @@ function SpeciesPickerHarness({
     useState<SpeciesSelection | null>(initialCommitted)
   const [draft, setDraft] = useState<SpeciesSelectionDraft | null>(initialDraft)
   const catalog = createBundledSpeciesCatalog()
+  const featCatalog = createBundledFeatCatalog()
 
   return (
     <SpeciesPicker
@@ -37,6 +39,7 @@ function SpeciesPickerHarness({
       committedSelection={committedSelection}
       draft={draft}
       catalog={catalog}
+      featCatalog={featCatalog}
       onDraftChange={setDraft}
       onCommittedSelectionChange={setCommittedSelection}
     />

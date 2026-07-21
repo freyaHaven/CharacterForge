@@ -11,6 +11,10 @@ import type { EquipmentItemDefinition } from '../domain/equipment/types'
 import { SKILL_IDS, SKILL_LABELS, type SkillId } from '../domain/skills/types'
 import { resolveClassEffects } from '../rules/class/resolveClassEffects'
 import { resolveSpeciesEffects } from '../rules/species/resolveSpeciesEffects'
+import {
+  resolveSpeciesSize,
+  resolveSpeciesWalkSpeed,
+} from '../rules/species/resolveSpeciesDerivedStats'
 import { calculateCharacterHitPoints } from '../rules/hit-points/calculateCharacterHitPoints'
 import { calculateCharacterArmorClass } from '../rules/armor-class/calculateCharacterArmorClass'
 import type { ResolvedEquipment } from '../rules/character/resolveCharacterEquipment'
@@ -74,7 +78,7 @@ export type ReviewFeatCardModel = {
   prerequisite: string | null
   choices: { prompt: string; summary: string }[]
   /** Where the feat came from — drives Overview edit navigation. */
-  source: 'selection' | 'background-origin' | 'class-feat-grant'
+  source: 'selection' | 'background-origin' | 'class-feat-grant' | 'species-feat-grant'
   /** Human-readable grant source, e.g. "Epic Boon · Fighter 19". */
   sourceLabel: string | null
 }
@@ -147,6 +151,7 @@ function collectProficientSkills(
   character: Character,
   classDefinitions: Map<string, ClassDefinition>,
   backgroundDefinition: BackgroundDefinition | null,
+  speciesDefinition: SpeciesDefinition | null,
 ): Set<SkillId> {
   const skills = new Set<SkillId>()
 
@@ -169,6 +174,17 @@ function collectProficientSkills(
   if (backgroundDefinition !== null) {
     for (const skillId of backgroundDefinition.skillProficiencies) {
       skills.add(skillId)
+    }
+  }
+
+  if (speciesDefinition !== null && character.species !== null) {
+    for (const effect of resolveSpeciesEffects(
+      speciesDefinition,
+      character.species,
+    )) {
+      if (effect.kind === 'skill-proficiency') {
+        skills.add(effect.skillId)
+      }
     }
   }
 
@@ -231,8 +247,8 @@ function buildSpeciesCard(
   return {
     speciesId: definition.id,
     name: getSpeciesDisplayName(definition, selection.choices),
-    sizeLabel: formatSizeLabel(definition.size),
-    speedFeet: definition.speed.walk,
+    sizeLabel: formatSizeLabel(resolveSpeciesSize(definition, selection)),
+    speedFeet: resolveSpeciesWalkSpeed(definition, selection),
     traits: definition.traits.map((trait) => ({
       id: trait.id,
       name: trait.name,
@@ -386,6 +402,11 @@ function mapFeatGrantSource(
       }
     case 'character-feat':
       return { source: 'selection', sourceLabel: 'Legacy feat' }
+    case 'species-feat-grant':
+      return {
+        source: 'species-feat-grant',
+        sourceLabel: `${grantSource.grantLabel} · ${grantSource.speciesDisplayName}`,
+      }
     case 'class-feat-grant':
       return {
         source: 'class-feat-grant',
@@ -602,15 +623,21 @@ function buildSavingThrowNotes(
     speciesDefinition,
     speciesSelection,
   )) {
-    if (effect.kind !== 'save-advantage') {
+    if (effect.kind === 'save-advantage') {
+      const conditionLabel =
+        effect.condition.charAt(0).toUpperCase() + effect.condition.slice(1)
+      notes.push(
+        `Advantage on saving throws to avoid or end the ${conditionLabel} condition.`,
+      )
       continue
     }
 
-    const conditionLabel =
-      effect.condition.charAt(0).toUpperCase() + effect.condition.slice(1)
-    notes.push(
-      `Advantage on saving throws to avoid or end the ${conditionLabel} condition.`,
-    )
+    if (effect.kind === 'save-advantage-ability') {
+      const labels = effect.abilities.map(
+        (ability) => ability.charAt(0).toUpperCase() + ability.slice(1),
+      )
+      notes.push(`Advantage on ${labels.join(', ')} saving throws.`)
+    }
   }
 
   return notes
@@ -648,6 +675,7 @@ export function buildReviewSheetModels(
     character,
     input.classDefinitions,
     input.backgroundDefinition,
+    input.speciesDefinition,
   )
   const expertiseSkills = collectExpertiseSkills(
     character,

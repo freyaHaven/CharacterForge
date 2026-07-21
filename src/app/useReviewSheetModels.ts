@@ -70,6 +70,7 @@ export function useReviewSheetModels(
         classCatalog,
         backgroundCatalog,
         featCatalog,
+        speciesCatalog,
       })
       const featDefinitionsById = new Map<string, FeatDefinition>()
       await Promise.all(

@@ -22,7 +22,15 @@ export const SRD_2024_SIZE_CHOICE: SpeciesChoice = {
   type: 'single-select',
   required: true,
   options: [
-    { id: 'medium', label: 'Medium' },
-    { id: 'small', label: 'Small' },
+    {
+      id: 'medium',
+      label: 'Medium',
+      effects: [{ kind: 'size', size: 'medium' }],
+    },
+    {
+      id: 'small',
+      label: 'Small',
+      effects: [{ kind: 'size', size: 'small' }],
+    },
   ],
 }

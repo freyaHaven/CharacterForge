@@ -52,12 +52,15 @@ function featEditAction(
   feat: ReviewFeatCardModel,
   onEditBackground?: () => void,
   onEditClass?: () => void,
+  onEditSpecies?: () => void,
 ): { label: string; onEdit: (() => void) | undefined } {
   switch (feat.source) {
     case 'background-origin':
       return { label: 'Edit background', onEdit: onEditBackground }
     case 'class-feat-grant':
       return { label: 'Edit class', onEdit: onEditClass }
+    case 'species-feat-grant':
+      return { label: 'Edit species', onEdit: onEditSpecies }
     case 'selection':
       return { label: 'Edit feat', onEdit: undefined }
   }
@@ -154,7 +157,12 @@ export function OverviewFeaturesPanel({
         ) : null}
 
         {feats.map((feat, index) => {
-          const edit = featEditAction(feat, onEditBackground, onEditClass)
+          const edit = featEditAction(
+            feat,
+            onEditBackground,
+            onEditClass,
+            onEditSpecies,
+          )
           const sourceSuffix =
             feat.sourceLabel !== null && feat.sourceLabel.length > 0
               ? ` · ${feat.sourceLabel}`

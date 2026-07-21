@@ -242,6 +242,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   committedSelection={character.species}
                   draft={species.speciesDraft}
                   catalog={editor.speciesCatalog}
+                  featCatalog={editor.featCatalog}
+                  takenFeatIds={species.takenFeatIds}
                   onDraftChange={species.setSpeciesDraft}
                   onCommittedSelectionChange={species.commitSpeciesSelection}
                 />

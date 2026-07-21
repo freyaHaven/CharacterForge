@@ -2,6 +2,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { createBundledFeatCatalog } from '../../../../adapters/bundledFeatCatalog'
 import { createBundledSpeciesCatalog } from '../../../../adapters/bundledSpeciesCatalog'
 import { SpeciesStep } from '../SpeciesStep'
 
@@ -13,6 +14,7 @@ describe('SpeciesStep', () => {
         committedSelection={null}
         draft={null}
         catalog={createBundledSpeciesCatalog()}
+        featCatalog={createBundledFeatCatalog()}
         onDraftChange={vi.fn()}
         onCommittedSelectionChange={vi.fn()}
       />,

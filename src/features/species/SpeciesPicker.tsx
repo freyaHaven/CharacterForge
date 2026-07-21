@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { EditionId } from '../../domain/types'
 import type {
@@ -6,7 +7,15 @@ import type {
   SpeciesDefinition,
   SpeciesSelection,
 } from '../../domain/species/types'
+import {
+  EMPTY_FEAT_ELIGIBILITY_CONTEXT,
+  type FeatEligibilityContext,
+} from '../../domain/feat/eligibility'
 import { validateSpeciesSelection } from '../../rules/species/speciesRules'
+import {
+  resolveSpeciesSize,
+  resolveSpeciesWalkSpeed,
+} from '../../rules/species/resolveSpeciesDerivedStats'
 import { filterSpeciesByName } from './filterSpeciesByName'
 import { formatSpeciesValidationIssue } from './formatSpeciesValidation'
 import { SpeciesCatalogCard } from './SpeciesCatalogCard'
@@ -14,6 +23,7 @@ import {
   SpeciesChoiceAccordion,
   SpeciesLanguagesPanel,
 } from './SpeciesLanguagesPanel'
+import { SpeciesFeatGrantChoiceField } from './SpeciesFeatGrantChoiceField'
 import { SpeciesHighlightsPanel } from './SpeciesHighlightsPanel'
 import { SpeciesIcon } from './SpeciesIcon'
 import { SpeciesSectionAccordion } from './SpeciesSectionAccordion'
@@ -45,6 +55,8 @@ type SpeciesPickerProps = {
   committedSelection: SpeciesSelection | null
   draft: SpeciesSelectionDraft | null
   catalog: SpeciesCatalog
+  featCatalog: FeatCatalog
+  takenFeatIds?: readonly string[]
   onDraftChange: (draft: SpeciesSelectionDraft | null) => void
   onCommittedSelectionChange: (selection: SpeciesSelection | null) => void
 }
@@ -54,12 +66,28 @@ export function SpeciesPicker({
   committedSelection,
   draft,
   catalog,
+  featCatalog,
+  takenFeatIds = [],
   onDraftChange,
   onCommittedSelectionChange,
 }: SpeciesPickerProps) {
   const [speciesList, setSpeciesList] = useState<SpeciesDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [featById, setFeatById] = useState<
+    Map<string, import('../../domain/feat/types').FeatDefinition>
+  >(() => new Map())
+
+  const eligibilityContext: FeatEligibilityContext = EMPTY_FEAT_ELIGIBILITY_CONTEXT
+
+  const validationOptions = useMemo(
+    () => ({
+      featById,
+      takenFeatIds,
+      eligibilityContext,
+    }),
+    [eligibilityContext, featById, takenFeatIds],
+  )
 
   const activeSpeciesId =
     draft?.speciesId ?? committedSelection?.speciesId ?? null
@@ -88,6 +116,7 @@ export function SpeciesPicker({
           draftToSpeciesSelection(draft),
           editionId,
           activeDefinition,
+          validationOptions,
         )
 
   const highlights =
@@ -117,12 +146,29 @@ export function SpeciesPicker({
     }
   }, [catalog, editionId])
 
+  useEffect(() => {
+    let isActive = true
+
+    void featCatalog.listFeats(editionId).then((feats) => {
+      if (!isActive) {
+        return
+      }
+
+      setFeatById(new Map(feats.map((feat) => [feat.id, feat])))
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [editionId, featCatalog])
+
   async function commitDraft(nextDraft: SpeciesSelectionDraft) {
     const definition = await catalog.getSpecies(nextDraft.speciesId)
     const { committed } = tryCommitSpeciesDraft(
       nextDraft,
       editionId,
       definition,
+      validationOptions,
     )
 
     if (committed !== null) {
@@ -300,7 +346,14 @@ export function SpeciesPicker({
                           <SizeStatIcon />
                         </span>
                         <dt>Size</dt>
-                        <dd>{formatSize(activeDefinition.size)}</dd>
+                        <dd>
+                          {formatSize(
+                            resolveSpeciesSize(activeDefinition, {
+                              speciesId: activeDefinition.id,
+                              choices: activeChoices,
+                            }),
+                          )}
+                        </dd>
                       </div>
                       <div className="species-picker__metadata-item">
                         <span
@@ -311,7 +364,12 @@ export function SpeciesPicker({
                         </span>
                         <dt>Speed</dt>
                         <dd>
-                          {formatWalkSpeed(activeDefinition.speed.walk)}
+                          {formatWalkSpeed(
+                            resolveSpeciesWalkSpeed(activeDefinition, {
+                              speciesId: activeDefinition.id,
+                              choices: activeChoices,
+                            }),
+                          )}
                         </dd>
                       </div>
                     </dl>
@@ -327,6 +385,57 @@ export function SpeciesPicker({
                       typeof selectedValue === 'string'
                         ? selectedValue
                         : undefined
+
+                    if (choice.type === 'feat-grant') {
+                      const featName =
+                        selectedOptionId !== undefined
+                          ? (featById.get(selectedOptionId)?.name ??
+                            selectedOptionId)
+                          : undefined
+                      const isComplete =
+                        selectedOptionId !== undefined &&
+                        selectedOptionId !== ''
+
+                      return (
+                        <SpeciesSectionAccordion
+                          key={choice.id}
+                          title={choice.prompt}
+                          metaParts={
+                            featName !== undefined
+                              ? [featName]
+                              : ['No selection']
+                          }
+                          completion={
+                            choice.required && !isComplete
+                              ? 'incomplete'
+                              : 'complete'
+                          }
+                          completionLabel={
+                            isComplete ? 'Complete' : 'Incomplete'
+                          }
+                          defaultExpanded={!isComplete}
+                        >
+                          {choice.helperText !== undefined ? (
+                            <p className="helper-text">{choice.helperText}</p>
+                          ) : null}
+                          <SpeciesFeatGrantChoiceField
+                            choiceId={choice.id}
+                            value={selectedOptionId}
+                            editionId={editionId}
+                            featCatalog={featCatalog}
+                            featCategory={choice.featCategory ?? 'origin'}
+                            takenFeatIds={takenFeatIds}
+                            eligibilityContext={eligibilityContext}
+                            recommendedFeatId={
+                              choice.recommendedFeatId ?? null
+                            }
+                            onChange={(choiceId, featId) => {
+                              void handleChoiceChange(choiceId, featId)
+                            }}
+                          />
+                        </SpeciesSectionAccordion>
+                      )
+                    }
 
                     return (
                       <SpeciesChoiceAccordion

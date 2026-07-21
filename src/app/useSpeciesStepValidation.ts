@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import type { FeatCatalog } from '../domain/ports/featCatalog'
 import type { SpeciesCatalog } from '../domain/ports/speciesCatalog'
 import type { EditionId } from '../domain/types'
 import type { SpeciesSelection } from '../domain/species/types'
+import type { FeatDefinition } from '../domain/feat/types'
 import {
   draftToSpeciesSelection,
   type SpeciesSelectionDraft,
@@ -16,10 +18,43 @@ export function useSpeciesStepValidation(
   editionId: EditionId,
   committedSelection: SpeciesSelection | null,
   speciesDraft: SpeciesSelectionDraft | null,
+  options?: {
+    featCatalog?: FeatCatalog
+    takenFeatIds?: readonly string[]
+  },
 ) {
   const [speciesDraftValidation, setSpeciesDraftValidation] =
     useState<SpeciesValidationResult | null>(null)
   const [committedSpeciesValid, setCommittedSpeciesValid] = useState(false)
+  const [featById, setFeatById] = useState<Map<string, FeatDefinition>>(
+    () => new Map(),
+  )
+
+  useEffect(() => {
+    if (options?.featCatalog === undefined) {
+      setFeatById(new Map())
+      return
+    }
+
+    let isActive = true
+
+    void options.featCatalog.listFeats(editionId).then((feats) => {
+      if (!isActive) {
+        return
+      }
+
+      setFeatById(new Map(feats.map((feat) => [feat.id, feat])))
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [editionId, options?.featCatalog])
+
+  const validationOptions = {
+    featById,
+    takenFeatIds: options?.takenFeatIds,
+  }
 
   useEffect(() => {
     if (speciesDraft === null) {
@@ -39,6 +74,7 @@ export function useSpeciesStepValidation(
           draftToSpeciesSelection(speciesDraft),
           editionId,
           definition,
+          validationOptions,
         ),
       )
     })
@@ -46,7 +82,7 @@ export function useSpeciesStepValidation(
     return () => {
       isActive = false
     }
-  }, [catalog, editionId, speciesDraft])
+  }, [catalog, editionId, featById, options?.takenFeatIds, speciesDraft])
 
   useEffect(() => {
     if (committedSelection === null) {
@@ -62,14 +98,19 @@ export function useSpeciesStepValidation(
       }
 
       setCommittedSpeciesValid(
-        validateSpeciesSelection(committedSelection, editionId, definition).ok,
+        validateSpeciesSelection(
+          committedSelection,
+          editionId,
+          definition,
+          validationOptions,
+        ).ok,
       )
     })
 
     return () => {
       isActive = false
     }
-  }, [catalog, committedSelection, editionId])
+  }, [catalog, committedSelection, editionId, featById, options?.takenFeatIds])
 
   return { speciesDraftValidation, committedSpeciesValid }
 }

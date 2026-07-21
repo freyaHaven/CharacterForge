@@ -15,12 +15,41 @@ const GNOMISH_LINEAGE_OPTIONS: SpeciesChoiceOption[] = [
     label: 'Forest Gnome',
     description:
       'You know the Minor Illusion cantrip. You always have Speak with Animals prepared and can cast it without a spell slot a number of times equal to your Proficiency Bonus (regain all on a Long Rest), or using spell slots.',
+    spellcasting: {
+      entitlements: [
+        {
+          id: 'forest-gnome-cantrip',
+          kind: 'granted',
+          spells: [{ spellId: 'srd-2024:minor-illusion', minLevel: 1 }],
+          countsAgainstLimit: false,
+        },
+        {
+          id: 'forest-gnome-speak-with-animals',
+          kind: 'granted',
+          spells: [{ spellId: 'srd-2024:speak-with-animals', minLevel: 1 }],
+          countsAgainstLimit: false,
+        },
+      ],
+    },
   },
   {
     id: 'rock-gnome',
     label: 'Rock Gnome',
     description:
       'You know the Mending and Prestidigitation cantrips. You can spend 10 minutes casting Prestidigitation to create a Tiny clockwork device (AC 5, 1 HP) that produces one Prestidigitation effect; you can have three such devices at a time.',
+    spellcasting: {
+      entitlements: [
+        {
+          id: 'rock-gnome-cantrips',
+          kind: 'granted',
+          spells: [
+            { spellId: 'srd-2024:mending', minLevel: 1 },
+            { spellId: 'srd-2024:prestidigitation', minLevel: 1 },
+          ],
+          countsAgainstLimit: false,
+        },
+      ],
+    },
   },
 ]
 
@@ -29,7 +58,7 @@ export const gnomeSrd2024: SpeciesDefinition = {
   editionId: 'srd-2024',
   name: 'Gnome',
   description:
-    'A gnome\'s energy and enthusiasm for living shines through every inch of their tiny body.',
+    "A gnome's energy and enthusiasm for living shines through every inch of their tiny body.",
   source: SRD_2024_SOURCE,
   creatureType: 'humanoid',
   size: 'small',
@@ -47,6 +76,12 @@ export const gnomeSrd2024: SpeciesDefinition = {
       name: 'Gnomish Cunning',
       description:
         'You have Advantage on Intelligence, Wisdom, and Charisma saving throws.',
+      effects: [
+        {
+          kind: 'save-advantage-ability',
+          abilities: ['intelligence', 'wisdom', 'charisma'],
+        },
+      ],
     },
     {
       id: 'gnomish-lineage',

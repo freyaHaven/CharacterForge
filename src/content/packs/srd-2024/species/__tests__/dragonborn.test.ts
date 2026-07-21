@@ -195,8 +195,19 @@ describe('halflingSrd2024', () => {
 })
 
 describe('humanSrd2024', () => {
-  it('requires a size choice and keeps Skillful/Versatile descriptive', () => {
-    expect(humanSrd2024.choices.map((choice) => choice.id)).toEqual(['size'])
+  it('requires size, Skillful, and Versatile choices', () => {
+    expect(humanSrd2024.choices.map((choice) => choice.id)).toEqual([
+      'size',
+      'skillful',
+      'versatile',
+    ])
+    expect(
+      humanSrd2024.choices.find((choice) => choice.id === 'versatile'),
+    ).toMatchObject({
+      type: 'feat-grant',
+      featCategory: 'origin',
+      recommendedFeatId: 'srd-2024:skilled',
+    })
     expect(humanSrd2024.traits.map((trait) => trait.id)).toEqual([
       'resourceful',
       'skillful',

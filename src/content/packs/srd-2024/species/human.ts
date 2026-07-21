@@ -1,7 +1,14 @@
 import type { SpeciesDefinition } from '../../../../domain/species/types'
+import { SKILL_IDS, SKILL_LABELS } from '../../../../domain/skills/types'
 import { SRD_2024_SOURCE } from '../source'
 import { SRD_2024_ORIGIN_LANGUAGES } from './originLanguages'
 import { SRD_2024_SIZE_CHOICE } from './sharedChoices'
+
+const SKILLFUL_OPTIONS = SKILL_IDS.map((skillId) => ({
+  id: skillId,
+  label: SKILL_LABELS[skillId],
+  effects: [{ kind: 'skill-proficiency' as const, skillId }],
+}))
 
 export const humanSrd2024: SpeciesDefinition = {
   id: 'srd-2024:human',
@@ -34,7 +41,27 @@ export const humanSrd2024: SpeciesDefinition = {
     },
   ],
   effects: [],
-  choices: [SRD_2024_SIZE_CHOICE],
+  choices: [
+    SRD_2024_SIZE_CHOICE,
+    {
+      id: 'skillful',
+      prompt: 'Choose a skill (Skillful)',
+      type: 'single-select',
+      required: true,
+      helperText: 'You gain proficiency in the chosen skill.',
+      options: SKILLFUL_OPTIONS,
+    },
+    {
+      id: 'versatile',
+      prompt: 'Choose an Origin feat (Versatile)',
+      type: 'feat-grant',
+      required: true,
+      helperText: 'Skilled is recommended.',
+      featCategory: 'origin',
+      recommendedFeatId: 'srd-2024:skilled',
+      options: [],
+    },
+  ],
   guidance: {
     age: 'Humans reach adulthood in their late teens and live less than a century.',
     height: 'Typical height: 60–210 cm (Small or Medium)',

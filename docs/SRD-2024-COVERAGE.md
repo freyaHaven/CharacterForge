@@ -33,7 +33,7 @@ scored across seven dimensions:
 
 | Area | Overall | Notes |
 |------|---------|-------|
-| Species & ancestry | 🟡 | 9/9 SRD species bundled; several trait choices lack derived effects |
+| Species & ancestry | 🟡 | 9/9 SRD species; creator-time effects largely wired; play-time traits descriptive |
 | Backgrounds | 🟡 | 4 bundled backgrounds; no custom background builder |
 | Classes & subclasses | 🟡 | 7/12 SRD classes; 1 subclass each |
 | Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon pickable at L19; some subclass extras missing |
@@ -64,16 +64,16 @@ scored across seven dimensions:
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
 | Content | ✅ | 9 species in `species/index.ts` |
-| UI | ✅ | `SpeciesStep` → `SpeciesPicker` with search and choices |
-| Persistence | ✅ | `character.species`; schema v2+ |
-| Validation | ✅ | `speciesRules.ts` |
-| Derived | 🟡 | Darkvision, damage resistance, HP (Dwarf), languages wired; **Elf Keen Senses skill**, **Human Skillful / Versatile origin feat**, **Wood Elf +5 speed**, **lineage L3/L5 spells** not derived |
-| Sheet | 🟡 | Species card on Overview; missing skill/speed/spell grants |
-| Tests | ✅ | `speciesWorkflow`, `speciesRules`, per-species content tests |
+| UI | ✅ | `SpeciesStep` → `SpeciesPicker` with search and choices (incl. Human Versatile feat grant) |
+| Persistence | ✅ | `character.species`; schema v2+ (no v15 bump for Human Skillful/Versatile) |
+| Validation | ✅ | `speciesRules.ts` including feat-grant / duplicate checks |
+| Derived | 🟡 | Creator-time: darkvision, resistance, HP, skills, speed, size, ability save notes, lineage/legacy spells, Versatile feat grants. **Play-time** traits (Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration, etc.) remain descriptive |
+| Sheet | 🟡 | Species card uses resolved size/speed/display name; skills & Versatile on Overview; species spell groups on Spells step |
+| Tests | ✅ | `phase1SpeciesMechanics`, `speciesGrants`, workflow / picker tests |
 
-**Gaps:** Human `skillful` and `versatile` traits are descriptive only (no choices).
-Elf `keen-senses` choice has no `skill-proficiency` effect. Elven lineage higher-level
-spells are text-only (no `spellEntitlements`).
+**Phase 1 boundary (D1):** Only creator-time effects are resolved. Active-use / rest / triggered species features stay descriptive until a play-sheet exists.
+
+**Acquisition:** Human Versatile → `species.choices.versatile` → `resolveCharacterFeatGrants` (`species-feat-grant`); never writes `character.feat`.
 
 ---
 
@@ -435,7 +435,7 @@ code (documents through v11 at time of audit).
 ### 1. Required for a complete SRD 2024 character creator
 
 - [ ] **Remaining 5 classes:** Bard, Druid, Sorcerer, Warlock, Wizard (with subclasses)
-- [ ] **Species mechanical gaps:** Human Skillful/Versatile, Elf Keen Senses skill, lineage speed/spells
+- [ ] **Species play-time features:** Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration
 - [ ] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 configuration (currently excluded from grant pickers)
 - [ ] **Additional SRD backgrounds** beyond the bundled four
 - [ ] **Multiclass ability score prerequisites**

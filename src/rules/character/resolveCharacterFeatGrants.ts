@@ -1,6 +1,7 @@
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
+import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import {
   isAbilityScoreImprovementChoiceId,
   parseAsiChoice,
@@ -9,6 +10,7 @@ import {
   getEpicBoonFeatIdFromChoiceValue,
   isEpicBoonChoiceId,
 } from '../../domain/class/epicBoon'
+import { getSpeciesVersatileFeatId } from '../../domain/species/resolveSpeciesDerived'
 import type { Character } from '../../domain/types'
 
 export type FeatGrantSource =
@@ -20,6 +22,13 @@ export type FeatGrantSource =
   | {
       /** Legacy free-floating slot — new UI must not write this. */
       kind: 'character-feat'
+    }
+  | {
+      kind: 'species-feat-grant'
+      speciesId: string
+      speciesDisplayName: string
+      choiceId: string
+      grantLabel: string
     }
   | {
       kind: 'class-feat-grant'
@@ -52,6 +61,7 @@ export type ResolveCharacterFeatGrantsOptions = {
   classCatalog: ClassCatalog
   backgroundCatalog: BackgroundCatalog
   featCatalog?: FeatCatalog
+  speciesCatalog?: SpeciesCatalog
 }
 
 function grantLabelForChoiceId(choiceId: string): string {
@@ -61,6 +71,10 @@ function grantLabelForChoiceId(choiceId: string): string {
 
   if (isAbilityScoreImprovementChoiceId(choiceId)) {
     return 'Ability Score Improvement'
+  }
+
+  if (choiceId === 'versatile') {
+    return 'Versatile'
   }
 
   return choiceId
@@ -75,6 +89,8 @@ function formatGrantDisplayLabel(
       return `${featName} (${source.backgroundName})`
     case 'character-feat':
       return `${featName} (Legacy feat)`
+    case 'species-feat-grant':
+      return `${featName} (${source.grantLabel} · ${source.speciesDisplayName})`
     case 'class-feat-grant':
       return `${featName} (${source.grantLabel} · ${source.className} ${source.classLevel})`
   }
@@ -149,6 +165,45 @@ export async function resolveCharacterFeatGrants(
     }
   }
 
+  if (character.species !== null && options.speciesCatalog !== undefined) {
+    const speciesDefinition = await options.speciesCatalog.getSpecies(
+      character.species.speciesId,
+    )
+    if (speciesDefinition !== null) {
+      for (const choice of speciesDefinition.choices) {
+        if (choice.type !== 'feat-grant') {
+          continue
+        }
+
+        const featId =
+          choice.id === 'versatile'
+            ? getSpeciesVersatileFeatId(character.species)
+            : typeof character.species.choices[choice.id] === 'string'
+              ? (character.species.choices[choice.id] as string)
+              : null
+
+        if (featId === null) {
+          continue
+        }
+
+        const source: FeatGrantSource = {
+          kind: 'species-feat-grant',
+          speciesId: speciesDefinition.id,
+          speciesDisplayName: speciesDefinition.name,
+          choiceId: choice.id,
+          grantLabel: grantLabelForChoiceId(choice.id),
+        }
+        const featName = featNameById.get(featId) ?? featId
+        grants.push({
+          featId,
+          choices: {},
+          source,
+          displayLabel: formatGrantDisplayLabel(featName, source),
+        })
+      }
+    }
+  }
+
   // Legacy compatibility only — new UI must not write character.feat.
   if (character.feat !== null) {
     const featId = character.feat.featId
@@ -210,7 +265,7 @@ export async function resolveCharacterFeatGrants(
 
 /**
  * Feat ids already taken outside a specific class choice slot.
- * Includes legacy character.feat, background origin, and other class grants.
+ * Includes legacy character.feat, background origin, species grants, and other class grants.
  */
 export function collectTakenFeatIdsForClassChoice(input: {
   resolved: ResolvedCharacterFeats
