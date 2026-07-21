@@ -260,8 +260,8 @@ Icons are decorative; class names in the UI provide accessible labels.
 Prioritized gaps and play-sheet requirements are maintained in
 [`docs/SRD-2024-COVERAGE.md`](docs/SRD-2024-COVERAGE.md). Highlights:
 
-- **Creator:** remaining five SRD classes, Epic Boon at level 19, species
-  mechanical gaps, feat/details step visibility
+- **Creator:** remaining five SRD classes, species mechanical gaps, Details
+  step visibility; nested ASI-feat config from Epic Boon deferred
 - **Play sheet:** feat-derived stats, resource tracking, rest workflow
 - **Optional:** full SRD compendiums, custom backgrounds, campaign tools
 - **Out of scope:** non-SRD book content, automatic cross-edition conversion

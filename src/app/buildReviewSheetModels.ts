@@ -14,6 +14,7 @@ import { resolveSpeciesEffects } from '../rules/species/resolveSpeciesEffects'
 import { calculateCharacterHitPoints } from '../rules/hit-points/calculateCharacterHitPoints'
 import { calculateCharacterArmorClass } from '../rules/armor-class/calculateCharacterArmorClass'
 import type { ResolvedEquipment } from '../rules/character/resolveCharacterEquipment'
+import type { ResolvedFeatGrant } from '../rules/character/resolveCharacterFeatGrants'
 import {
   formatAbilityScoreBonusSummary,
   formatBackgroundChoiceSummary,
@@ -73,7 +74,9 @@ export type ReviewFeatCardModel = {
   prerequisite: string | null
   choices: { prompt: string; summary: string }[]
   /** Where the feat came from — drives Overview edit navigation. */
-  source: 'selection' | 'background-origin'
+  source: 'selection' | 'background-origin' | 'class-feat-grant'
+  /** Human-readable grant source, e.g. "Epic Boon · Fighter 19". */
+  sourceLabel: string | null
 }
 
 export type ReviewSkillRowModel = {
@@ -108,7 +111,10 @@ export type ReviewProficienciesModel = {
 export type ReviewSheetModels = {
   species: ReviewSpeciesCardModel | null
   background: ReviewBackgroundCardModel | null
+  /** @deprecated Prefer `feats` — retained as the first grant for older callers. */
   feat: ReviewFeatCardModel | null
+  /** All resolved feat grants (background, legacy, ASI, Epic Boon). */
+  feats: ReviewFeatCardModel[]
   skills: ReviewSkillRowModel[]
   savingThrows: ReviewSaveRowModel[]
   savingThrowNotes: string[]
@@ -290,6 +296,7 @@ function buildFeatCard(
   definition: FeatDefinition | null,
   selection: FeatSelection | null,
   source: ReviewFeatCardModel['source'] = 'selection',
+  sourceLabel: string | null = null,
 ): ReviewFeatCardModel | null {
   if (definition === null) {
     return null
@@ -325,11 +332,12 @@ function buildFeatCard(
       description: benefit.description,
     })),
     prerequisite:
-      definition.prerequisite.kind === 'text'
-        ? definition.prerequisite.summary
-        : null,
+      definition.prerequisite.kind === 'none'
+        ? null
+        : definition.prerequisite.summary,
     choices,
     source,
+    sourceLabel,
   }
 }
 
@@ -342,7 +350,12 @@ function buildOriginFeatCard(
   }
 
   if (featDefinition !== null) {
-    return buildFeatCard(featDefinition, null, 'background-origin')
+    return buildFeatCard(
+      featDefinition,
+      null,
+      'background-origin',
+      backgroundDefinition.name,
+    )
   }
 
   return {
@@ -355,7 +368,71 @@ function buildOriginFeatCard(
     prerequisite: null,
     choices: [],
     source: 'background-origin',
+    sourceLabel: backgroundDefinition.name,
   }
+}
+
+function mapFeatGrantSource(
+  grantSource: ResolvedFeatGrant['source'],
+): {
+  source: ReviewFeatCardModel['source']
+  sourceLabel: string | null
+} {
+  switch (grantSource.kind) {
+    case 'background-origin':
+      return {
+        source: 'background-origin',
+        sourceLabel: grantSource.backgroundName,
+      }
+    case 'character-feat':
+      return { source: 'selection', sourceLabel: 'Legacy feat' }
+    case 'class-feat-grant':
+      return {
+        source: 'class-feat-grant',
+        sourceLabel: `${grantSource.grantLabel} · ${grantSource.className} ${grantSource.classLevel}`,
+      }
+  }
+}
+
+function buildFeatCardsFromGrants(
+  grants: readonly ResolvedFeatGrant[],
+  definitionsById: ReadonlyMap<string, FeatDefinition>,
+  characterFeat: FeatSelection | null,
+): ReviewFeatCardModel[] {
+  const cards: ReviewFeatCardModel[] = []
+
+  for (const grant of grants) {
+    const definition = definitionsById.get(grant.featId) ?? null
+    const { source, sourceLabel } = mapFeatGrantSource(grant.source)
+    const selection =
+      grant.source.kind === 'character-feat' && characterFeat !== null
+        ? characterFeat
+        : Object.keys(grant.choices).length > 0
+          ? { featId: grant.featId, choices: grant.choices }
+          : null
+
+    const card =
+      definition !== null
+        ? buildFeatCard(definition, selection, source, sourceLabel)
+        : {
+            name: grant.featId,
+            description: '',
+            category: '',
+            categoryBadge: '',
+            summary: grant.displayLabel,
+            benefits: [],
+            prerequisite: null,
+            choices: [],
+            source,
+            sourceLabel,
+          }
+
+    if (card !== null) {
+      cards.push(card)
+    }
+  }
+
+  return cards
 }
 
 function buildSkills(
@@ -546,6 +623,12 @@ export type BuildReviewSheetModelsInput = {
   featDefinition: FeatDefinition | null
   /** Resolved origin feat when `character.feat` is unset. */
   originFeatDefinition?: FeatDefinition | null
+  /**
+   * Resolved feat grants (preferred). When provided, Overview uses these for
+   * source-labeled feat cards instead of only character.feat / origin feat.
+   */
+  featGrants?: readonly ResolvedFeatGrant[]
+  featDefinitionsById?: ReadonlyMap<string, FeatDefinition>
   classDefinitions: Map<string, ClassDefinition>
   /**
    * Class instances used for Hit Points (committed, optionally overlaid by
@@ -615,19 +698,32 @@ export function buildReviewSheetModels(
     equipmentDefinitionsById: input.equipmentDefinitionsById ?? new Map(),
   })
 
+  const feats =
+    input.featGrants !== undefined
+      ? buildFeatCardsFromGrants(
+          input.featGrants,
+          input.featDefinitionsById ?? new Map(),
+          character.feat,
+        )
+      : (() => {
+          const legacy =
+            character.feat !== null
+              ? buildFeatCard(input.featDefinition, character.feat, 'selection', 'Legacy feat')
+              : buildOriginFeatCard(
+                  input.backgroundDefinition,
+                  input.originFeatDefinition ?? null,
+                )
+          return legacy === null ? [] : [legacy]
+        })()
+
   return {
     species: speciesCard,
     background: buildBackgroundCard(
       input.backgroundDefinition,
       character.background,
     ),
-    feat:
-      character.feat !== null
-        ? buildFeatCard(input.featDefinition, character.feat, 'selection')
-        : buildOriginFeatCard(
-            input.backgroundDefinition,
-            input.originFeatDefinition ?? null,
-          ),
+    feat: feats[0] ?? null,
+    feats,
     skills,
     savingThrows: buildSavingThrows(
       character.abilityScores,

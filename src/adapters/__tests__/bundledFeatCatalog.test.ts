@@ -4,14 +4,24 @@ import { createBundledFeatCatalog } from '../bundledFeatCatalog'
 describe('createBundledFeatCatalog', () => {
   const catalog = createBundledFeatCatalog()
 
-  it('lists origin feats for srd-2024', async () => {
+  it('lists bundled feats for srd-2024', async () => {
     const feats = await catalog.listFeats('srd-2024')
 
     expect(feats.map((entry) => entry.id)).toEqual([
+      'srd-2024:ability-score-improvement',
       'srd-2024:alert',
+      'srd-2024:boon-of-combat-prowess',
+      'srd-2024:boon-of-dimensional-travel',
+      'srd-2024:boon-of-fate',
+      'srd-2024:boon-of-irresistible-offense',
+      'srd-2024:boon-of-spell-recall',
+      'srd-2024:boon-of-the-night-spirit',
+      'srd-2024:boon-of-truesight',
+      'srd-2024:grappler',
       'srd-2024:magic-initiate-cleric',
       'srd-2024:magic-initiate-wizard',
       'srd-2024:savage-attacker',
+      'srd-2024:skilled',
     ])
   })
 

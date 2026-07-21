@@ -20,8 +20,12 @@ describe('filterFeatsByName', () => {
   it('matches origin category text for the current catalogue', async () => {
     const feats = await createBundledFeatCatalog().listFeats('srd-2024')
 
-    expect(filterFeatsByName(feats, 'origin').map((feat) => feat.id)).toEqual(
-      feats.map((feat) => feat.id),
-    )
+    expect(filterFeatsByName(feats, 'origin').map((feat) => feat.id)).toEqual([
+      'srd-2024:alert',
+      'srd-2024:magic-initiate-cleric',
+      'srd-2024:magic-initiate-wizard',
+      'srd-2024:savage-attacker',
+      'srd-2024:skilled',
+    ])
   })
 })

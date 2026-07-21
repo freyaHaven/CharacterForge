@@ -7,6 +7,7 @@ import {
   getClassFeaturesUpToLevel,
 } from '../../../../../domain/class/featureProgression'
 import { createAsiChoicesUpToLevel } from '../../../../../domain/class/abilityScoreImprovement'
+import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { createFighterWeaponMasteryChoices } from '../fighter.weaponMastery'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
@@ -72,6 +73,10 @@ function createValidFighterSelection(level: number) {
 
   if (level >= 3) {
     choices['fighter-subclass'] = 'champion'
+  }
+
+  if (level >= 19) {
+    choices['epic-boon'] = selectEpicBoonFeat('srd-2024:boon-of-combat-prowess')
   }
 
   return {
@@ -246,6 +251,18 @@ describe('fighterSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(fighterSrd2024, 19).some(
         (requirement) => requirement.id === 'epic-boon-19',
       ),
+    ).toBe(false)
+  })
+
+  it('exposes Epic Boon as a required class choice at level 19', () => {
+    expect(
+      getChoicesAvailableAtLevel(fighterSrd2024, 19).some(
+        (choice) => choice.id === 'epic-boon',
+      ),
+    ).toBe(true)
+    expect(
+      validateClassSelection(createValidFighterSelection(19), 'srd-2024', fighterSrd2024)
+        .ok,
     ).toBe(true)
   })
 })

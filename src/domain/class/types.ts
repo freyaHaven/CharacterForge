@@ -104,6 +104,11 @@ export type ClassChoice =
       type: 'single-select'
       required: boolean
       options: ClassChoiceOption[]
+      /**
+       * Optional catalogue feat id recommended for this choice (e.g. Epic Boon).
+       * Display-only — does not restrict selection.
+       */
+      recommendedFeatId?: string
     }
   | {
       id: string

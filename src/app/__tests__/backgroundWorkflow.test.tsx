@@ -296,7 +296,10 @@ describe('Background workflow', () => {
     expect(within(backgroundGroup).getByText(/Strength \+2/i)).toBeInTheDocument()
     expect(within(backgroundGroup).getByText('Athletics, Intimidation')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Feats · Savage Attacker', level: 4 }),
+      screen.getByRole('heading', {
+        name: 'Feats · Savage Attacker · Soldier',
+        level: 4,
+      }),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/roll the weapon’s damage dice twice/i),

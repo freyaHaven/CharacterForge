@@ -6,6 +6,9 @@ export function spellSourceKey(source: SpellSourceRef): string {
     case 'class-instance':
       return `class:${source.instanceId}:${source.entitlementId}`
     case 'feat':
+      if (source.slot === 'class-choice') {
+        return `feat:${source.slot}:${source.instanceId ?? ''}:${source.choiceId ?? ''}:${source.featId}:${source.entitlementId}`
+      }
       return `feat:${source.slot}:${source.featId}:${source.entitlementId}`
     case 'background-origin':
       return `background-origin:${source.backgroundId}:${source.entitlementId}`

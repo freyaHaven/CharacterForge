@@ -10,11 +10,10 @@ import { FeatureList } from './ReviewSheetContentBlocks'
 export type OverviewFeaturesPanelProps = {
   species: ReviewSpeciesCardModel | null
   background: ReviewBackgroundCardModel | null
-  feat: ReviewFeatCardModel | null
+  feats: ReviewFeatCardModel[]
   classFeatures: ReviewFeatureItem[]
   onEditSpecies?: () => void
   onEditBackground?: () => void
-  onEditFeat?: () => void
   onEditClass?: () => void
 }
 
@@ -49,20 +48,34 @@ function FeatureGroup({
   )
 }
 
+function featEditAction(
+  feat: ReviewFeatCardModel,
+  onEditBackground?: () => void,
+  onEditClass?: () => void,
+): { label: string; onEdit: (() => void) | undefined } {
+  switch (feat.source) {
+    case 'background-origin':
+      return { label: 'Edit background', onEdit: onEditBackground }
+    case 'class-feat-grant':
+      return { label: 'Edit class', onEdit: onEditClass }
+    case 'selection':
+      return { label: 'Edit feat', onEdit: undefined }
+  }
+}
+
 export function OverviewFeaturesPanel({
   species,
   background,
-  feat,
+  feats,
   classFeatures,
   onEditSpecies,
   onEditBackground,
-  onEditFeat,
   onEditClass,
 }: OverviewFeaturesPanelProps) {
   const hasContent =
     species !== null ||
     background !== null ||
-    feat !== null ||
+    feats.length > 0 ||
     classFeatures.length > 0
 
   if (!hasContent) {
@@ -140,38 +153,39 @@ export function OverviewFeaturesPanel({
           </FeatureGroup>
         ) : null}
 
-        {feat !== null ? (
-          <FeatureGroup
-            title={`Feats · ${feat.name}`}
-            editLabel={
-              feat.source === 'background-origin'
-                ? 'Edit background'
-                : 'Edit feat'
-            }
-            onEdit={
-              feat.source === 'background-origin'
-                ? onEditBackground
-                : onEditFeat
-            }
-          >
-            <p className="character-sheet__feature-summary">{feat.description}</p>
-            {feat.prerequisite !== null ? (
-              <p className="character-sheet__feature-summary">
-                Prerequisite: {feat.prerequisite}
-              </p>
-            ) : null}
-            {feat.choices.length > 0 ? (
-              <dl className="character-sheet__feature-details">
-                {feat.choices.map((choice) => (
-                  <div key={choice.prompt}>
-                    <dt>{choice.prompt}</dt>
-                    <dd>{choice.summary}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </FeatureGroup>
-        ) : null}
+        {feats.map((feat, index) => {
+          const edit = featEditAction(feat, onEditBackground, onEditClass)
+          const sourceSuffix =
+            feat.sourceLabel !== null && feat.sourceLabel.length > 0
+              ? ` · ${feat.sourceLabel}`
+              : ''
+
+          return (
+            <FeatureGroup
+              key={`${feat.source}-${feat.name}-${index}`}
+              title={`Feats · ${feat.name}${sourceSuffix}`}
+              editLabel={edit.label}
+              onEdit={edit.onEdit}
+            >
+              <p className="character-sheet__feature-summary">{feat.description}</p>
+              {feat.prerequisite !== null ? (
+                <p className="character-sheet__feature-summary">
+                  Prerequisite: {feat.prerequisite}
+                </p>
+              ) : null}
+              {feat.choices.length > 0 ? (
+                <dl className="character-sheet__feature-details">
+                  {feat.choices.map((choice) => (
+                    <div key={choice.prompt}>
+                      <dt>{choice.prompt}</dt>
+                      <dd>{choice.summary}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+            </FeatureGroup>
+          )
+        })}
 
         {classFeatures.length > 0 ? (
           <FeatureGroup

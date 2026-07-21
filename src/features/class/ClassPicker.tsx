@@ -115,7 +115,7 @@ function getFeatureLinkedChoiceStateKeys(
 export function ClassPicker({
   editionId,
   buildMode,
-  targetLevel: _targetLevel,
+  targetLevel,
   committedClasses,
   classDrafts,
   startingClassInstanceId,
@@ -260,6 +260,14 @@ export function ClassPicker({
     [classNamesById, effectiveInstances],
   )
 
+  const classDefinitionsById = useMemo(
+    () =>
+      new Map(
+        classList.map((definition) => [definition.id, definition] as const),
+      ),
+    [classList],
+  )
+
   const maxInstanceLevel =
     buildMode === 'single-class' ? MAX_CLASS_LEVEL : MAX_CLASS_LEVEL
 
@@ -316,9 +324,7 @@ export function ClassPicker({
     const resolved = calculateCharacterHitPoints({
       classes: classesForHp,
       startingClassInstanceId: resolvedStartingClassInstanceId,
-      classDefinitionsById: new Map(
-        classList.map((definition) => [definition.id, definition]),
-      ),
+      classDefinitionsById,
       abilityScores,
       speciesDefinition,
       speciesSelection,
@@ -329,8 +335,8 @@ export function ClassPicker({
     abilityScores,
     activeInstanceId,
     buildMode,
+    classDefinitionsById,
     classDrafts,
-    classList,
     committedClasses,
     draft?.hitPointIncreases,
     speciesDefinition,
@@ -761,6 +767,10 @@ export function ClassPicker({
                       hitPointsLabel={hitPointsLabel}
                       featCatalog={featCatalog}
                       characterFeatId={characterFeatId}
+                      abilityScores={abilityScores}
+                      characterLevel={targetLevel}
+                      eligibilityClasses={effectiveInstances}
+                      classDefinitionsById={classDefinitionsById}
                       onLevelChange={(level) => {
                         void handleLevelChange(level)
                       }}
@@ -878,6 +888,10 @@ export function ClassPicker({
                           hitPointIncreases={activeHitPointIncreases}
                           featCatalog={featCatalog}
                           characterFeatId={characterFeatId}
+                          abilityScores={abilityScores}
+                          characterLevel={targetLevel}
+                          eligibilityClasses={effectiveInstances}
+                          classDefinitionsById={classDefinitionsById}
                           onLevelChange={(level) => {
                             void handleLevelChange(level)
                           }}

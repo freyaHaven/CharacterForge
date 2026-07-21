@@ -6,6 +6,11 @@ import {
   parseAsiChoice,
 } from '../../domain/class/abilityScoreImprovement'
 import {
+  formatEpicBoonChoiceSummary,
+  isCompleteEpicBoonChoiceValue,
+  isEpicBoonChoiceId,
+} from '../../domain/class/epicBoon'
+import {
   ABILITY_ABBREVIATIONS,
   SKILL_ABILITY_MAP,
 } from '../../domain/character/sheetMechanics'
@@ -42,6 +47,14 @@ export function formatClassChoiceSummary(
     }
 
     return formatAsiChoiceSummary(value, featNameById)
+  }
+
+  if (isEpicBoonChoiceId(choice.id)) {
+    if (typeof value !== 'string' || !isCompleteEpicBoonChoiceValue(value)) {
+      return null
+    }
+
+    return formatEpicBoonChoiceSummary(value, featNameById)
   }
 
   if (choice.type === 'single-select') {

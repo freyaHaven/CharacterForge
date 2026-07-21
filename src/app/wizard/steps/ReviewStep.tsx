@@ -241,11 +241,10 @@ export function ReviewStep({
       <OverviewFeaturesPanel
         species={sheetModels.species}
         background={sheetModels.background}
-        feat={sheetModels.feat}
+        feats={sheetModels.feats}
         classFeatures={sheet.features}
         onEditSpecies={() => onEditStep('species')}
         onEditBackground={() => onEditStep('background')}
-        onEditFeat={() => onEditStep('feats')}
         onEditClass={() => onEditStep('class')}
       />
 

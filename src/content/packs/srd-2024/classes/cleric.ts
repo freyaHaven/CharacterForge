@@ -1,5 +1,6 @@
 import type { ClassDefinition } from '../../../../domain/class/types'
 import { createAsiChoiceDefinition } from '../../../../domain/class/abilityScoreImprovement'
+import { createEpicBoonChoiceDefinition } from '../../../../domain/class/epicBoon'
 import { subclassToChoiceOption } from '../../../../domain/class/subclassDefinition'
 import type { SkillId } from '../../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../../domain/skills/types'
@@ -312,6 +313,9 @@ export const clericSrd2024: ClassDefinition = {
     createAsiChoiceDefinition('ability-score-improvement-8', 8),
     createAsiChoiceDefinition('ability-score-improvement-12', 12),
     createAsiChoiceDefinition('ability-score-improvement-16', 16),
+    createEpicBoonChoiceDefinition({
+      recommendedFeatId: 'srd-2024:boon-of-fate',
+    }),
   ],
   startingEquipment: createCompleteClassPackageOrGoldStartingEquipment({
     items: CLERIC_PACKAGE_A,
@@ -324,13 +328,6 @@ export const clericSrd2024: ClassDefinition = {
       destinationStep: 'equipment',
       label: 'Starting Equipment',
       description: 'Choose starting equipment in Equipment',
-    },
-    {
-      id: 'epic-boon-19',
-      level: 19,
-      destinationStep: 'ability-scores',
-      label: 'Epic Boon',
-      description: 'Resolve the level 19 Epic Boon or qualifying feat',
     },
   ],
 }

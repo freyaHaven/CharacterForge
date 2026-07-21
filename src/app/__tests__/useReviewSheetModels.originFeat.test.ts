@@ -40,6 +40,8 @@ describe('origin feat catalog resolution', () => {
 
     expect(models.feat?.name).toBe('Savage Attacker')
     expect(models.feat?.source).toBe('background-origin')
+    expect(models.feat?.sourceLabel).toBe('Soldier')
+    expect(models.feats).toHaveLength(1)
   })
 
   it('keeps useReviewSheetModels free of hardcoded srd-2024 feat namespaces', async () => {

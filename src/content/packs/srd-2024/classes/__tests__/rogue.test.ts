@@ -80,6 +80,7 @@ describe('rogueSrd2024', () => {
       { id: 'ability-score-improvement-10', level: 10 },
       { id: 'ability-score-improvement-12', level: 12 },
       { id: 'ability-score-improvement-16', level: 16 },
+      { id: 'epic-boon', level: 19 },
     ])
   })
 })

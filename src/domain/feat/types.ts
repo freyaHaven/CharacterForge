@@ -24,12 +24,22 @@ export type FeatChoice = {
   options: FeatChoiceOption[]
 }
 
+import type { FeatRequirement } from './requirements'
+
+export type { FeatRequirement } from './requirements'
+
 export type FeatPrerequisite =
   | { kind: 'none' }
   | {
       kind: 'text'
       /** Short label shown on cards and in the details panel. */
       summary: string
+    }
+  | {
+      kind: 'requirements'
+      /** Short label shown on cards and in the details panel. */
+      summary: string
+      requirements: FeatRequirement[]
     }
 
 export type FeatBenefit = {

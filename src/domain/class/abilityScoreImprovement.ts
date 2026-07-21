@@ -30,10 +30,7 @@ export const ASI_CHOICE_OPTIONS = [
 ] as const
 
 export function isAbilityScoreImprovementChoiceId(choiceId: string): boolean {
-  return (
-    choiceId.startsWith('ability-score-improvement-') ||
-    choiceId.startsWith('epic-boon-')
-  )
+  return choiceId.startsWith('ability-score-improvement-')
 }
 
 export function isAsiMode(value: string): value is AsiMode {

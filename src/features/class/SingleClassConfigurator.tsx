@@ -1,6 +1,7 @@
 import type { HitPointIncrease } from '../../domain/class/hitPointIncreases'
-import type { EditionId } from '../../domain/types'
+import type { AbilityScores, EditionId } from '../../domain/types'
 import type {
+  CharacterClassSelection,
   ClassChoiceValue,
   ClassDefinition,
   ClassSelection,
@@ -28,6 +29,10 @@ export type SingleClassConfiguratorProps = {
   hitPointsLabel?: string | null
   featCatalog: FeatCatalog
   characterFeatId?: string | null
+  abilityScores: AbilityScores
+  characterLevel: number
+  eligibilityClasses: readonly CharacterClassSelection[]
+  classDefinitionsById: ReadonlyMap<string, ClassDefinition>
   onLevelChange: (level: number) => void
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
   onHitPointIncreaseChange: (
@@ -53,6 +58,10 @@ export function SingleClassConfigurator({
   hitPointsLabel = null,
   featCatalog,
   characterFeatId = null,
+  abilityScores,
+  characterLevel,
+  eligibilityClasses,
+  classDefinitionsById,
   onLevelChange,
   onChoiceChange,
   onHitPointIncreaseChange,
@@ -97,6 +106,10 @@ export function SingleClassConfigurator({
         hitPointIncreases={hitPointIncreases}
         featCatalog={featCatalog}
         characterFeatId={characterFeatId}
+        abilityScores={abilityScores}
+        characterLevel={characterLevel}
+        eligibilityClasses={eligibilityClasses}
+        classDefinitionsById={classDefinitionsById}
         onChoiceChange={onChoiceChange}
         onHitPointIncreaseChange={onHitPointIncreaseChange}
       />

@@ -1,4 +1,6 @@
 import type { ClassValidationIssue } from '../../rules/class/classRules'
+import { isAbilityScoreImprovementChoiceId } from '../../domain/class/abilityScoreImprovement'
+import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
 
 const MESSAGE_BY_CODE: Record<
   ClassValidationIssue['code'],
@@ -15,13 +17,17 @@ const MESSAGE_BY_CODE: Record<
         ? 'Choose two skill proficiencies.'
         : issue.choiceId?.startsWith('weapon-mastery')
           ? 'Choose your Weapon Masteries.'
-          : issue.choiceId?.startsWith('ability-score-improvement-')
+          : isAbilityScoreImprovementChoiceId(issue.choiceId ?? '')
             ? 'Complete your Ability Score Improvement.'
-            : `Choose an option for ${issue.choiceId ?? 'a required class choice'}.`,
+            : isEpicBoonChoiceId(issue.choiceId ?? '')
+              ? 'Choose an Epic Boon or qualifying feat.'
+              : `Choose an option for ${issue.choiceId ?? 'a required class choice'}.`,
   'invalid-choice': (issue) =>
-    issue.choiceId?.startsWith('ability-score-improvement-')
+    isAbilityScoreImprovementChoiceId(issue.choiceId ?? '')
       ? 'The Ability Score Improvement selection is invalid.'
-      : `The selected option for ${issue.choiceId ?? 'a class choice'} is invalid.`,
+      : isEpicBoonChoiceId(issue.choiceId ?? '')
+        ? 'The Epic Boon selection is invalid.'
+        : `The selected option for ${issue.choiceId ?? 'a class choice'} is invalid.`,
   'invalid-multi-select-count': (issue) =>
     issue.choiceId === 'skill-proficiencies'
       ? 'Choose exactly two skill proficiencies.'

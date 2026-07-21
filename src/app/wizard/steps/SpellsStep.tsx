@@ -58,6 +58,12 @@ function findSourceForEntitlement(
       return group.groupId === `class:${candidate.instanceId}`
     }
     if (candidate.kind === 'feat') {
+      if (candidate.slot === 'class-choice') {
+        return (
+          group.groupId ===
+          `feat:class-choice:${candidate.instanceId}:${candidate.choiceId}:${candidate.featId}`
+        )
+      }
       return group.groupId === `feat:${candidate.slot}:${candidate.featId}`
     }
     if (candidate.kind === 'background-origin') {

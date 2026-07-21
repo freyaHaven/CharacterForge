@@ -13,6 +13,7 @@ import {
   CLERIC_ASI_FEATURE_LEVELS,
   createAsiChoicesUpToLevel,
 } from '../../../../../domain/class/abilityScoreImprovement'
+import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
 
@@ -76,6 +77,10 @@ function createValidClericSelection(level: number) {
 
   if (level >= 7) {
     choices['blessed-strikes'] = 'potent-spellcasting'
+  }
+
+  if (level >= 19) {
+    choices['epic-boon'] = selectEpicBoonFeat('srd-2024:boon-of-fate')
   }
 
   return {
@@ -244,6 +249,6 @@ describe('clericSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(clericSrd2024, 19).some(
         (requirement) => requirement.id === 'epic-boon-19',
       ),
-    ).toBe(true)
+    ).toBe(false)
   })
 })

@@ -155,12 +155,22 @@ describe('Overview character sheet content', () => {
     ).not.toBeInTheDocument()
 
     const featGroup = screen
-      .getByRole('heading', { name: 'Feats · Savage Attacker', level: 4 })
+      .getByRole('heading', {
+        name: 'Feats · Savage Attacker · Legacy feat',
+        level: 4,
+      })
       .closest('.character-sheet__feature-group') as HTMLElement
     expect(
       within(featGroup).getByText(/roll the weapon’s damage dice twice/i),
     ).toBeInTheDocument()
     expect(within(featGroup).queryByText('Origin')).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Feats · Savage Attacker · Soldier',
+        level: 4,
+      }),
+    ).toBeInTheDocument()
 
     const skillsPanel = screen
       .getByRole('heading', { name: 'Skills', level: 4 })

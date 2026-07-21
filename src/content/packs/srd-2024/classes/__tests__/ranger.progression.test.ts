@@ -13,6 +13,7 @@ import {
   RANGER_ASI_FEATURE_LEVELS,
   createAsiChoicesUpToLevel,
 } from '../../../../../domain/class/abilityScoreImprovement'
+import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { createRangerWeaponMasteryChoices } from '../ranger.weaponMastery'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
@@ -82,6 +83,12 @@ function createValidRangerSelection(level: number) {
 
   if (level >= 9) {
     choices['expertise-9'] = ['perception', 'survival']
+  }
+
+  if (level >= 19) {
+    choices['epic-boon'] = selectEpicBoonFeat(
+      'srd-2024:boon-of-dimensional-travel',
+    )
   }
 
   return {
@@ -274,6 +281,6 @@ describe('rangerSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(rangerSrd2024, 19).some(
         (requirement) => requirement.id === 'epic-boon-19',
       ),
-    ).toBe(true)
+    ).toBe(false)
   })
 })

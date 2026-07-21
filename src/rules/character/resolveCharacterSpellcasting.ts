@@ -243,7 +243,7 @@ function entitlementLabel(
 
 function formatGrantedFeatSpellcastingLabel(
   featName: string,
-  grantedBy: 'Background' | 'Feat',
+  grantedBy: string,
   contextName?: string,
 ): string {
   const baseName = featName.replace(/\s*\([^)]*\)\s*$/u, '').trim()
@@ -259,6 +259,13 @@ function collectFeatActiveEntitlements(
   spellcasting: FeatSpellcasting,
   sourceBase:
     | { kind: 'feat'; slot: 'character-feat'; featId: string }
+    | {
+        kind: 'feat'
+        slot: 'class-choice'
+        featId: string
+        instanceId: string
+        choiceId: string
+      }
     | { kind: 'background-origin'; backgroundId: string },
   groupId: string,
   groupLabel: string,
@@ -266,12 +273,21 @@ function collectFeatActiveEntitlements(
   return spellcasting.entitlements.map((entitlement) => ({
     source:
       sourceBase.kind === 'feat'
-        ? {
-            kind: 'feat' as const,
-            slot: 'character-feat' as const,
-            featId: sourceBase.featId,
-            entitlementId: entitlement.id,
-          }
+        ? sourceBase.slot === 'class-choice'
+          ? {
+              kind: 'feat' as const,
+              slot: 'class-choice' as const,
+              featId: sourceBase.featId,
+              instanceId: sourceBase.instanceId,
+              choiceId: sourceBase.choiceId,
+              entitlementId: entitlement.id,
+            }
+          : {
+              kind: 'feat' as const,
+              slot: 'character-feat' as const,
+              featId: sourceBase.featId,
+              entitlementId: entitlement.id,
+            }
         : {
             kind: 'background-origin' as const,
             backgroundId: sourceBase.backgroundId,
@@ -398,50 +414,87 @@ export async function resolveCharacterSpellcasting(
     )
   }
 
-  if (character.feat !== null && options?.featCatalog !== undefined) {
-    const feat = await options.featCatalog.getFeat(character.feat.featId)
-    if (feat?.spellcasting !== undefined) {
-      activeEntitlements.push(
-        ...collectFeatActiveEntitlements(
-          feat.spellcasting,
-          {
-            kind: 'feat',
-            slot: 'character-feat',
-            featId: feat.id,
-          },
-          `feat:character-feat:${feat.id}`,
-          formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
-        ),
-      )
-    }
-  }
-
-  if (
-    character.background !== null &&
-    options?.backgroundCatalog !== undefined &&
-    options.featCatalog !== undefined
-  ) {
-    const background = await options.backgroundCatalog.getBackground(
-      character.background.backgroundId,
+  if (options?.featCatalog !== undefined) {
+    const { resolveCharacterFeatGrants } = await import(
+      './resolveCharacterFeatGrants'
     )
-    if (background !== null) {
-      const originFeat = await options.featCatalog.getFeat(
-        background.originFeat.featId,
-      )
-      if (originFeat?.spellcasting !== undefined) {
+
+    if (options.backgroundCatalog !== undefined) {
+      const resolvedFeats = await resolveCharacterFeatGrants(character, {
+        classCatalog,
+        backgroundCatalog: options.backgroundCatalog,
+        featCatalog: options.featCatalog,
+      })
+
+      for (const grant of resolvedFeats.grants) {
+        const feat = await options.featCatalog.getFeat(grant.featId)
+        if (feat?.spellcasting === undefined) {
+          continue
+        }
+
+        if (grant.source.kind === 'background-origin') {
+          activeEntitlements.push(
+            ...collectFeatActiveEntitlements(
+              feat.spellcasting,
+              {
+                kind: 'background-origin',
+                backgroundId: grant.source.backgroundId,
+              },
+              `background-origin:${grant.source.backgroundId}`,
+              formatGrantedFeatSpellcastingLabel(
+                feat.name,
+                'Background',
+                grant.source.backgroundName,
+              ),
+            ),
+          )
+        } else if (grant.source.kind === 'character-feat') {
+          activeEntitlements.push(
+            ...collectFeatActiveEntitlements(
+              feat.spellcasting,
+              {
+                kind: 'feat',
+                slot: 'character-feat',
+                featId: feat.id,
+              },
+              `feat:character-feat:${feat.id}`,
+              formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
+            ),
+          )
+        } else {
+          activeEntitlements.push(
+            ...collectFeatActiveEntitlements(
+              feat.spellcasting,
+              {
+                kind: 'feat',
+                slot: 'class-choice',
+                featId: feat.id,
+                instanceId: grant.source.instanceId,
+                choiceId: grant.source.choiceId,
+              },
+              `feat:class-choice:${grant.source.instanceId}:${grant.source.choiceId}:${feat.id}`,
+              formatGrantedFeatSpellcastingLabel(
+                feat.name,
+                grant.source.grantLabel,
+                grant.source.className,
+              ),
+            ),
+          )
+        }
+      }
+    } else if (character.feat !== null) {
+      const feat = await options.featCatalog.getFeat(character.feat.featId)
+      if (feat?.spellcasting !== undefined) {
         activeEntitlements.push(
           ...collectFeatActiveEntitlements(
-            originFeat.spellcasting,
+            feat.spellcasting,
             {
-              kind: 'background-origin',
-              backgroundId: background.id,
+              kind: 'feat',
+              slot: 'character-feat',
+              featId: feat.id,
             },
-            `background-origin:${background.id}`,
-            formatGrantedFeatSpellcastingLabel(
-              originFeat.name,
-              'Background',
-              background.name,
-            ),
+            `feat:character-feat:${feat.id}`,
+            formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
           ),
         )
       }

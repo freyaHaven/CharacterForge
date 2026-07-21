@@ -36,9 +36,9 @@ scored across seven dimensions:
 | Species & ancestry | 🟡 | 9/9 SRD species bundled; several trait choices lack derived effects |
 | Backgrounds | 🟡 | 4 bundled backgrounds; no custom background builder |
 | Classes & subclasses | 🟡 | 7/12 SRD classes; 1 subclass each |
-| Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon and some subclass extras missing |
-| Deferred class requirements | 🟡 | Starting equipment active; Epic Boon blocks finish at L19+ |
-| Feats & acquisition | 🟡 | 4 origin feats; feat step hidden; no epic boons |
+| Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon pickable at L19; some subclass extras missing |
+| Deferred class requirements | 🟡 | Starting equipment only; Epic Boon is a class choice (not deferred) |
+| Feats & acquisition | 🟡 | Origin + epic boons + Grappler/Skilled/ASI feat; no standalone Feats step |
 | Fighting styles | 🟡 | Fighter/Ranger/Paladin L1–2; Champion L7 second style missing |
 | Weapon mastery | 🟡 | Slot schedules + UI; gear sub-choices deferred |
 | Ability scores & ASIs | ✅ | All three methods + class ASI choices including feat option |
@@ -50,8 +50,8 @@ scored across seven dimensions:
 | Proficiencies & languages | 🟡 | Class/background on sheet; species/feat gaps |
 | Derived combat stats | 🟡 | HP/AC strong; initiative/speed feat & lineage gaps |
 | Multiclass | 🟡 | UI + validation + shared slots; no ability prerequisites |
-| Higher-level creation | 🟡 | Levels 1–20 supported; L19 Epic Boon not pickable |
-| Wizard visibility & routing | 🟡 | 10-step catalog; Details/Feats hidden; no URL routing |
+| Higher-level creation | 🟡 | Levels 1–20 supported; L19 Epic Boon pickable on Class step |
+| Wizard visibility & routing | 🟡 | 10-step catalog; Details/Feats hidden (legacy); no URL routing |
 | Import/export & migrations | ✅ | `.cforge` + localStorage v0→v14 |
 | Overview & in-play management | 🟡 | Rich creation-time sheet; no rest/level-up/play mode |
 
@@ -118,10 +118,10 @@ Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain).
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Skill proficiencies, subclasses, fighting styles, weapon mastery, ASIs, Divine Order, expertise, HP increases |
-| UI | ✅ | `ClassProgressionSection`, `ClassMultiSelectChoiceField`, `AsiChoiceField` |
+| Content | 🟡 | Skill proficiencies, subclasses, fighting styles, weapon mastery, ASIs, Epic Boon, Divine Order, expertise, HP increases |
+| UI | ✅ | `ClassProgressionSection`, `ClassMultiSelectChoiceField`, `AsiChoiceField`, `FeatGrantChoiceField` |
 | Persistence | ✅ | `ClassInstance.choices`, `hitPointIncreases` |
-| Validation | ✅ | `classRules.ts` including ASI encoding and weapon-mastery dedup |
+| Validation | ✅ | `classRules.ts` including ASI/Epic Boon encoding and weapon-mastery dedup |
 | Derived | 🟡 | Most choice effects resolve; Champion L7 second fighting style is text-only |
 | Sheet | ✅ | Feature accordion + choice summaries |
 | Tests | ✅ | `classRules.test.ts`, per-class progression tests, `ClassPicker.test.tsx` |
@@ -132,15 +132,16 @@ Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain).
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | `starting-equipment` (L1), `epic-boon-19` (L19) on all bundled classes |
+| Content | 🟡 | `starting-equipment` (L1) on all bundled classes |
 | UI | 🟡 | `ClassDeferredRequirementsPanel` links to destination steps |
 | Persistence | ➖ | Requirements are derived, not stored |
 | Validation | 🟡 | Unresolved deferred reqs block finish (`characterFinishPolicy.ts`) |
-| Derived | 🟡 | Starting equipment resolves to inventory; Epic Boon has no picker |
+| Derived | ✅ | Starting equipment resolves to inventory |
 | Sheet | ✅ | Alerts on Overview when unresolved |
-| Tests | ✅ | `deferredRequirements.test.ts`, progression tests assert L19 entry |
+| Tests | ✅ | `deferredRequirements.test.ts`, progression tests |
 
-**Gap:** Characters at **level 19–20 cannot finish** until Epic Boon selection exists.
+**Note:** Epic Boon is a **class progression choice** at level 19 (`epic-boon`), not a
+deferred requirement.
 
 ---
 
@@ -148,17 +149,23 @@ Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain).
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | 4 origin feats: Alert, Magic Initiate (Cleric/Wizard), Savage Attacker |
-| UI | 🟡 | `FeatPicker` exists; **Feats wizard step hidden** (`hasFeatChoices()` → false) |
-| Persistence | ✅ | `character.feat`; schema v10+ |
-| Validation | ✅ | `featRules.ts` |
-| Derived | 🟡 | Magic Initiate spell entitlements resolve; Alert/Savage Attacker benefits display-only |
-| Sheet | 🟡 | Origin feat card; no initiative bonus from Alert |
-| Tests | 🟡 | `featRules.test.ts`, `FeatPicker.test.tsx`; no feat-step workflow tests |
+| Content | 🟡 | Origin feats + 7 epic boons + ASI feat, Grappler, Skilled; fighting-style feats deferred |
+| UI | 🟡 | Grants via Background / ASI (`AsiChoiceField`) / Epic Boon (`FeatGrantChoiceField`); **Feats wizard step stays hidden** |
+| Persistence | 🟡 | Class choices + background origin; `character.feat` is **legacy-only** (new UI must not write it) |
+| Validation | ✅ | Unified eligibility + duplicate detection in `classRules` / `evaluateFeatEligibility` |
+| Derived | 🟡 | Magic Initiate spell entitlements; Alert/Savage Attacker benefits still display-only |
+| Sheet | 🟡 | Overview lists grants with source labels (Background / ASI / Epic Boon / Legacy) |
+| Tests | 🟡 | `resolveCharacterFeatGrants`, `epicBoon`, eligibility, progression tests |
 
-**Acquisition paths today:** Background origin feat (auto-granted). Class ASI can pick a
-feat from catalog via `AsiChoiceField`. No general feat step, no Epic Boon category
-definitions, no fighting-style feat entries.
+**Acquisition paths:** Background origin feat; class ASI feat mode; class Epic Boon
+feat-only grant. Shared pipeline: `resolveCharacterFeatGrants` → eligibility, dedup,
+spell resolution, Overview labels.
+
+**Temporary limitation (option 3):** The general **Ability Score Improvement** feat is
+present in the catalogue but **excluded from feat-grant pickers** (Epic Boon and ASI
+“Choose a Feat”). Class choice values only store `feat:{id}` and cannot yet encode the
+ASI feat’s nested +2 / +1+1 configuration. Players use dedicated ASI slot modes for
+stat increases. Nested ASI-feat configuration from Epic Boon is deferred.
 
 ---
 
@@ -352,7 +359,7 @@ not computed. Passive scores use class/background skills only.
 | Content | ✅ | All bundled classes define features through L20 |
 | UI | ✅ | Level stepper 1–20 (`LevelStepper`) |
 | Persistence | ✅ | `targetLevel`, per-instance `level` |
-| Validation | 🟡 | Level-gated choices work; **L19 Epic Boon blocks finish** |
+| Validation | ✅ | Level-gated choices work; Epic Boon required at class level ≥ 19 |
 | Derived | ✅ | Progression effects scale with level |
 | Sheet | ✅ | Overview reflects target level |
 | Tests | ✅ | Progression tests per class |
@@ -426,9 +433,8 @@ code (documents through v11 at time of audit).
 ### 1. Required for a complete SRD 2024 character creator
 
 - [ ] **Remaining 5 classes:** Bard, Druid, Sorcerer, Warlock, Wizard (with subclasses)
-- [ ] **Epic Boon selection at level 19** — feat definitions + choice UI (currently blocks finish at L19–20)
 - [ ] **Species mechanical gaps:** Human Skillful/Versatile, Elf Keen Senses skill, lineage speed/spells
-- [ ] **Feat step visibility** — surface origin/ASI feat picks when entitlements exist
+- [ ] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 configuration (currently excluded from grant pickers)
 - [ ] **Character Details step** — enable nav or fold into Overview editing
 - [ ] **Additional SRD backgrounds** beyond the bundled four
 - [ ] **Multiclass ability score prerequisites**
@@ -454,7 +460,7 @@ code (documents through v11 at time of audit).
 
 - [ ] Full SRD equipment compendium and shop/purchase workflow
 - [ ] Full SRD spell compendium browser
-- [ ] Full SRD feat compendium (all origin, general, fighting styles, epic boons)
+- [ ] Full SRD feat compendium (remaining origin/general feats; fighting-style feat defs)
 - [ ] Custom background builder
 - [ ] Campaign roster / party management
 - [ ] Cloud sync or shared character links
@@ -478,8 +484,9 @@ code (documents through v11 at time of audit).
 **Method:** File inspection, test grep, and spot-checks of resolver and wizard paths.
 Comments and README claims were verified against code.
 
-**Counts verified in repo:** 9 species, 7 classes, 7 subclasses, 4 backgrounds, 4 feats,
-~100 spells, ~61 equipment items, storage schema v14.
+**Counts verified in repo:** 9 species, 7 classes, 7 subclasses, 4 backgrounds, 14 feats
+(4 origin + 7 epic boons + ASI + Grappler + Skilled), ~100 spells, ~61 equipment items,
+storage schema v14.
 
 **Uncertain without manual SRD crosswalk:**
 

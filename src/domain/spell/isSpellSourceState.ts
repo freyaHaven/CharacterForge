@@ -17,12 +17,24 @@ export function isSpellSourceRef(value: unknown): value is SpellSourceRef {
         isNonEmptyString(candidate.instanceId) &&
         isNonEmptyString(candidate.entitlementId)
       )
-    case 'feat':
+    case 'feat': {
+      if (
+        !isNonEmptyString(candidate.featId) ||
+        !isNonEmptyString(candidate.entitlementId)
+      ) {
+        return false
+      }
+
+      if (candidate.slot === 'character-feat') {
+        return true
+      }
+
       return (
-        candidate.slot === 'character-feat' &&
-        isNonEmptyString(candidate.featId) &&
-        isNonEmptyString(candidate.entitlementId)
+        candidate.slot === 'class-choice' &&
+        isNonEmptyString(candidate.instanceId) &&
+        isNonEmptyString(candidate.choiceId)
       )
+    }
     case 'background-origin':
       return (
         isNonEmptyString(candidate.backgroundId) &&

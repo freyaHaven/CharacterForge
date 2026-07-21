@@ -13,6 +13,7 @@ import {
   MONK_ASI_FEATURE_LEVELS,
   createAsiChoicesUpToLevel,
 } from '../../../../../domain/class/abilityScoreImprovement'
+import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
 
@@ -80,6 +81,12 @@ function createValidMonkSelection(level: number) {
 
   if (level >= 3) {
     choices['monk-subclass'] = 'warrior-of-the-open-hand'
+  }
+
+  if (level >= 19) {
+    choices['epic-boon'] = selectEpicBoonFeat(
+      'srd-2024:boon-of-irresistible-offense',
+    )
   }
 
   return {
@@ -227,6 +234,6 @@ describe('monkSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(monkSrd2024, 19).some(
         (requirement) => requirement.id === 'epic-boon-19',
       ),
-    ).toBe(true)
+    ).toBe(false)
   })
 })

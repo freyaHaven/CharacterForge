@@ -10,6 +10,10 @@ import {
   isAbilityScoreImprovementChoiceId,
   isCompleteAsiChoiceValue,
 } from '../../domain/class/abilityScoreImprovement'
+import {
+  isCompleteEpicBoonChoiceValue,
+  isEpicBoonChoiceId,
+} from '../../domain/class/epicBoon'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { withLevelAdjustedChoiceLimits } from '../../domain/class/weaponMastery'
@@ -85,6 +89,10 @@ function isChoiceComplete(
 ): boolean {
   if (isAbilityScoreImprovementChoiceId(choice.id)) {
     return typeof value === 'string' && isCompleteAsiChoiceValue(value)
+  }
+
+  if (isEpicBoonChoiceId(choice.id)) {
+    return typeof value === 'string' && isCompleteEpicBoonChoiceValue(value)
   }
 
   if (choice.type === 'single-select') {

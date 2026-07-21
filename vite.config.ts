@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],
+    // Heavy RTL class/review workflows need headroom under default parallel load.
+    testTimeout: 15_000,
   },
 })

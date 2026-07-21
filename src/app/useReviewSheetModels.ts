@@ -15,6 +15,8 @@ import {
   buildReviewSheetModels,
   type ReviewSheetModels,
 } from './buildReviewSheetModels'
+import { resolveCharacterFeatGrants } from '../rules/character/resolveCharacterFeatGrants'
+import type { FeatDefinition } from '../domain/feat/types'
 
 const EMPTY_MODELS: ReviewSheetModels = buildReviewSheetModels({
   character: createDefaultCharacter(),
@@ -64,6 +66,24 @@ export function useReviewSheetModels(
           ? await featCatalog.getFeat(backgroundDefinition.originFeat.featId)
           : null
 
+      const resolvedFeats = await resolveCharacterFeatGrants(character, {
+        classCatalog,
+        backgroundCatalog,
+        featCatalog,
+      })
+      const featDefinitionsById = new Map<string, FeatDefinition>()
+      await Promise.all(
+        resolvedFeats.grants.map(async (grant) => {
+          if (featDefinitionsById.has(grant.featId)) {
+            return
+          }
+          const definition = await featCatalog.getFeat(grant.featId)
+          if (definition !== null) {
+            featDefinitionsById.set(grant.featId, definition)
+          }
+        }),
+      )
+
       const hitPointClasses = getClassInstancesForHitPoints(
         character.classes,
         classDrafts,
@@ -109,6 +129,8 @@ export function useReviewSheetModels(
           backgroundDefinition,
           featDefinition,
           originFeatDefinition,
+          featGrants: resolvedFeats.grants,
+          featDefinitionsById,
           classDefinitions,
           hitPointClasses,
           resolvedEquipment,

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { HitPointIncrease } from '../../domain/class/hitPointIncreases'
-import type { EditionId } from '../../domain/types'
+import type { AbilityScores, EditionId } from '../../domain/types'
 import type {
+  CharacterClassSelection,
   ClassChoiceValue,
   ClassDefinition,
   ClassSelection,
@@ -11,6 +12,13 @@ import {
   collectAsiFeatIds,
   isAbilityScoreImprovementChoiceId,
 } from '../../domain/class/abilityScoreImprovement'
+import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
+import { collectClassFeatGrantIds } from '../../rules/character/resolveCharacterFeatGrants'
+import {
+  characterHasFightingStyle,
+  characterHasSpellcasting,
+} from '../../rules/character/buildFeatEligibilityContext'
+import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { validateClassSelection } from '../../rules/class/classRules'
@@ -32,6 +40,7 @@ import {
   ClassSelectionSummary,
 } from './ClassSelectionSummary'
 import { AsiChoiceField } from './AsiChoiceField'
+import { FeatGrantChoiceField } from './FeatGrantChoiceField'
 import { ClassMultiSelectChoiceField } from './ClassMultiSelectChoiceField'
 import { HitPointIncreasePanel } from './HitPointIncreasePanel'
 import { LevelStepper } from './LevelStepper'
@@ -87,6 +96,10 @@ export type ClassInstanceConfiguratorProps = {
   hitPointIncreases?: readonly HitPointIncrease[]
   featCatalog: FeatCatalog
   characterFeatId?: string | null
+  abilityScores?: AbilityScores
+  characterLevel?: number
+  eligibilityClasses?: readonly CharacterClassSelection[]
+  classDefinitionsById?: ReadonlyMap<string, ClassDefinition>
   levelLabel?: string
   showRemoveButton?: boolean
   onLevelChange: (level: number) => void
@@ -112,6 +125,17 @@ export function ClassInstanceConfigurator({
   hitPointIncreases,
   featCatalog,
   characterFeatId = null,
+  abilityScores = {
+    strength: 10,
+    dexterity: 10,
+    constitution: 10,
+    intelligence: 10,
+    wisdom: 10,
+    charisma: 10,
+  },
+  characterLevel = 20,
+  eligibilityClasses,
+  classDefinitionsById,
   levelLabel = 'Levels in this class',
   showRemoveButton = false,
   onLevelChange,
@@ -121,6 +145,67 @@ export function ClassInstanceConfigurator({
 }: ClassInstanceConfiguratorProps) {
   const [choiceExpansionState, setChoiceExpansionState] =
     useState<FeatureChoiceExpansionState>({})
+
+  const definitionsMap = useMemo(() => {
+    if (classDefinitionsById !== undefined) {
+      return classDefinitionsById
+    }
+    return new Map([[activeDefinition.id, activeDefinition]])
+  }, [activeDefinition, classDefinitionsById])
+
+  const classesForEligibility = useMemo(() => {
+    if (eligibilityClasses !== undefined) {
+      return eligibilityClasses
+    }
+    if (activeInstanceId === null) {
+      return []
+    }
+    return [
+      {
+        instanceId: activeInstanceId,
+        classId: activeClassId,
+        level: activeLevel,
+        choices: activeChoices,
+      },
+    ]
+  }, [
+    activeChoices,
+    activeClassId,
+    activeInstanceId,
+    activeLevel,
+    eligibilityClasses,
+  ])
+
+  const eligibilityContext: FeatEligibilityContext = useMemo(
+    () => ({
+      characterLevel,
+      abilityScores,
+      hasSpellcasting: characterHasSpellcasting(
+        classesForEligibility,
+        definitionsMap,
+      ),
+      hasFightingStyle: characterHasFightingStyle(
+        classesForEligibility,
+        definitionsMap,
+      ),
+      takenFeatIds: [],
+    }),
+    [abilityScores, characterLevel, classesForEligibility, definitionsMap],
+  )
+
+  const crossInstanceTakenFeatIds = useMemo(() => {
+    const ids: string[] = []
+    for (const instance of classesForEligibility) {
+      if (instance.instanceId === activeInstanceId) {
+        continue
+      }
+      ids.push(...collectClassFeatGrantIds(instance.choices))
+    }
+    if (characterFeatId !== null) {
+      ids.push(characterFeatId)
+    }
+    return ids
+  }, [activeInstanceId, characterFeatId, classesForEligibility])
 
   const draftValidation =
     draft === null
@@ -263,14 +348,58 @@ export function ClassInstanceConfigurator({
                                 editionId={editionId}
                                 featCatalog={featCatalog}
                                 takenFeatIds={[
-                                  ...collectAsiFeatIds(
+                                  ...collectClassFeatGrantIds(
                                     activeChoices,
                                     linkedSingleSelect.id,
                                   ),
-                                  ...(characterFeatId !== null
-                                    ? [characterFeatId]
-                                    : []),
+                                  ...crossInstanceTakenFeatIds,
                                 ]}
+                                errorId={errorId}
+                                onChange={onChoiceChange}
+                              />
+                              {issue !== undefined && errorId !== undefined ? (
+                                <p
+                                  id={errorId}
+                                  className="class-picker__choice-error"
+                                  role="alert"
+                                >
+                                  {formatClassValidationIssue(issue)}
+                                </p>
+                              ) : null}
+                            </div>
+                          )
+                        }
+
+                        if (isEpicBoonChoiceId(linkedSingleSelect.id)) {
+                          return (
+                            <div
+                              key={feature.id}
+                              className="class-picker__choice"
+                            >
+                              <h6>{feature.name}</h6>
+                              <p className="class-picker__feature-accordion-description">
+                                {feature.description}
+                              </p>
+                              <FeatGrantChoiceField
+                                choiceId={linkedSingleSelect.id}
+                                value={
+                                  typeof choiceValue === 'string'
+                                    ? choiceValue
+                                    : undefined
+                                }
+                                editionId={editionId}
+                                featCatalog={featCatalog}
+                                takenFeatIds={[
+                                  ...collectClassFeatGrantIds(
+                                    activeChoices,
+                                    linkedSingleSelect.id,
+                                  ),
+                                  ...crossInstanceTakenFeatIds,
+                                ]}
+                                eligibilityContext={eligibilityContext}
+                                recommendedFeatId={
+                                  linkedSingleSelect.recommendedFeatId ?? null
+                                }
                                 errorId={errorId}
                                 onChange={onChoiceChange}
                               />

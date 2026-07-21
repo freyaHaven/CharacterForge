@@ -112,9 +112,11 @@ export type SpellSourceRef =
     }
   | {
       kind: 'feat'
-      slot: 'character-feat'
+      slot: 'character-feat' | 'class-choice'
       featId: string
       entitlementId: string
+      instanceId?: string
+      choiceId?: string
     }
   | {
       kind: 'background-origin'

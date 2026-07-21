@@ -13,6 +13,7 @@ import {
   PALADIN_ASI_FEATURE_LEVELS,
   createAsiChoicesUpToLevel,
 } from '../../../../../domain/class/abilityScoreImprovement'
+import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { createPaladinWeaponMasteryChoices } from '../paladin.weaponMastery'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
@@ -75,6 +76,10 @@ function createValidPaladinSelection(level: number) {
 
   if (level >= 3) {
     choices['paladin-subclass'] = 'oath-of-devotion'
+  }
+
+  if (level >= 19) {
+    choices['epic-boon'] = selectEpicBoonFeat('srd-2024:boon-of-truesight')
   }
 
   return {
@@ -233,6 +238,6 @@ describe('paladinSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(paladinSrd2024, 19).some(
         (requirement) => requirement.id === 'epic-boon-19',
       ),
-    ).toBe(true)
+    ).toBe(false)
   })
 })

@@ -11,7 +11,7 @@ describe('resolveDeferredCharacterRequirements', () => {
     ).toEqual([])
   })
 
-  it('still defers starting equipment at level 1 and epic boon at 19', () => {
+  it('still defers starting equipment at level 1', () => {
     expect(
       resolveDeferredCharacterRequirements(fighterSrd2024, 1).map(
         (requirement) => requirement.id,
@@ -21,7 +21,7 @@ describe('resolveDeferredCharacterRequirements', () => {
       resolveDeferredCharacterRequirements(fighterSrd2024, 19).map(
         (requirement) => requirement.id,
       ),
-    ).toEqual(['starting-equipment', 'epic-boon-19'])
+    ).toEqual(['starting-equipment'])
   })
 
   it('does not defer ability score improvements after they move to the class step', () => {

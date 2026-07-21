@@ -6,11 +6,16 @@ import type {
   ClassSelection,
 } from '../../domain/class/types'
 import {
-  collectAsiFeatIds,
   isAbilityScoreImprovementChoiceId,
   validateAsiEncodedValue,
   type AsiFeatValidationContext,
 } from '../../domain/class/abilityScoreImprovement'
+import {
+  isCompleteEpicBoonChoiceValue,
+  isEpicBoonChoiceId,
+  isFeatExcludedFromFeatGrantPickers,
+  getEpicBoonFeatIdFromChoiceValue,
+} from '../../domain/class/epicBoon'
 import { withLevelAdjustedChoiceLimits } from '../../domain/class/weaponMastery'
 import {
   collectWeaponMasterySelections,
@@ -18,6 +23,9 @@ import {
 } from '../../domain/class/weaponMastery'
 import type { EditionId } from '../../domain/types'
 import type { FeatDefinition } from '../../domain/feat/types'
+import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
+import { evaluateFeatEligibility } from '../../domain/feat/eligibility'
+import { collectClassFeatGrantIds } from '../character/resolveCharacterFeatGrants'
 
 export type ClassValidationIssueCode =
   | 'class-not-found'
@@ -55,8 +63,53 @@ export type ClassInstanceValidationResult =
 
 export type ClassValidationOptions = {
   featById?: ReadonlyMap<string, FeatDefinition>
-  /** Character-level feat id, if any (not written by ASI). */
+  /**
+   * Legacy character.feat id — kept for compatibility.
+   * Prefer takenFeatIds from resolveCharacterFeatGrants when available.
+   */
   characterFeatId?: string | null
+  /** Feat ids already granted outside the choice being validated. */
+  takenFeatIds?: readonly string[]
+  /** Shared eligibility context (spellcasting, level, abilities, etc.). */
+  eligibilityContext?: FeatEligibilityContext
+}
+
+function buildFeatValidationContext(
+  allChoices: Record<string, ClassChoiceValue>,
+  choiceId: string,
+  options?: ClassValidationOptions,
+): AsiFeatValidationContext | undefined {
+  if (options?.featById === undefined) {
+    return undefined
+  }
+
+  const takenFeatIds = [
+    ...collectClassFeatGrantIds(allChoices, choiceId),
+    ...(options.takenFeatIds ?? []),
+    ...(options.characterFeatId ? [options.characterFeatId] : []),
+  ]
+
+  const eligibilityContext: FeatEligibilityContext = {
+    characterLevel: options.eligibilityContext?.characterLevel ?? 20,
+    abilityScores: options.eligibilityContext?.abilityScores ?? {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      wisdom: 10,
+      charisma: 10,
+    },
+    hasSpellcasting: options.eligibilityContext?.hasSpellcasting ?? true,
+    hasFightingStyle: options.eligibilityContext?.hasFightingStyle ?? true,
+    takenFeatIds,
+  }
+
+  return {
+    featById: options.featById,
+    takenFeatIds,
+    evaluateEligibility: (definition) =>
+      evaluateFeatEligibility(definition, eligibilityContext),
+  }
 }
 
 function validateChoiceValue(
@@ -76,19 +129,11 @@ function validateChoiceValue(
       return [{ code: 'invalid-choice', choiceId: choice.id }]
     }
 
-    const takenFeatIds = [
-      ...collectAsiFeatIds(allChoices, choice.id),
-      ...(options?.characterFeatId ? [options.characterFeatId] : []),
-    ]
-
-    const featContext: AsiFeatValidationContext | undefined =
-      options?.featById !== undefined
-        ? {
-            featById: options.featById,
-            takenFeatIds,
-          }
-        : undefined
-
+    const featContext = buildFeatValidationContext(
+      allChoices,
+      choice.id,
+      options,
+    )
     const result = validateAsiEncodedValue(value, featContext)
 
     if (result.ok) {
@@ -100,6 +145,52 @@ function validateChoiceValue(
     }
 
     return [{ code: 'invalid-choice', choiceId: choice.id }]
+  }
+
+  if (isEpicBoonChoiceId(choice.id)) {
+    if (value === undefined) {
+      return choice.required
+        ? [{ code: 'missing-required-choice', choiceId: choice.id }]
+        : []
+    }
+
+    if (typeof value !== 'string' || !isCompleteEpicBoonChoiceValue(value)) {
+      return typeof value === 'string' && value.length > 0
+        ? [{ code: 'invalid-choice', choiceId: choice.id }]
+        : [{ code: 'missing-required-choice', choiceId: choice.id }]
+    }
+
+    const featId = getEpicBoonFeatIdFromChoiceValue(value)
+    if (featId === null || isFeatExcludedFromFeatGrantPickers(featId)) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const featContext = buildFeatValidationContext(
+      allChoices,
+      choice.id,
+      options,
+    )
+    if (featContext === undefined) {
+      return []
+    }
+
+    const definition = featContext.featById.get(featId)
+    if (definition === undefined) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    if (!featContext.evaluateEligibility?.(definition).eligible) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const priorTakes = featContext.takenFeatIds.filter(
+      (id) => id === featId,
+    ).length
+    if (priorTakes > 0 && !definition.repeatable) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    return []
   }
 
   if (value === undefined) {
@@ -160,10 +251,16 @@ function formatValidationMessage(issue: ClassValidationIssue): string {
       if (isAbilityScoreImprovementChoiceId(issue.choiceId ?? '')) {
         return 'Complete your Ability Score Improvement.'
       }
+      if (isEpicBoonChoiceId(issue.choiceId ?? '')) {
+        return 'Choose an Epic Boon or qualifying feat.'
+      }
       return `Choose an option for ${issue.choiceId ?? 'a required class choice'}.`
     case 'invalid-choice':
       if (isAbilityScoreImprovementChoiceId(issue.choiceId ?? '')) {
         return 'The Ability Score Improvement selection is invalid.'
+      }
+      if (isEpicBoonChoiceId(issue.choiceId ?? '')) {
+        return 'The Epic Boon selection is invalid.'
       }
       return `The selected option for ${issue.choiceId ?? 'a class choice'} is invalid.`
     case 'invalid-multi-select-count':

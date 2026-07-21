@@ -14,6 +14,7 @@ import {
   selectAsiPlus2,
   type AsiMode,
 } from '../../domain/class/abilityScoreImprovement'
+import { isFeatExcludedFromFeatGrantPickers } from '../../domain/class/epicBoon'
 import { formatAbilityLabel } from './formatClassDetails'
 import type { AbilityId } from '../../domain/abilities/types'
 
@@ -99,7 +100,9 @@ export function AsiChoiceField({
 
     void featCatalog.listFeats(editionId).then((list) => {
       if (active) {
-        setFeats(list)
+        setFeats(
+          list.filter((feat) => !isFeatExcludedFromFeatGrantPickers(feat.id)),
+        )
       }
     })
 

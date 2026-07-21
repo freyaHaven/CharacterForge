@@ -13,6 +13,7 @@ import {
   ROGUE_ASI_FEATURE_LEVELS,
   createAsiChoicesUpToLevel,
 } from '../../../../../domain/class/abilityScoreImprovement'
+import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { createRogueWeaponMasteryChoices } from '../rogue.weaponMastery'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
@@ -83,6 +84,10 @@ function createValidRogueSelection(level: number) {
 
   if (level >= 6) {
     choices['expertise-6'] = ['perception', 'athletics']
+  }
+
+  if (level >= 19) {
+    choices['epic-boon'] = selectEpicBoonFeat('srd-2024:boon-of-the-night-spirit')
   }
 
   return {
@@ -258,6 +263,6 @@ describe('rogueSrd2024 progression', () => {
       resolveDeferredCharacterRequirements(rogueSrd2024, 19).some(
         (requirement) => requirement.id === 'epic-boon-19',
       ),
-    ).toBe(true)
+    ).toBe(false)
   })
 })

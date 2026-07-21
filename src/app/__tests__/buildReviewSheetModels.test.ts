@@ -106,6 +106,8 @@ describe('buildReviewSheetModels', () => {
     expect(models.feat?.categoryBadge).toBe('Origin')
     expect(models.feat?.description).toMatch(/damage dice twice/i)
     expect(models.feat?.source).toBe('selection')
+    expect(models.feat?.sourceLabel).toBe('Legacy feat')
+    expect(models.feats).toHaveLength(1)
 
     const athletics = models.skills.find((skill) => skill.skillId === 'athletics')
     const perception = models.skills.find(
@@ -281,6 +283,7 @@ describe('buildReviewSheetModels', () => {
 
     expect(models.feat?.name).toBe('Savage Attacker')
     expect(models.feat?.source).toBe('background-origin')
+    expect(models.feat?.sourceLabel).toBe('Soldier')
     expect(models.feat?.description).toMatch(/damage dice twice/i)
   })
 })

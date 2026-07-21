@@ -125,10 +125,20 @@ describe('ContentRegistry (bundled)', () => {
     const registry = createBundledContentRegistry()
 
     expect(registry.listFeats('srd-2024').map((feat) => feat.id)).toEqual([
+      'srd-2024:ability-score-improvement',
       'srd-2024:alert',
+      'srd-2024:boon-of-combat-prowess',
+      'srd-2024:boon-of-dimensional-travel',
+      'srd-2024:boon-of-fate',
+      'srd-2024:boon-of-irresistible-offense',
+      'srd-2024:boon-of-spell-recall',
+      'srd-2024:boon-of-the-night-spirit',
+      'srd-2024:boon-of-truesight',
+      'srd-2024:grappler',
       'srd-2024:magic-initiate-cleric',
       'srd-2024:magic-initiate-wizard',
       'srd-2024:savage-attacker',
+      'srd-2024:skilled',
     ])
     expect(registry.listFeats('srd-2014')).toEqual([])
     expect(registry.getFeat('srd-2024:alert')?.name).toBe('Alert')

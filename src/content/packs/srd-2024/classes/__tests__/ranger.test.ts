@@ -108,6 +108,7 @@ describe('rangerSrd2024', () => {
       { id: 'ability-score-improvement-8', level: 8 },
       { id: 'ability-score-improvement-12', level: 12 },
       { id: 'ability-score-improvement-16', level: 16 },
+      { id: 'epic-boon', level: 19 },
     ])
   })
 })

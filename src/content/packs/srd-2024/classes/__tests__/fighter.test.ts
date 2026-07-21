@@ -80,6 +80,7 @@ describe('fighterSrd2024', () => {
       { id: 'ability-score-improvement-12', level: 12 },
       { id: 'ability-score-improvement-14', level: 14 },
       { id: 'ability-score-improvement-16', level: 16 },
+      { id: 'epic-boon', level: 19 },
     ])
   })
 })

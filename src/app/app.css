@@ -3066,6 +3066,12 @@ html {
   gap: 0.75rem;
 }
 
+.class-picker__feat-recommended {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--color-text-muted, #5c5c5c);
+}
+
 .class-picker__asi-feat-options {
   display: grid;
   gap: 0.5rem;

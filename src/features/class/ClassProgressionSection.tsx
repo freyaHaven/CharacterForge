@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { EditionId } from '../../domain/types'
+import type { AbilityScores, EditionId } from '../../domain/types'
 import type {
+  CharacterClassSelection,
   ClassChoiceValue,
   ClassDefinition,
 } from '../../domain/class/types'
@@ -8,11 +9,19 @@ import {
   collectAsiFeatIds,
   isAbilityScoreImprovementChoiceId,
 } from '../../domain/class/abilityScoreImprovement'
+import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
+import { collectClassFeatGrantIds } from '../../rules/character/resolveCharacterFeatGrants'
+import {
+  characterHasFightingStyle,
+  characterHasSpellcasting,
+} from '../../rules/character/buildFeatEligibilityContext'
+import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { validateClassSelection } from '../../rules/class/classRules'
 import { resolveDeferredRequirementsForInstances } from '../../rules/class/resolveCharacterDeferredRequirements'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import { SingleSelectChoiceOptions } from '../choices/SingleSelectChoiceOptions'
 import { AsiChoiceField } from './AsiChoiceField'
+import { FeatGrantChoiceField } from './FeatGrantChoiceField'
 import { buildClassFeatureAccordionItems } from './buildClassFeatureAccordionItems'
 import { ClassFeatureAccordion } from './ClassFeatureAccordion'
 import { ClassDeferredRequirementsPanel } from './ClassSelectionSummary'
@@ -70,6 +79,11 @@ export type ClassProgressionSectionProps = {
   hitPointIncreases?: readonly HitPointIncrease[]
   featCatalog: FeatCatalog
   characterFeatId?: string | null
+  abilityScores: AbilityScores
+  characterLevel: number
+  /** Effective class instances for eligibility (committed + draft overlay). */
+  eligibilityClasses: readonly CharacterClassSelection[]
+  classDefinitionsById: ReadonlyMap<string, ClassDefinition>
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
   onHitPointIncreaseChange: (
     classLevel: number,
@@ -89,6 +103,10 @@ export function ClassProgressionSection({
   hitPointIncreases,
   featCatalog,
   characterFeatId = null,
+  abilityScores,
+  characterLevel,
+  eligibilityClasses,
+  classDefinitionsById,
   onChoiceChange,
   onHitPointIncreaseChange,
 }: ClassProgressionSectionProps) {
@@ -116,6 +134,42 @@ export function ClassProgressionSection({
     }
   }, [editionId, featCatalog])
 
+  const eligibilityContext: FeatEligibilityContext = useMemo(
+    () => ({
+      characterLevel,
+      abilityScores,
+      hasSpellcasting: characterHasSpellcasting(
+        eligibilityClasses,
+        classDefinitionsById,
+      ),
+      hasFightingStyle: characterHasFightingStyle(
+        eligibilityClasses,
+        classDefinitionsById,
+      ),
+      takenFeatIds: [],
+    }),
+    [
+      abilityScores,
+      characterLevel,
+      classDefinitionsById,
+      eligibilityClasses,
+    ],
+  )
+
+  const crossInstanceTakenFeatIds = useMemo(() => {
+    const ids: string[] = []
+    for (const instance of eligibilityClasses) {
+      if (instance.instanceId === activeInstanceId) {
+        continue
+      }
+      ids.push(...collectClassFeatGrantIds(instance.choices))
+    }
+    if (characterFeatId !== null) {
+      ids.push(characterFeatId)
+    }
+    return ids
+  }, [activeInstanceId, characterFeatId, eligibilityClasses])
+
   const draftValidation =
     draft === null
       ? null
@@ -130,6 +184,8 @@ export function ClassProgressionSection({
           {
             featById,
             characterFeatId,
+            takenFeatIds: crossInstanceTakenFeatIds,
+            eligibilityContext,
           },
         )
 
@@ -222,6 +278,9 @@ export function ClassProgressionSection({
               const isAsiChoice =
                 item.singleSelectChoice !== null &&
                 isAbilityScoreImprovementChoiceId(item.singleSelectChoice.id)
+              const isEpicBoonChoice =
+                item.singleSelectChoice !== null &&
+                isEpicBoonChoiceId(item.singleSelectChoice.id)
 
               return (
                 <ClassFeatureAccordion
@@ -232,7 +291,9 @@ export function ClassProgressionSection({
                   completionLabel={item.completionLabel}
                   defaultExpanded={false}
                 >
-                  {item.description.trim().length > 0 && !isAsiChoice ? (
+                  {item.description.trim().length > 0 &&
+                  !isAsiChoice &&
+                  !isEpicBoonChoice ? (
                     <p className="class-picker__feature-accordion-description">
                       {item.description}
                     </p>
@@ -257,11 +318,11 @@ export function ClassProgressionSection({
                         editionId={editionId}
                         featCatalog={featCatalog}
                         takenFeatIds={[
-                          ...collectAsiFeatIds(
+                          ...collectClassFeatGrantIds(
                             activeChoices,
                             item.singleSelectChoice.id,
                           ),
-                          ...(characterFeatId !== null ? [characterFeatId] : []),
+                          ...crossInstanceTakenFeatIds,
                         ]}
                         errorId={errorId}
                         onChange={onChoiceChange}
@@ -269,7 +330,43 @@ export function ClassProgressionSection({
                     </div>
                   ) : null}
 
-                  {item.singleSelectChoice !== null && !isAsiChoice ? (
+                  {isEpicBoonChoice && item.singleSelectChoice !== null ? (
+                    <div className="class-picker__feature-accordion-choices">
+                      {item.description.trim().length > 0 ? (
+                        <p className="class-picker__feature-accordion-description">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      <FeatGrantChoiceField
+                        choiceId={item.singleSelectChoice.id}
+                        value={
+                          typeof activeChoices[item.singleSelectChoice.id] ===
+                          'string'
+                            ? (activeChoices[item.singleSelectChoice.id] as string)
+                            : undefined
+                        }
+                        editionId={editionId}
+                        featCatalog={featCatalog}
+                        takenFeatIds={[
+                          ...collectClassFeatGrantIds(
+                            activeChoices,
+                            item.singleSelectChoice.id,
+                          ),
+                          ...crossInstanceTakenFeatIds,
+                        ]}
+                        eligibilityContext={eligibilityContext}
+                        recommendedFeatId={
+                          item.singleSelectChoice.recommendedFeatId ?? null
+                        }
+                        errorId={errorId}
+                        onChange={onChoiceChange}
+                      />
+                    </div>
+                  ) : null}
+
+                  {item.singleSelectChoice !== null &&
+                  !isAsiChoice &&
+                  !isEpicBoonChoice ? (
                     <div
                       className="class-picker__feature-accordion-choices"
                       role="radiogroup"
