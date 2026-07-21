@@ -1,9 +1,13 @@
 # CharacterForge
 
 A modern D&D 5e single-page character creator built with React, TypeScript, and
-Vite. CharacterForge guides players through a seven-step wizard, validates
-choices against edition-specific rules data, and persists characters to
-localStorage with explicit schema versioning.
+Vite. CharacterForge guides players through a wizard, validates choices against
+edition-specific rules data, and persists characters to localStorage with explicit
+schema versioning.
+
+**SRD 2024 coverage:** see [`docs/SRD-2024-COVERAGE.md`](docs/SRD-2024-COVERAGE.md)
+for the authoritative checklist of what is complete, partial, or missing against SRD
+5.2.1.
 
 ## Project goals
 
@@ -19,17 +23,23 @@ localStorage with explicit schema versioning.
 
 ## Implemented features
 
-### Wizard (7 steps)
+### Wizard
 
-| Step | Status |
-|------|--------|
-| Basics (name, rules edition) | Required — complete |
-| Species | Required — catalogue, search, choices, edition change |
-| Class | Required — see [Class step](#class-step) below |
-| Ability Scores | Required — manual, standard array, point buy, rolled |
-| Background | Placeholder |
-| Equipment | Optional — class/background starting gear, inventory, loadout |
-| Review | Summary cards, finish policy |
+Ten steps are defined in the catalog; navigation shows only steps that are
+**visible** for the current character (some are conditional or temporarily hidden).
+
+| Step | Required | Status |
+|------|----------|--------|
+| Basics (name, rules edition) | Yes | Complete |
+| Class | Yes | Single-class and multiclass (levels 1–20) — see [Class step](#class-step) |
+| Background | No | Four SRD 2024 backgrounds |
+| Species | Yes | Nine SRD 2024 species with choices |
+| Ability Scores | Yes | Manual, standard array, point buy, rolled |
+| Equipment | No | Class/background starting gear (package vs gold) |
+| Character Details | No | Built but **hidden** from nav |
+| Feats | No | Built but **hidden** from nav |
+| Spells | No | **Conditional** — casters and feat-granted spells |
+| Overview (Review) | No | Character sheet, inventory loadout, finish policy |
 
 ### Class step
 
@@ -66,7 +76,7 @@ step UI correctly.
 
 ### Rules content (bundled)
 
-**SRD 2024**
+**SRD 2024** (manifest `5.2.1`) — **7 of 12** SRD classes today:
 
 - Species: Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling
 - Classes:
@@ -86,14 +96,21 @@ step UI correctly.
     level 20
   - **Cleric** — levels 1–20, Spellcasting, Divine Order, Life Domain at
     level 3, feature progression through level 20
+- Backgrounds: Acolyte, Criminal, Sage, Soldier
+- Feats: Alert, Magic Initiate (Cleric/Wizard), Savage Attacker (origin feats for
+  backgrounds and ASI selection)
+- Spells: ~100 definitions on demand for bundled casters and feat grants (not a
+  full SRD spell compendium)
 
 **Starting equipment (SRD 2024)**
 
-- All bundled classes: complete Package A (and Package B for Fighter) vs gold
-  options on the Equipment step
-- Backgrounds: Acolyte, Criminal, Sage, Soldier package vs gold
-- Equipment catalog: items referenced by those starting packages only (not a
-  full SRD compendium or shop)
+- All bundled classes: Package A (and Package B for Fighter) vs gold on the
+  Equipment step
+- Backgrounds: package vs 50 GP
+- Equipment catalog: ~61 items referenced by starting packages only (not a full
+  SRD compendium or shop)
+
+**Missing SRD 2024 classes:** Bard, Druid, Sorcerer, Warlock, Wizard.
 
 **SRD 2014**
 
@@ -102,10 +119,10 @@ step UI correctly.
 
 ### Persistence
 
-- Versioned localStorage envelope (`schemaVersion: 9`)
-- Sequential migrations from legacy saves (v0 → v9)
+- Versioned localStorage envelope (**schema version 14**)
+- Sequential migrations from legacy saves (v0 → v14)
 - Multi-instance class model: `classes[]`, `targetLevel`, `startingClassInstanceId`
-- Background selections and character details on the saved character
+- Background, feat, spell, equipment, and character details on the saved character
 - Draft blocking on save when species or class selections are incomplete
 - `.cforge` JSON import/export using the same envelope (see
   [`src/adapters/STORAGE.md`](src/adapters/STORAGE.md))
@@ -117,6 +134,8 @@ step UI correctly.
 - Single-class overview/progression layout (sticky overview on wide viewports)
 - Edition-change confirmation when incompatible species or class selections
   would be cleared
+- Overview character sheet: combat stats, skills, features, spells, inventory with
+  inline loadout editing
 - Transparent PNG class icons (Fighter, Barbarian, Rogue, Artificer) with SVG
   fallback for unregistered classes
 
@@ -169,32 +188,36 @@ npm run preview  # preview production build
 
 ## Storage schema version
 
-**Current version: 9**
+**Current version: 14**
 
-Envelope shape:
+Envelope shape (simplified):
 
 ```json
 {
-  "schemaVersion": 9,
+  "schemaVersion": 14,
   "character": {
     "species": null,
     "targetLevel": 1,
     "classes": [],
     "startingClassInstanceId": null,
     "background": null,
+    "feat": null,
+    "spellSourceStates": [],
+    "equipment": { "selections": [], "loadout": {} },
     "details": {}
   }
 }
 ```
 
+Major milestones:
+
 - **v0:** legacy root-level character JSON
-- **v1:** versioned envelope without species
-- **v2:** adds `species`
-- **v3:** adds legacy single `class`
-- **v4–v6:** adds and cleans up `background`
-- **v7–v8:** adds and restructures `details`
-- **v9:** replaces `class` with `classes[]`, `targetLevel`, and
-  `startingClassInstanceId`
+- **v1–v2:** envelope + species
+- **v3–v6:** class (legacy) + background
+- **v7–v8:** character details
+- **v9:** multiclass `classes[]`, `targetLevel`, `startingClassInstanceId`
+- **v10–v11:** feat + hit point increases
+- **v12–v14:** spell states, equipment selections, loadout
 
 Migrations run on load in `src/adapters/storage/migrations/`.
 
@@ -202,7 +225,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling | Fighter; Barbarian; Rogue; Monk; Ranger; Paladin |
+| `srd-2024` | D&D 5e 2024 | 9 bundled | 7 bundled (Fighter, Barbarian, Rogue, Monk, Ranger, Paladin, Cleric) |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
@@ -234,12 +257,11 @@ Icons are decorative; class names in the UI provide accessible labels.
 
 ## Roadmap
 
-- **Class content:** Additional 2024 SRD classes; parallel `srd-2014`
-  definitions where rules differ
-- **Class icons:** Register remaining PNG emblems as artwork is finalized
-- **Species:** 2014 SRD species in a future `srd-2014` content pack
-- **Background step:** edition-specific picker polish
-- **Equipment:** weapon mastery gear choices deferred from Fighter level-1 text
-- **Review polish:** richer summaries as more steps ship
-- **Out of scope for now:** automatic cross-edition conversion, non-SRD book
-  content
+Prioritized gaps and play-sheet requirements are maintained in
+[`docs/SRD-2024-COVERAGE.md`](docs/SRD-2024-COVERAGE.md). Highlights:
+
+- **Creator:** remaining five SRD classes, Epic Boon at level 19, species
+  mechanical gaps, feat/details step visibility
+- **Play sheet:** feat-derived stats, resource tracking, rest workflow
+- **Optional:** full SRD compendiums, custom backgrounds, campaign tools
+- **Out of scope:** non-SRD book content, automatic cross-edition conversion
