@@ -1,5 +1,24 @@
 import { isFeatGrantChoiceStorageKey } from '../feat/featGrantChoiceStorage'
+import { matchesRequiredOptionId } from './classOptionPrerequisites'
+import { isInvocationChoiceStorageKey } from './invocationChoiceStorage'
 import type { ClassChoiceValue, ClassDefinition, ClassLevel } from './types'
+
+function choiceHasOptionSelected(
+  selectedChoices: Record<string, ClassChoiceValue>,
+  choiceId: string,
+  optionId: string,
+): boolean {
+  const selected = selectedChoices[choiceId]
+  if (selected === undefined) {
+    return false
+  }
+
+  if (typeof selected === 'string') {
+    return matchesRequiredOptionId(selected, optionId)
+  }
+
+  return selected.some((id) => matchesRequiredOptionId(id, optionId))
+}
 
 export function getChoicesAvailableAtLevel(
   definition: ClassDefinition,
@@ -12,8 +31,11 @@ export function getChoicesAvailableAtLevel(
     }
 
     if (choice.availableWhen !== undefined) {
-      const selected = selectedChoices[choice.availableWhen.choiceId]
-      return selected === choice.availableWhen.optionId
+      return choiceHasOptionSelected(
+        selectedChoices,
+        choice.availableWhen.choiceId,
+        choice.availableWhen.optionId,
+      )
     }
 
     return true
@@ -29,7 +51,9 @@ export function pruneClassChoicesForLevel(
   return Object.fromEntries(
     Object.entries(choices).filter(
       ([choiceId]) =>
-        availableIds.has(choiceId) || isFeatGrantChoiceStorageKey(choiceId),
+        availableIds.has(choiceId) ||
+        isFeatGrantChoiceStorageKey(choiceId) ||
+        isInvocationChoiceStorageKey(choiceId),
     ),
   )
 }

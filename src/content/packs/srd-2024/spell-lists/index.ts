@@ -1,5 +1,6 @@
 import type { SpellListDefinition } from '../../../../domain/spell/types'
 import { SRD_2024_SOURCE } from '../source'
+import { SRD_2024_SPELLS } from '../spells'
 
 function list(
   slug: string,
@@ -930,6 +931,111 @@ export const magicalDiscoveriesSpellListSrd2024 = list(
   ),
 )
 
+export const warlockSpellListSrd2024 = list('warlock', 'Warlock', [
+  // cantrips
+  'chill-touch',
+  'eldritch-blast',
+  'mage-hand',
+  'minor-illusion',
+  'poison-spray',
+  'prestidigitation',
+  'true-strike',
+  // 1
+  'bane',
+  'charm-person',
+  'comprehend-languages',
+  'detect-magic',
+  'expeditious-retreat',
+  'hellish-rebuke',
+  'hex',
+  'tashas-hideous-laughter',
+  'illusory-script',
+  'protection-from-evil-and-good',
+  'speak-with-animals',
+  'unseen-servant',
+  // 2
+  'darkness',
+  'enthrall',
+  'hold-person',
+  'invisibility',
+  'mind-spike',
+  'mirror-image',
+  'misty-step',
+  'ray-of-enfeeblement',
+  'spider-climb',
+  'suggestion',
+  // 3
+  'counterspell',
+  'dispel-magic',
+  'fear',
+  'fly',
+  'gaseous-form',
+  'hypnotic-pattern',
+  'magic-circle',
+  'major-image',
+  'remove-curse',
+  'tongues',
+  'vampiric-touch',
+  // 4
+  'banishment',
+  'blight',
+  'charm-monster',
+  'dimension-door',
+  'hallucinatory-terrain',
+  // 5
+  'contact-other-plane',
+  'dream',
+  'hold-monster',
+  'mislead',
+  'planar-binding',
+  'scrying',
+  'teleportation-circle',
+  // 6
+  'circle-of-death',
+  'create-undead',
+  'eyebite',
+  'true-seeing',
+  // 7
+  'etherealness',
+  'finger-of-death',
+  'forcecage',
+  'plane-shift',
+  // 8
+  'befuddlement',
+  'demiplane',
+  'dominate-monster',
+  'glibness',
+  'power-word-stun',
+  // 9
+  'astral-projection',
+  'foresight',
+  'gate',
+  'imprisonment',
+  'power-word-kill',
+  'true-polymorph',
+  'weird',
+])
+
+function spellSlug(id: string): string {
+  return id.startsWith('srd-2024:') ? id.slice('srd-2024:'.length) : id
+}
+
+export const allCantripsSpellListSrd2024 = list(
+  'all-cantrips',
+  'All Cantrips',
+  SRD_2024_SPELLS.filter((spell) => spell.level === 0).map((spell) =>
+    spellSlug(spell.id),
+  ),
+)
+
+export const level1RitualsSpellListSrd2024 = list(
+  'level-1-rituals',
+  'Level 1 Rituals',
+  SRD_2024_SPELLS.filter(
+    (spell) => spell.level === 1 && spell.ritual === true,
+  ).map((spell) => spellSlug(spell.id)),
+)
+
 export const SRD_2024_SPELL_LISTS: SpellListDefinition[] = [
   clericSpellListSrd2024,
   paladinSpellListSrd2024,
@@ -938,8 +1044,11 @@ export const SRD_2024_SPELL_LISTS: SpellListDefinition[] = [
   wizardSpellListSrd2024,
   bardSpellListSrd2024,
   sorcererSpellListSrd2024,
+  warlockSpellListSrd2024,
   magicalSecretsSpellListSrd2024,
   magicalDiscoveriesSpellListSrd2024,
+  allCantripsSpellListSrd2024,
+  level1RitualsSpellListSrd2024,
 ]
 
 export const SPELL_LIST_IDS = {
@@ -950,6 +1059,9 @@ export const SPELL_LIST_IDS = {
   wizard: wizardSpellListSrd2024.id,
   bard: bardSpellListSrd2024.id,
   sorcerer: sorcererSpellListSrd2024.id,
+  warlock: warlockSpellListSrd2024.id,
   magicalSecrets: magicalSecretsSpellListSrd2024.id,
   magicalDiscoveries: magicalDiscoveriesSpellListSrd2024.id,
+  allCantrips: allCantripsSpellListSrd2024.id,
+  level1Rituals: level1RitualsSpellListSrd2024.id,
 } as const

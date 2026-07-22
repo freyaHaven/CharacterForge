@@ -7,6 +7,10 @@ import {
   parseAsiChoice,
 } from '../../domain/class/abilityScoreImprovement'
 import {
+  getCatalogueFeatGrantIdFromChoiceValue,
+  isCatalogueFeatGrantChoiceId,
+} from '../../domain/class/catalogueFeatGrant'
+import {
   getEpicBoonFeatIdFromChoiceValue,
   isEpicBoonChoiceId,
 } from '../../domain/class/epicBoon'
@@ -131,16 +135,8 @@ export function collectClassFeatGrantIds(
       continue
     }
 
-    if (isEpicBoonChoiceId(choiceId)) {
-      const featId = getEpicBoonFeatIdFromChoiceValue(value)
-      if (featId !== null) {
-        featIds.push(featId)
-      }
-      continue
-    }
-
-    if (isFightingStyleFeatGrantChoiceId(choiceId)) {
-      const featId = getFightingStyleFeatIdFromChoiceValue(value)
+    if (isCatalogueFeatGrantChoiceId(choiceId)) {
+      const featId = getCatalogueFeatGrantIdFromChoiceValue(value)
       if (featId !== null) {
         featIds.push(featId)
       }
@@ -251,10 +247,8 @@ export async function resolveCharacterFeatGrants(
       if (isAbilityScoreImprovementChoiceId(choiceId)) {
         const parsed = parseAsiChoice(value)
         featId = parsed?.kind === 'feat' ? parsed.featId : null
-      } else if (isEpicBoonChoiceId(choiceId)) {
-        featId = getEpicBoonFeatIdFromChoiceValue(value)
-      } else if (isFightingStyleFeatGrantChoiceId(choiceId)) {
-        featId = getFightingStyleFeatIdFromChoiceValue(value)
+      } else if (isCatalogueFeatGrantChoiceId(choiceId)) {
+        featId = getCatalogueFeatGrantIdFromChoiceValue(value)
       }
 
       if (featId === null) {

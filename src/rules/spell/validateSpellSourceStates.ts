@@ -20,6 +20,7 @@ export type SpellValidationIssueCode =
   | 'spell-level-ineligible'
   | 'spell-school-ineligible'
   | 'spell-casting-time-ineligible'
+  | 'spell-ritual-ineligible'
   | 'duplicate-selection'
   | 'granted-spell-selected'
   | 'cross-source-duplicate'
@@ -306,6 +307,17 @@ export async function validateSpellSourceStates(
           entitlementId: entitlement.entitlementId,
           spellId: selection.spellId,
           message: `${spell.name} does not match the required casting time (${entitlement.castingTime}).`,
+        })
+      }
+
+      if (entitlement.ritual === true && spell.ritual !== true) {
+        issues.push({
+          code: 'spell-ritual-ineligible',
+          sourceKey: key,
+          groupLabel: group.label,
+          entitlementId: entitlement.entitlementId,
+          spellId: selection.spellId,
+          message: `${spell.name} is not a ritual spell.`,
         })
       }
 

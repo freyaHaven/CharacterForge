@@ -130,6 +130,17 @@ export const PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL = [
   2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
 ]
 
+/** SRD 2024 Warlock prepared L1+ spells (alias of Pact Magic known table). */
+export const WARLOCK_PREPARED_BY_LEVEL = PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL
+
+/**
+ * SRD 2024 Eldritch Invocations known by Warlock level (index = level - 1).
+ * 1,3,3,3,5,5,6,6,7,7,7,8,8,8,9,9,9,10,10,10
+ */
+export const WARLOCK_INVOCATIONS_BY_LEVEL = [
+  1, 3, 3, 3, 5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10,
+]
+
 /** Wizard-style spellbook free spells at level 1 (SRD: 6). */
 export const WIZARD_SPELLBOOK_INITIAL_COUNT = 6
 

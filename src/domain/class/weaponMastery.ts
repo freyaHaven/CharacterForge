@@ -1,3 +1,4 @@
+import { tableValueAtLevel } from '../spell/progressions'
 import type { ClassChoice, ClassChoiceValue } from './types'
 import { withWildShapeFormsChoiceLimits } from './beastForms'
 
@@ -105,10 +106,28 @@ export function createWeaponMasteryChoices(
   return result
 }
 
-/** Adjust choice limits that scale with class level (e.g. Wild Shape forms). */
+/**
+ * Adjust choice limits that scale with class level
+ * (Wild Shape forms, data-driven `limitsByLevel` multi-selects).
+ */
 export function withLevelAdjustedChoiceLimits(
   choice: ClassChoice,
   level: number,
 ): ClassChoice {
-  return withWildShapeFormsChoiceLimits(choice, level)
+  const withWildShape = withWildShapeFormsChoiceLimits(choice, level)
+
+  if (
+    withWildShape.type !== 'multi-select' ||
+    withWildShape.limitsByLevel === undefined ||
+    withWildShape.limitsByLevel.length === 0
+  ) {
+    return withWildShape
+  }
+
+  const limit = tableValueAtLevel(withWildShape.limitsByLevel, level)
+  return {
+    ...withWildShape,
+    min: limit,
+    max: limit,
+  }
 }

@@ -294,6 +294,11 @@ const RAW_SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
     name: 'Arcane Focus (crystal)',
     category: 'tool',
   }),
+  def({
+    id: id('arcane-focus-orb'),
+    name: 'Arcane Focus (orb)',
+    category: 'tool',
+  }),
   /** Generic stand-in kept for backward-compat grants; not tagged for choose-items. */
   def({
     id: id('artisans-tools'),
@@ -433,6 +438,11 @@ const RAW_SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
   }),
   def({ id: id('book-prayers'), name: 'Book (prayers)', category: 'gear' }),
   def({ id: id('book-history'), name: 'Book (history)', category: 'gear' }),
+  def({
+    id: id('book-occult-lore'),
+    name: 'Book (occult lore)',
+    category: 'gear',
+  }),
   def({ id: id('parchment'), name: 'Parchment', category: 'gear' }),
   def({
     id: id('selected-gaming-set'),
@@ -601,6 +611,7 @@ const EQUIPMENT_STATS: Record<
   [id('holy-symbol')]: { weightLb: 1, costGp: 5 },
   [id('druidic-focus-mistletoe')]: { weightLb: 0, costGp: 0 },
   [id('arcane-focus-crystal')]: { weightLb: 1, costGp: 10 },
+  [id('arcane-focus-orb')]: { weightLb: 3, costGp: 20 },
   [id('artisans-tools')]: { weightLb: 5, costGp: 10 },
   [id('dice-set')]: { weightLb: 0, costGp: 0.1 },
   [id('dragonchess-set')]: { weightLb: 0.5, costGp: 1 },
@@ -644,6 +655,7 @@ const EQUIPMENT_STATS: Record<
   [id('spellbook')]: { weightLb: 3, costGp: 50, notes: 'Tiny object' },
   [id('book-prayers')]: { weightLb: 5, costGp: 25 },
   [id('book-history')]: { weightLb: 5, costGp: 25 },
+  [id('book-occult-lore')]: { weightLb: 5, costGp: 25 },
   [id('parchment')]: { weightLb: 0, costGp: 0.1 },
 }
 

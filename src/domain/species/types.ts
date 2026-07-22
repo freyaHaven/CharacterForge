@@ -31,13 +31,37 @@ export type MovementSpeed = {
   burrow?: number
 }
 
+/** SRD damage types (Fiendish Resilience uses all except Force). */
 export type DamageTypeId =
-  | 'poison'
   | 'acid'
+  | 'bludgeoning'
   | 'cold'
   | 'fire'
+  | 'force'
   | 'lightning'
   | 'necrotic'
+  | 'piercing'
+  | 'poison'
+  | 'psychic'
+  | 'radiant'
+  | 'slashing'
+  | 'thunder'
+
+export const DAMAGE_TYPE_IDS: readonly DamageTypeId[] = [
+  'acid',
+  'bludgeoning',
+  'cold',
+  'fire',
+  'force',
+  'lightning',
+  'necrotic',
+  'piercing',
+  'poison',
+  'psychic',
+  'radiant',
+  'slashing',
+  'thunder',
+] as const
 
 export type ConditionId = 'poisoned' | 'charmed' | 'frightened'
 

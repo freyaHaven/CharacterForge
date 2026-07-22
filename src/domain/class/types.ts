@@ -80,6 +80,13 @@ export type ClassChoiceEffect =
   | { kind: 'skill-expertise'; skillId: SkillId }
   | { kind: 'armor-proficiency'; category: ArmorProficiency }
   | { kind: 'weapon-proficiency'; category: WeaponProficiency }
+  /** Proficiency with a specific weapon id (e.g. Pact of the Blade). */
+  | { kind: 'weapon-proficiency-item'; weaponId: string }
+  /**
+   * Use listed abilities for weapon attack/damage rolls (e.g. CHA with pact weapon).
+   * Sheet/summary metadata — attack resolution during play is out of scope.
+   */
+  | { kind: 'weapon-attack-ability'; abilities: AbilityId[] }
   | { kind: 'language'; languageId: string; label: string }
   | { kind: 'tool-proficiency'; toolId: string; label: string }
   /** Half proficiency (floor) on skill checks lacking proficiency. */
@@ -89,6 +96,19 @@ export type ClassChoiceEffect =
   /** Add `amount` to hit point maximum per level in this class instance. */
   | { kind: 'hit-point-maximum-per-class-level'; amount: number }
   | { kind: 'damage-resistance'; damageType: DamageTypeId }
+
+/** Prerequisites for selecting a class choice option (e.g. Eldritch Invocations). */
+export type ClassOptionPrerequisite =
+  | { kind: 'min-source-level'; level: number }
+  | {
+      kind: 'requires-selected-option'
+      choiceId: string
+      /**
+       * Required option id. May be a base id — numbered repeats like
+       * `pact-of-the-blade-2` also satisfy `pact-of-the-blade`.
+       */
+      optionId: string
+    }
 
 /** Feature granted by selecting a subclass (or similar) choice option. */
 export type ClassOptionFeature = {
@@ -111,6 +131,13 @@ export type ClassChoiceOption = {
   features?: ClassOptionFeature[]
   /** Spell entitlements unlocked when this option is selected. */
   spellEntitlements?: SpellEntitlement[]
+  /** Selection prerequisites (level / other options). */
+  prerequisites?: ClassOptionPrerequisite[]
+  /**
+   * Documentation flag for repeatable options. Use numbered option ids
+   * (`agonizing-blast`, `agonizing-blast-2`) for actual repeats.
+   */
+  repeatable?: boolean
 }
 
 export type ClassChoice =
@@ -134,6 +161,8 @@ export type ClassChoice =
       /**
        * Choice is available only when another choice has the given option id
        * selected (e.g. Champion Additional Fighting Style).
+       * Works for single-select equality or multi-select inclusion
+       * (including numbered base-id matches via {@link matchesRequiredOptionId}).
        */
       availableWhen?: { choiceId: string; optionId: string }
     }
@@ -147,8 +176,14 @@ export type ClassChoice =
       max: number
       options: ClassChoiceOption[]
       /**
+       * When set, min and max both become `limitsByLevel[level - 1]` via
+       * {@link withLevelAdjustedChoiceLimits} (data-driven level scaling).
+       */
+      limitsByLevel?: number[]
+      /**
        * Choice is available only when another choice has the given option id
        * selected (e.g. College of Lore bonus proficiencies).
+       * Works for single-select equality or multi-select inclusion.
        */
       availableWhen?: { choiceId: string; optionId: string }
     }

@@ -6,6 +6,11 @@ import type {
   ClassSelection,
 } from '../../domain/class/types'
 import {
+  getCatalogueFeatGrantIdFromChoiceValue,
+  isCatalogueFeatGrantChoice,
+  isCompleteCatalogueFeatGrantValue,
+} from '../../domain/class/catalogueFeatGrant'
+import {
   isAbilityScoreImprovementChoiceId,
   parseAsiChoice,
   validateAsiEncodedValue,
@@ -26,10 +31,16 @@ import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
 } from '../../domain/class/weaponMastery'
+import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
+import {
+  isClassChoiceOptionEligible,
+  type ClassOptionEligibilityContext,
+} from '../../domain/class/classOptionPrerequisites'
 import {
   isFeatGrantChoiceStorageKey,
   readFeatGrantChoices,
 } from '../../domain/feat/featGrantChoiceStorage'
+import { isInvocationChoiceStorageKey } from '../../domain/class/invocationChoiceStorage'
 import {
   validateFeatDefinitionChoices,
   type FeatChoiceValidationContext,
@@ -185,6 +196,7 @@ function validateChoiceValue(
   choice: ClassChoice,
   value: ClassChoiceValue | undefined,
   allChoices: Record<string, ClassChoiceValue>,
+  sourceLevel: number,
   options?: ClassValidationOptions,
 ): ClassValidationIssue[] {
   if (isAbilityScoreImprovementChoiceId(choice.id)) {
@@ -355,6 +367,68 @@ function validateChoiceValue(
     )
   }
 
+  if (isCatalogueFeatGrantChoice(choice)) {
+    if (value === undefined) {
+      return choice.required
+        ? [{ code: 'missing-required-choice', choiceId: choice.id }]
+        : []
+    }
+
+    if (
+      typeof value !== 'string' ||
+      !isCompleteCatalogueFeatGrantValue(value)
+    ) {
+      return typeof value === 'string' && value.length > 0
+        ? [{ code: 'invalid-choice', choiceId: choice.id }]
+        : [{ code: 'missing-required-choice', choiceId: choice.id }]
+    }
+
+    const featId = getCatalogueFeatGrantIdFromChoiceValue(value)
+    if (featId === null) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const featContext = buildFeatValidationContext(
+      allChoices,
+      choice.id,
+      options,
+    )
+    if (featContext === undefined) {
+      return validateNestedFeatGrantChoices(
+        choice.id,
+        featId,
+        allChoices,
+        options,
+      )
+    }
+
+    const definition = featContext.featById.get(featId)
+    if (
+      definition === undefined ||
+      definition.category !== choice.featGrantCategory
+    ) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    if (!featContext.evaluateEligibility?.(definition).eligible) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const priorTakes = featContext.takenFeatIds.filter(
+      (id) => id === featId,
+    ).length
+    if (priorTakes > 0 && !definition.repeatable) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    return validateNestedFeatGrantChoices(
+      choice.id,
+      featId,
+      allChoices,
+      options,
+    )
+  }
+
   if (value === undefined) {
     if (choice.required) {
       return [{ code: 'missing-required-choice', choiceId: choice.id }]
@@ -368,11 +442,20 @@ function validateChoiceValue(
       return [{ code: 'invalid-choice', choiceId: choice.id }]
     }
 
-    const isValidOption = choice.options.some((option) => option.id === value)
+    const option = choice.options.find((entry) => entry.id === value)
+    if (option === undefined) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
 
-    return isValidOption
-      ? []
-      : [{ code: 'invalid-choice', choiceId: choice.id }]
+    const eligibilityCtx: ClassOptionEligibilityContext = {
+      sourceLevel,
+      selectedChoices: allChoices,
+    }
+    if (!isClassChoiceOptionEligible(option, eligibilityCtx)) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    return []
   }
 
   if (!Array.isArray(value)) {
@@ -383,9 +466,18 @@ function validateChoiceValue(
     return [{ code: 'invalid-multi-select-count', choiceId: choice.id }]
   }
 
-  const invalidOption = value.some(
-    (optionId) => !choice.options.some((option) => option.id === optionId),
-  )
+  const eligibilityCtx: ClassOptionEligibilityContext = {
+    sourceLevel,
+    selectedChoices: allChoices,
+  }
+
+  const invalidOption = value.some((optionId) => {
+    const option = choice.options.find((entry) => entry.id === optionId)
+    if (option === undefined) {
+      return true
+    }
+    return !isClassChoiceOptionEligible(option, eligibilityCtx)
+  })
 
   return invalidOption
     ? [{ code: 'invalid-choice', choiceId: choice.id }]
@@ -496,9 +588,11 @@ export function validateClassInstance(
   }
 
   const issues: ClassValidationIssue[] = []
-  const availableChoices = definition.choices
-    .filter((choice) => choice.level <= instance.level)
-    .map((choice) => withLevelAdjustedChoiceLimits(choice, instance.level))
+  const availableChoices = getChoicesAvailableAtLevel(
+    definition,
+    instance.level,
+    instance.choices,
+  ).map((choice) => withLevelAdjustedChoiceLimits(choice, instance.level))
   const availableChoiceIds = new Set(
     availableChoices.map((choice) => choice.id),
   )
@@ -509,6 +603,7 @@ export function validateClassInstance(
         choice,
         instance.choices[choice.id],
         instance.choices,
+        instance.level,
         options,
       ),
     )
@@ -551,6 +646,9 @@ export function validateClassInstance(
 
   for (const choiceId of Object.keys(instance.choices)) {
     if (isFeatGrantChoiceStorageKey(choiceId)) {
+      continue
+    }
+    if (isInvocationChoiceStorageKey(choiceId)) {
       continue
     }
     if (!availableChoiceIds.has(choiceId)) {

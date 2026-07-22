@@ -24,6 +24,7 @@ import {
   characterHasSpellcasting,
 } from '../../rules/character/buildFeatEligibilityContext'
 import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
+import { getIneligibleClassChoiceOptionIds } from '../../domain/class/classOptionPrerequisites'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { validateClassSelection } from '../../rules/class/classRules'
@@ -643,6 +644,18 @@ export function ClassInstanceConfigurator({
                                 activeChoices,
                                 ownedProficientSkillIds,
                               )}
+                              ineligibleOptionIds={new Map(
+                                getIneligibleClassChoiceOptionIds(
+                                  linkedMultiSelect,
+                                  {
+                                    sourceLevel: activeLevel,
+                                    selectedChoices: activeChoices,
+                                  },
+                                ).map((entry) => [
+                                  entry.optionId,
+                                  entry.reason,
+                                ]),
+                              )}
                               onChange={onChoiceChange}
                             />
                             {issue !== undefined && errorId !== undefined ? (
@@ -699,6 +712,12 @@ export function ClassInstanceConfigurator({
                         choice.id,
                         activeChoices,
                         ownedProficientSkillIds,
+                      )}
+                      ineligibleOptionIds={new Map(
+                        getIneligibleClassChoiceOptionIds(choice, {
+                          sourceLevel: activeLevel,
+                          selectedChoices: activeChoices,
+                        }).map((entry) => [entry.optionId, entry.reason]),
                       )}
                       onChange={onChoiceChange}
                     />

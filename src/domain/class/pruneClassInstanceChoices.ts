@@ -4,8 +4,15 @@ import {
   getChoicesAvailableAtLevel,
   pruneClassChoicesForLevel,
 } from './choiceAvailability'
+import { pruneIneligibleMultiSelectOptions } from './classOptionPrerequisites'
+import { isCatalogueFeatGrantChoiceId } from './catalogueFeatGrant'
 import { isEpicBoonChoiceId } from './epicBoon'
 import { isFightingStyleFeatGrantChoiceId } from './fightingStyle'
+import {
+  isInvocationChoiceStorageKey,
+  pruneAllInvocationChoiceKeys,
+  pruneOrphanInvocationChoiceKeys,
+} from './invocationChoiceStorage'
 import type {
   CharacterClassSelection,
   ClassDefinition,
@@ -21,6 +28,7 @@ function collectActiveFeatGrantSlotIds(
   for (const choiceId of Object.keys(choices)) {
     if (
       isAbilityScoreImprovementChoiceId(choiceId) ||
+      isCatalogueFeatGrantChoiceId(choiceId) ||
       isEpicBoonChoiceId(choiceId) ||
       isFightingStyleFeatGrantChoiceId(choiceId)
     ) {
@@ -66,8 +74,50 @@ export function pruneClassInstanceChoicesForLevel(
 
     const value = finalChoices[adjusted.id]
 
-    if (Array.isArray(value) && value.length > adjusted.max) {
-      finalChoices[adjusted.id] = value.slice(0, adjusted.max)
+    if (!Array.isArray(value)) {
+      continue
+    }
+
+    let nextValue = value
+    if (nextValue.length > adjusted.max) {
+      nextValue = nextValue.slice(0, adjusted.max)
+    }
+
+    nextValue = pruneIneligibleMultiSelectOptions(
+      adjusted,
+      nextValue,
+      newLevel,
+      finalChoices,
+    )
+
+    finalChoices[adjusted.id] = nextValue
+    finalChoices = pruneOrphanInvocationChoiceKeys(
+      finalChoices,
+      adjusted.id,
+      new Set(nextValue),
+    )
+  }
+
+  // Drop invocation companions when parent multi-select is no longer available.
+  const availableIds = new Set(availableAfterPrune.map((choice) => choice.id))
+  for (const key of Object.keys(finalChoices)) {
+    if (!isInvocationChoiceStorageKey(key)) {
+      continue
+    }
+    // Parent gone entirely → strip all invocation keys once after loop.
+  }
+
+  const hasInvocationParent = availableAfterPrune.some(
+    (choice) => choice.type === 'multi-select',
+  )
+  if (!hasInvocationParent) {
+    // Keep keys only if some multi-select remains; otherwise clear orphans tied
+    // to missing parents via per-choice prune above. Full wipe when no parents.
+    const stillHasParentSelection = Object.keys(finalChoices).some((id) =>
+      availableIds.has(id),
+    )
+    if (!stillHasParentSelection) {
+      finalChoices = pruneAllInvocationChoiceKeys(finalChoices)
     }
   }
 

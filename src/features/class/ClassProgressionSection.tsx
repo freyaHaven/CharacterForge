@@ -10,6 +10,8 @@ import {
   isAbilityScoreImprovementChoiceId,
 } from '../../domain/class/abilityScoreImprovement'
 import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
+import { isCatalogueFeatGrantChoice } from '../../domain/class/catalogueFeatGrant'
+import { getIneligibleClassChoiceOptionIds } from '../../domain/class/classOptionPrerequisites'
 import { isFightingStyleFeatGrantChoice } from '../../domain/class/fightingStyle'
 import {
   createFeatGrantChoiceStorageKey,
@@ -332,6 +334,9 @@ export function ClassProgressionSection({
               const isFightingStyleChoice =
                 item.singleSelectChoice !== null &&
                 isFightingStyleFeatGrantChoice(item.singleSelectChoice)
+              const isCatalogueFeatChoice =
+                item.singleSelectChoice !== null &&
+                isCatalogueFeatGrantChoice(item.singleSelectChoice)
 
               return (
                 <ClassFeatureAccordion
@@ -345,7 +350,8 @@ export function ClassProgressionSection({
                   {item.description.trim().length > 0 &&
                   !isAsiChoice &&
                   !isEpicBoonChoice &&
-                  !isFightingStyleChoice ? (
+                  !isFightingStyleChoice &&
+                  !isCatalogueFeatChoice ? (
                     <p className="class-picker__feature-accordion-description">
                       {item.description}
                     </p>
@@ -491,10 +497,59 @@ export function ClassProgressionSection({
                     </div>
                   ) : null}
 
+                  {isCatalogueFeatChoice && item.singleSelectChoice !== null ? (
+                    <div className="class-picker__feature-accordion-choices">
+                      {item.description.trim().length > 0 ? (
+                        <p className="class-picker__feature-accordion-description">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      <FeatGrantChoiceField
+                        choiceId={item.singleSelectChoice.id}
+                        value={
+                          typeof activeChoices[item.singleSelectChoice.id] ===
+                          'string'
+                            ? (activeChoices[item.singleSelectChoice.id] as string)
+                            : undefined
+                        }
+                        editionId={editionId}
+                        featCatalog={featCatalog}
+                        takenFeatIds={[
+                          ...collectClassFeatGrantIds(
+                            activeChoices,
+                            item.singleSelectChoice.id,
+                          ),
+                          ...crossInstanceTakenFeatIds,
+                        ]}
+                        eligibilityContext={eligibilityContext}
+                        recommendedFeatId={
+                          item.singleSelectChoice.recommendedFeatId ?? null
+                        }
+                        categoryFilter={item.singleSelectChoice.featGrantCategory}
+                        featChoices={readFeatGrantChoices(
+                          activeChoices,
+                          item.singleSelectChoice.id,
+                        )}
+                        ownedSkillIds={ownedSkillIds}
+                        ownedToolIds={ownedToolIds}
+                        errorId={errorId}
+                        onChange={onChoiceChange}
+                        onFeatChoiceChange={(featChoiceId, value) => {
+                          handleFeatSubChoiceChange(
+                            item.singleSelectChoice!.id,
+                            featChoiceId,
+                            value,
+                          )
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
                   {item.singleSelectChoice !== null &&
                   !isAsiChoice &&
                   !isEpicBoonChoice &&
-                  !isFightingStyleChoice ? (
+                  !isFightingStyleChoice &&
+                  !isCatalogueFeatChoice ? (
                     <div
                       className="class-picker__feature-accordion-choices"
                       role="radiogroup"
@@ -535,6 +590,15 @@ export function ClassProgressionSection({
                           item.multiSelectChoice.id,
                           activeChoices,
                           ownedProficientSkillIds,
+                        )}
+                        ineligibleOptionIds={new Map(
+                          getIneligibleClassChoiceOptionIds(
+                            item.multiSelectChoice,
+                            {
+                              sourceLevel: activeLevel,
+                              selectedChoices: activeChoices,
+                            },
+                          ).map((entry) => [entry.optionId, entry.reason]),
                         )}
                         onChange={onChoiceChange}
                       />

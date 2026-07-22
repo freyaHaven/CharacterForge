@@ -121,12 +121,12 @@ step UI correctly.
 
 - All bundled classes: Package A (and Package B for Fighter) vs gold on the
   Equipment step; Bard nested musical instrument + Entertainer’s Pack; Sorcerer
-  crystal Arcane Focus
+  crystal Arcane Focus; Warlock orb focus + occult lore book
 - Backgrounds: package vs 50 GP
 - Equipment catalog: items referenced by starting packages only (not a full
   SRD compendium or shop)
 
-**Missing SRD 2024 classes:** Warlock.
+**SRD 2024 classes:** all 12 bundled (Fighter through Warlock), one subclass each.
 
 **SRD 2014**
 
@@ -276,8 +276,9 @@ Icons are decorative; class names in the UI provide accessible labels.
 Prioritized gaps and play-sheet requirements are maintained in
 [`docs/SRD-2024-COVERAGE.md`](docs/SRD-2024-COVERAGE.md). Highlights:
 
-- **Creator:** remaining SRD class (Warlock), species play-time features,
-  Details step visibility; nested ASI-feat config from Epic Boon deferred
+- **Creator:** species play-time features, Details step visibility;
+  nested ASI-feat config from Epic Boon deferred
 - **Play sheet:** feat-derived stats, resource tracking, rest workflow
+  (incl. Magical Cunning / Pact Magic slot recovery, invocation casting)
 - **Optional:** full SRD compendiums, custom backgrounds, campaign tools
 - **Out of scope:** non-SRD book content, automatic cross-edition conversion

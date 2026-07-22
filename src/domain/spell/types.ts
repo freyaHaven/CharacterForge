@@ -117,6 +117,11 @@ export type SpellEntitlement =
        * (e.g. `'Action'` for Spell Mastery).
        */
       castingTime?: string
+      /**
+       * When true, only spells with `ritual: true` are eligible
+       * (e.g. Pact of the Tome level-1 rituals).
+       */
+      ritual?: boolean
       /** Display label override for Spells step section headers. */
       label?: string
       /**

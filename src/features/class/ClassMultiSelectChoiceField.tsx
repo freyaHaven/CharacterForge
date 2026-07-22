@@ -98,6 +98,8 @@ export type ClassMultiSelectChoiceFieldProps = {
   labelledBy?: string
   /** Option ids selected in related choices (e.g. other Weapon Mastery rows). */
   excludedOptionIds?: readonly string[]
+  /** Option ids that fail prerequisites — shown disabled with a reason. */
+  ineligibleOptionIds?: ReadonlyMap<string, string>
   onChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
 }
 
@@ -109,6 +111,7 @@ export function ClassMultiSelectChoiceField({
   ariaLabel,
   labelledBy,
   excludedOptionIds = [],
+  ineligibleOptionIds,
   onChange,
 }: ClassMultiSelectChoiceFieldProps) {
   const selectedOptionIds = getSelectedOptionIds(value)
@@ -139,18 +142,25 @@ export function ClassMultiSelectChoiceField({
         {visibleOptions.map((option) => {
           const inputId = `class-choice-${choice.id}-${option.id}`
           const isChecked = selectedOptionIds.includes(option.id)
+          const ineligibleReason = ineligibleOptionIds?.get(option.id)
+          const isIneligible = ineligibleReason !== undefined && !isChecked
           const isDisabled =
-            !isChecked && selectedOptionIds.length >= choice.max
+            isIneligible ||
+            (!isChecked && selectedOptionIds.length >= choice.max)
           const descriptionId =
             option.description !== undefined && option.description.length > 0
               ? `${inputId}-description`
+              : undefined
+          const reasonId =
+            isIneligible && ineligibleReason !== undefined
+              ? `${inputId}-ineligible`
               : undefined
 
           return (
             <div
               key={option.id}
               className={
-                descriptionId !== undefined
+                descriptionId !== undefined || reasonId !== undefined
                   ? 'class-picker__choice-option class-picker__choice-option--hoverable'
                   : 'class-picker__choice-option'
               }
@@ -162,7 +172,9 @@ export function ClassMultiSelectChoiceField({
                 value={option.id}
                 checked={isChecked}
                 disabled={isDisabled}
-                aria-describedby={descriptionId}
+                aria-describedby={[descriptionId, reasonId]
+                  .filter(Boolean)
+                  .join(' ') || undefined}
                 onChange={() => {
                   onChange(
                     choice.id,
@@ -175,8 +187,16 @@ export function ClassMultiSelectChoiceField({
                   {renderOptionLabel(option.id, option.label)}
                 </span>
               </label>
-              {option.description !== undefined &&
-              option.description.length > 0 ? (
+              {isIneligible && ineligibleReason !== undefined ? (
+                <span
+                  id={reasonId}
+                  className="class-picker__choice-hover-description"
+                  role="tooltip"
+                >
+                  {ineligibleReason}
+                </span>
+              ) : option.description !== undefined &&
+                option.description.length > 0 ? (
                 <span
                   id={descriptionId}
                   className="class-picker__choice-hover-description"

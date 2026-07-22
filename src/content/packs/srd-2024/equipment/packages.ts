@@ -119,6 +119,17 @@ export const SORCERER_PACKAGE_A: EquipmentGrant[] = [
   gold(28),
 ]
 
+/** Warlock Package A (SRD 5.2.1). */
+export const WARLOCK_PACKAGE_A: EquipmentGrant[] = [
+  item(id('leather-armor')),
+  item(id('sickle')),
+  item(id('dagger'), 2),
+  item(id('arcane-focus-orb')),
+  item(id('book-occult-lore')),
+  item(id('scholars-pack')),
+  gold(15),
+]
+
 export const ACOLYTE_PACKAGE: EquipmentGrant[] = [
   item(id('calligraphers-supplies')),
   item(id('book-prayers')),

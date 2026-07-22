@@ -83,6 +83,8 @@ export type ResolvedSpellEntitlement = {
   schools?: string[]
   /** Casting-time filter from content (exact match). */
   castingTime?: string
+  /** When true, only ritual-tagged spells are eligible. */
+  ritual?: boolean
   /** Spell ids on the resolved list (when catalogue was available). */
   listSpellIds?: readonly string[]
 }
@@ -539,6 +541,7 @@ function buildResolvedEntitlement(
     countsAgainstLimit: entitlement.countsAgainstLimit ?? true,
     schools: entitlement.schools,
     castingTime: entitlement.castingTime,
+    ritual: entitlement.ritual,
     listSpellIds,
     ...stats,
   }

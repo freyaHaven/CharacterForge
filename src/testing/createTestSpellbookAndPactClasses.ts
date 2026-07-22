@@ -121,7 +121,7 @@ export function createTestPactCasterClass(
           id: 'known',
           kind: 'select',
           listId: 'srd-2024:spell-list:wizard',
-          selectionKind: 'known',
+          selectionKind: 'prepared',
           count: {
             kind: 'by-source-level',
             table: PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL,

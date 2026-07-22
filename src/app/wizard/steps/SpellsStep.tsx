@@ -181,6 +181,9 @@ function SelectEntitlementEditor({
       ) {
         return false
       }
+      if (entitlement.ritual === true && spell.ritual !== true) {
+        return false
+      }
       return true
     })
 
@@ -205,6 +208,7 @@ function SelectEntitlementEditor({
     entitlement.accessibleLevels,
     entitlement.castingTime,
     entitlement.prepareFrom,
+    entitlement.ritual,
     entitlement.schools,
     entitlement.selectedSpellIds,
     entitlement.spellbookSpellIds,

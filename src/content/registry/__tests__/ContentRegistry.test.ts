@@ -29,7 +29,9 @@ describe('ContentRegistry (bundled)', () => {
       'srd-2024:wizard',
       'srd-2024:bard',
       'srd-2024:sorcerer',
+      'srd-2024:warlock',
     ])
+    expect(registry.getClass('srd-2024:warlock')?.name).toBe('Warlock')
     expect(registry.listClasses('srd-2014')).toEqual([])
   })
 
@@ -95,6 +97,11 @@ describe('ContentRegistry (bundled)', () => {
       classId: 'srd-2024:sorcerer',
       name: 'Draconic Sorcery',
     })
+    expect(registry.getSubclass('srd-2024:fiend-patron')).toMatchObject({
+      choiceOptionId: 'fiend',
+      classId: 'srd-2024:warlock',
+      name: 'Fiend Patron',
+    })
     expect(
       registry.listSubclasses('srd-2024:fighter').map((entry) => entry.id),
     ).toEqual(['srd-2024:champion'])
@@ -125,6 +132,9 @@ describe('ContentRegistry (bundled)', () => {
     expect(
       registry.listSubclasses('srd-2024:sorcerer').map((entry) => entry.id),
     ).toEqual(['srd-2024:draconic-sorcery'])
+    expect(
+      registry.listSubclasses('srd-2024:warlock').map((entry) => entry.id),
+    ).toEqual(['srd-2024:fiend-patron'])
   })
 
   it('keeps subclass choice option ids stable for persistence', () => {

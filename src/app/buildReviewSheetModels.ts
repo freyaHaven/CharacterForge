@@ -9,6 +9,10 @@ import type { FeatDefinition, FeatSelection } from '../domain/feat/types'
 import type { SpeciesDefinition, SpeciesSelection } from '../domain/species/types'
 import type { EquipmentItemDefinition } from '../domain/equipment/types'
 import { SKILL_IDS, SKILL_LABELS, type SkillId } from '../domain/skills/types'
+import {
+  isWeaponId,
+  WEAPON_LABELS,
+} from '../domain/weapons/types'
 import { resolveClassEffects } from '../rules/class/resolveClassEffects'
 import { resolveSpeciesEffects } from '../rules/species/resolveSpeciesEffects'
 import {
@@ -714,6 +718,13 @@ function buildProficiencies(
         ])) {
           weapons.add(label)
         }
+      }
+      if (effect.kind === 'weapon-proficiency-item') {
+        weapons.add(
+          isWeaponId(effect.weaponId)
+            ? WEAPON_LABELS[effect.weaponId]
+            : effect.weaponId,
+        )
       }
       if (effect.kind === 'language') {
         languages.add(effect.label)

@@ -13,6 +13,7 @@ import { paladinSrd2024 } from '../../classes/paladin'
 import { rangerSrd2024 } from '../../classes/ranger'
 import { rogueSrd2024 } from '../../classes/rogue'
 import { sorcererSrd2024 } from '../../classes/sorcerer'
+import { warlockSrd2024 } from '../../classes/warlock'
 import { wizardSrd2024 } from '../../classes/wizard'
 import { SRD_2024_EQUIPMENT_BY_ID } from '../index'
 import {
@@ -27,6 +28,7 @@ import {
   RANGER_PACKAGE_A,
   ROGUE_PACKAGE_A,
   SORCERER_PACKAGE_A,
+  WARLOCK_PACKAGE_A,
   WIZARD_PACKAGE_A,
 } from '../packages'
 
@@ -119,6 +121,13 @@ const CLASS_STARTING_EQUIPMENT: ClassStartingEquipmentExpectation[] = [
     options: [
       { id: 'package-a', label: 'Package A', kind: 'items', grants: SORCERER_PACKAGE_A },
       { id: 'gold-alternative', label: '50 GP', kind: 'gold', goldPieces: 50 },
+    ],
+  },
+  {
+    classDef: warlockSrd2024,
+    options: [
+      { id: 'package-a', label: 'Package A', kind: 'items', grants: WARLOCK_PACKAGE_A },
+      { id: 'gold-alternative', label: '100 GP', kind: 'gold', goldPieces: 100 },
     ],
   },
   {
@@ -410,6 +419,20 @@ describe('SRD 2024 class starting equipment package contents', () => {
         item(id('arcane-focus-crystal')),
         item(id('dungeoneers-pack')),
         item(GOLD_PIECES_ITEM_ID, 28),
+      ]),
+    )
+  })
+
+  it('matches Warlock Package A', () => {
+    expect(formatGrants(WARLOCK_PACKAGE_A)).toEqual(
+      formatGrants([
+        item(id('leather-armor')),
+        item(id('sickle')),
+        item(id('dagger'), 2),
+        item(id('arcane-focus-orb')),
+        item(id('book-occult-lore')),
+        item(id('scholars-pack')),
+        item(GOLD_PIECES_ITEM_ID, 15),
       ]),
     )
   })

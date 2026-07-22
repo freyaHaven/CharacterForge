@@ -35,15 +35,15 @@ scored across seven dimensions:
 |------|---------|-------|
 | Species & ancestry | 🟡 | 9/9 SRD species; creator-time effects largely wired; play-time traits descriptive |
 | Backgrounds | 🟡 | 4 bundled backgrounds; no custom background builder |
-| Classes & subclasses | 🟡 | 11/12 SRD classes; 1 subclass each |
+| Classes & subclasses | ✅ | **12/12** SRD classes; 1 subclass each |
 | Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon pickable at L19; some subclass extras missing |
 | Deferred class requirements | 🟡 | Starting equipment only; Epic Boon is a class choice (not deferred) |
 | Feats & acquisition | 🟡 | Origin + epic boons + Fighting Style + Grappler/Skilled/ASI feat (nested sub-choices ✅); no standalone Feats step |
 | Fighting styles | ✅ | Feat defs + shared grant pipeline; Champion L7 Additional FS; Defense AC ✅ |
 | Weapon mastery | 🟡 | Slot schedules + UI; gear sub-choices deferred |
 | Ability scores & ASIs | ✅ | All three methods + class ASI choices including feat option |
-| Spell catalogue & lists | 🟡 | ~360 need-based spells; full Wizard + Druid + Bard + Sorcerer lists; Magical Secrets / Discoveries unions |
-| Spellcasting | 🟡 | Cleric/Paladin/Ranger/Druid/Wizard/Bard/Sorcerer; **P2.5 spellbook + Pact Magic architecture**; Warlock content pending |
+| Spell catalogue & lists | 🟡 | ~360 need-based spells; full lists for all 12 classes; Magical Secrets / Discoveries / all-cantrips / L1-rituals unions |
+| Spellcasting | 🟡 | All 12 classes; **P2.5 spellbook + Pact Magic**; Warlock prepared Pact Magic + invocations + arcanum |
 | Starting equipment | ✅ | Nested trees for bundled classes/backgrounds (Monk tools, Soldier gaming set) |
 | Full equipment catalogue | ⏸ | Starting-package scope (+ artisan tools / gaming sets); shop deferred |
 | Inventory, currency, loadout | 🟡 | Resolved inventory + Overview loadout; no shop |
@@ -99,7 +99,7 @@ wired; other tool-choice backgrounds N/A until more content ships.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | **11/12** SRD classes; **1 subclass each** |
+| Content | ✅ | **12/12** SRD classes; **1 subclass each** |
 | UI | ✅ | `ClassStep` — single-class and multiclass workflows |
 | Persistence | ✅ | `classes[]`, `targetLevel`, `startingClassInstanceId`; schema v9+ |
 | Validation | ✅ | `validateCharacterClasses.ts`, `classRules.ts` |
@@ -109,9 +109,15 @@ wired; other tool-choice backgrounds N/A until more content ships.
 
 **Bundled:** Fighter (Champion), Barbarian (Berserker), Bard (College of Lore), Rogue (Thief),
 Monk (Open Hand), Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain),
-Druid (Circle of the Land), Wizard (Evoker), Sorcerer (Draconic Sorcery).
+Druid (Circle of the Land), Wizard (Evoker), Sorcerer (Draconic Sorcery),
+Warlock (Fiend Patron).
 
-**Missing classes:** Warlock.
+**Warlock (Phase 2 boundary):** CHA prepared Pact Magic (`slotContributor: 'pact'`).
+Eldritch Invocations are creation-time multi-select with level-scaled counts and
+prerequisites; Pact Boons are invocations (Blade/Chain/Tome). Mystic Arcanum is
+fixed-level prepared picks (`countsAgainstLimit: false`). Magical Cunning, temp HP,
+familiar summon, pact weapon conjure, and Hurl Through Hell execution are descriptive
+only — no play-time resource state.
 
 **Sorcerer (Phase 2 boundary):** Prepared CHA full caster (not known-spells). Metamagic is
 creation-time multi-select only (2 at L2 / L10 / L17 with shared-pool exclusion). Font of
@@ -239,7 +245,7 @@ companion keys under `epic-boon`.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | **~360** spell definitions; lists for Cleric, Paladin, Ranger, Druid, Wizard, Bard, Sorcerer (+ Magical Secrets / Magical Discoveries unions) |
+| Content | 🟡 | **~360** spell definitions; lists for all 12 classes (+ Magical Secrets / Discoveries / all-cantrips / L1-rituals unions) |
 | UI | ➖ | Catalogue consumed by Spells step and ASI feat picker |
 | Persistence | ➖ | Definitions only |
 | Validation | ➖ | — |
@@ -248,8 +254,9 @@ companion keys under `epic-boon`.
 | Tests | 🟡 | Spellcasting resolution tests; no full catalogue completeness test vs SRD |
 
 **Scope:** Spells are included **on demand** (class lists, grants, Magic Initiate), not
-as a full SRD spell compendium. Wizard, Druid, Bard, and Sorcerer lists are complete
-through 9th level. Magical Secrets / Magical Discoveries are authored union lists.
+as a full SRD spell compendium. All 12 class lists are complete through 9th level where
+applicable. Magical Secrets / Magical Discoveries / all-cantrips / level-1-rituals are
+authored union lists.
 
 ---
 
@@ -257,13 +264,13 @@ through 9th level. Magical Secrets / Magical Discoveries are authored union list
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Full/half casters: Cleric, Paladin, Ranger, **Druid**, **Wizard**, **Bard**, **Sorcerer** (prepared CHA); domain/circle/lore/draconic grants. **Warlock class content not shipped yet** |
-| UI | ✅ | `SpellsStep` → `SpellSelectionGrid` (conditional visibility); spellbook labels + prepare-from-book filter; mastery/signature sections; Pact Magic slot summary |
+| Content | ✅ | Full/half casters + **Warlock** prepared Pact Magic; domain/circle/lore/draconic/fiend grants; invocations / arcanum / Contact Patron |
+| UI | ✅ | `SpellsStep` → `SpellSelectionGrid`; spellbook + prepare-from-book; mastery/signature/arcanum; Pact Magic slot summary; invocation prereq disable reasons |
 | Persistence | ✅ | `spellSourceStates`; schema v12+ (optional P2.5 fields; **no migration**, stay v15) |
-| Validation | ✅ | `useSpellsStepValidation`, `spellSelectionEligibility`; union spellbook + schools/castingTime; cross-spellbook dups |
-| Derived | ✅ | Shared multiclass slots (`full`/`half` only); **Pact Magic `pactSlots` separate**; multi-entitlement spellbook union; `countsAgainstLimit: false` for mastery/signature |
-| Sheet | ✅ | Spell groups on Overview when content exists |
-| Tests | 🟡 | `resolveCharacterSpellcasting*.test.ts`, `spellbookAndPactMagic.test.ts`, `wizardSpellbookAttribution.test.ts`; **no Spells-step wizard E2E** |
+| Validation | ✅ | `useSpellsStepValidation`, `spellSelectionEligibility`; union spellbook + schools/castingTime/ritual; invocation prerequisites |
+| Derived | ✅ | Shared multiclass slots (`full`/`half` only); **Pact Magic `pactSlots` separate**; `countsAgainstLimit: false` for mastery/signature/arcanum/tome |
+| Sheet | ✅ | Spell groups on Overview (Pact / Patron / Tome / Arcanum / Contact Patron labels) |
+| Tests | 🟡 | `resolveCharacterSpellcasting*.test.ts`, `spellbookAndPactMagic.test.ts`, `warlock*.test.ts`; **no Spells-step wizard E2E** |
 
 **P2.5–P2.6 architecture:** Spellbook entries live on `selectionKind: 'spellbook'`
 select entitlements (Wizard uses **distinct** `spellbook-1`…`spellbook-20` for
@@ -272,11 +279,17 @@ attribution). Prepared-from-book uses `prepareFrom: 'spellbook'`; when
 instance are unioned. Pact Magic uses `slotContributor: 'pact'` →
 `resolvePactMagicSlots` / `summary.pactSlots` (never merged into conventional
 shared slots). Fixtures: `createTestSpellbookCasterClass` /
-`createTestPactCasterClass` (tests only).
+`createTestPactCasterClass` (tests only; pact fixture uses prepared + `pact-slot-level`).
 
-**Still pending:** Warlock class content (P2.10),
+**P2.10 Warlock (done):** Full Warlock + Fiend Patron; CHA prepared Pact Magic;
+Eldritch Invocations (all SRD options, prereqs, `limitsByLevel`); Pact Boons as
+invocations; Mystic Arcanum 6–9; Contact Patron grant; Fiendish Resilience
+creation-time damage type; full Warlock spell list. Play-time Magical Cunning /
+temp HP / familiar / conjure / Hurl Through Hell deferred.
+
+**Still pending:**
 play-time Arcane Recovery / Memorize Spell / Overchannel / Potent Cantrip / Sculpt Spells /
-Empowered Evocation execution tracking.
+Empowered Evocation / Magical Cunning execution tracking.
 Species lineage spells wired for
 bundled species. Play-time slot expenditure / rest recovery deferred.
 
@@ -492,9 +505,7 @@ code (documents through v11 at time of audit).
 - [x] **Druid (P2.7)** — full class, Circle of the Land, Primal Order, Wild Shape Known Forms (creator-time only), full Druid spell list through 9th
 - [x] **Bard (P2.8)** — full class, College of Lore, Magical Secrets list expansion, Magical Discoveries, Words of Creation, Jack of All Trades, full Bard spell list; Bardic Inspiration Phase 2 descriptive only
 - [x] **Sorcerer (P2.9)** — full class, Draconic Sorcery, prepared CHA full caster, Metamagic creation-time choices, Elemental Affinity resistance, Draconic Resilience HP/AC, full Sorcerer spell list; Font/Innate/points Phase 2 descriptive only
-- [ ] **Remaining class:** Warlock (P2.10)
-  - **P2.5 done:** spellbook + Pact Magic architecture (fixtures/resolvers/validation/UI hooks)
-  - Warlock class content still deferred to P2.10
+- [x] **Warlock (P2.10)** — full class, Fiend Patron, CHA prepared Pact Magic, Eldritch Invocations (prereqs + `limitsByLevel`), Pact Boons as invocations, Mystic Arcanum, Contact Patron, Fiendish Resilience creation-time choice, full Warlock spell list; Magical Cunning / temp HP / familiar / conjure / Hurl Through Hell Phase 2 descriptive only
 - [ ] **Species play-time features:** Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration
 - [x] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 via companion keys; ASI feat excluded from ASI feat-mode pickers only (cycle guard)
 - [x] **Skilled sub-choices** — multi-select skill/tool companion keys under feat grants
@@ -510,7 +521,7 @@ code (documents through v11 at time of audit).
 - [x] **Creation-time nested starting-equipment trees** for bundled classes/backgrounds (Monk artisan tools, Soldier gaming set); future classes reuse the same architecture
 - [ ] **Additional class starting-equipment branch trees** where SRD offers more nested choices (e.g. remaining package sub-picks) — defs not yet authored, not a resolver gap
 - [ ] **Expand spell catalogue** as new casters ship (full lists per class, not stubs)
-  - Wizard + Druid + Bard + Sorcerer lists complete through 9th level; Magical Secrets / Discoveries unions; Warlock list still pending
+  - Wizard + Druid + Bard + Sorcerer + Warlock lists complete through 9th level; Magical Secrets / Discoveries / all-cantrips / L1-rituals unions
 
 ### 2. Required for a usable character sheet during play
 
@@ -563,7 +574,7 @@ equipment catalogue for starting packages + artisan tools + gaming sets, storage
 
 - **Incomplete authored defs** — a bundled class/background still missing a nested SRD
   sub-choice that the architecture already supports.
-- **Not-yet-implemented classes** — Warlock (and its gear tree).
+- **Not-yet-implemented play-time class resources** — Magical Cunning execution, temp HP, familiar summon, pact weapon conjure, Hurl Through Hell (creation-time Warlock content is shipped).
   Wild Shape play-time transformation is out of Phase 2 (Known Forms only today).
 - **Play-time gaps** — shop, encumbrance enforcement, attunement, rest/level-up inventory.
 
