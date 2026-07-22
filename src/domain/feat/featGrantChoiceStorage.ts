@@ -11,6 +11,9 @@
 
 export const FEAT_GRANT_CHOICES_KEY_PREFIX = 'feat-choices:' as const
 
+/** Grant slot id for background origin feat nested choices. */
+export const BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID = 'origin-feat' as const
+
 export type FeatGrantChoiceStorageKeyParts = {
   grantSlotId: string
   featChoiceId: string

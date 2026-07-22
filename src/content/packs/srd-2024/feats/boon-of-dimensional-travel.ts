@@ -1,11 +1,12 @@
 import type { FeatDefinition } from '../../../../domain/feat/types'
+import { createAsiScoreIncreaseChoice } from '../../../../domain/feat/asiScoreIncreaseChoice'
 import { SRD_2024_SOURCE } from '../source'
 
 export const boonOfDimensionalTravelSrd2024: FeatDefinition = {
   id: 'srd-2024:boon-of-dimensional-travel',
   editionId: 'srd-2024',
   name: 'Boon of Dimensional Travel',
-  summary: 'Teleport after Attack or Magic actions.',
+  summary: 'Teleport after you take the Attack or Magic action.',
   description:
     'You gain the following benefits. Ability Score Increase. Increase one ability score of your choice by 1, to a maximum of 30. Blink Steps. Immediately after you take the Attack action or the Magic action, you can teleport up to 30 feet to an unoccupied space you can see.',
   source: SRD_2024_SOURCE,
@@ -30,5 +31,10 @@ export const boonOfDimensionalTravelSrd2024: FeatDefinition = {
     },
   ],
   repeatable: false,
-  choices: [],
+  choices: [
+    createAsiScoreIncreaseChoice({
+      modes: ['plus-1'],
+      maximum: 30,
+    }),
+  ],
 }

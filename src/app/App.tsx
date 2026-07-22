@@ -339,6 +339,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   committedSelection={character.background}
                   draft={background.backgroundDraft}
                   catalog={editor.backgroundCatalog}
+                  featCatalog={editor.featCatalog}
                   onDraftChange={background.setBackgroundDraft}
                   onCommittedSelectionChange={background.commitBackgroundSelection}
                   speciesSelection={character.species}

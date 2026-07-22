@@ -11,8 +11,16 @@ const MESSAGE_BY_CODE: Record<
     `Choose an option for ${issue.choiceId ?? 'a required feat choice'}.`,
   'invalid-choice': (issue) =>
     `The selected option for ${issue.choiceId ?? 'a feat choice'} is invalid.`,
+  'invalid-multi-select-count': (issue) =>
+    `Select the required number of options for ${issue.choiceId ?? 'this feat choice'}.`,
+  'duplicate-selection': (issue) =>
+    `Remove the duplicate selection for ${issue.choiceId ?? 'this feat choice'}.`,
+  'already-proficient': (issue) =>
+    `Choose a skill or tool you are not already proficient in for ${issue.choiceId ?? 'this feat choice'}.`,
   'unknown-choice': (issue) =>
     `Remove the unknown choice ${issue.choiceId ?? 'entry'}.`,
+  'ability-score-maximum-exceeded': (issue) =>
+    `That ability score increase would exceed the maximum for ${issue.choiceId ?? 'this feat'}.`,
 }
 
 export function formatFeatValidationIssue(issue: FeatValidationIssue): string {

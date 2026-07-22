@@ -1,4 +1,5 @@
 import type { FeatDefinition } from '../../../../domain/feat/types'
+import { createAsiScoreIncreaseChoice } from '../../../../domain/feat/asiScoreIncreaseChoice'
 import { SRD_2024_SOURCE } from '../source'
 
 export const grapplerSrd2024: FeatDefinition = {
@@ -49,5 +50,11 @@ export const grapplerSrd2024: FeatDefinition = {
     },
   ],
   repeatable: false,
-  choices: [],
+  choices: [
+    createAsiScoreIncreaseChoice({
+      modes: ['plus-1'],
+      abilities: ['strength', 'dexterity'],
+      maximum: 20,
+    }),
+  ],
 }

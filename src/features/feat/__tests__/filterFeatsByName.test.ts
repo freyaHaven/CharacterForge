@@ -23,6 +23,7 @@ describe('filterFeatsByName', () => {
     expect(filterFeatsByName(feats, 'origin').map((feat) => feat.id)).toEqual([
       'srd-2024:alert',
       'srd-2024:magic-initiate-cleric',
+      'srd-2024:magic-initiate-druid',
       'srd-2024:magic-initiate-wizard',
       'srd-2024:savage-attacker',
       'srd-2024:skilled',

@@ -28,6 +28,8 @@ export function formatBackgroundValidationIssue(
         : 'One or more background choices are invalid.'
     case 'unknown-choice':
       return 'Remove invalid background choices.'
+    case 'invalid-origin-feat-choice':
+      return 'Complete the origin feat choices for this background.'
     default:
       return 'Complete the background selection.'
   }

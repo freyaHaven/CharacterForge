@@ -27,6 +27,8 @@ import {
   hasInitiativeProficiency,
   resolveArmorClassBonusFromFeatEffects,
   resolveCharacterFeatEffects,
+  resolveResistancesFromFeatEffects,
+  resolveSensesFromFeatEffects,
 } from '../rules/feat/resolveFeatEffects'
 import { selectEquippedArmorAndShield } from '../rules/armor-class/calculateCharacterArmorClass'
 import {
@@ -122,6 +124,7 @@ export type ReviewSaveRowModel = {
 export type ReviewSensesModel = {
   passives: { label: string; value: number }[]
   special: { label: string; detail: string }[]
+  resistances: { label: string; detail: string }[]
 }
 
 export type ReviewProficienciesModel = {
@@ -629,6 +632,7 @@ function buildSenses(
   speciesDefinition: SpeciesDefinition | null,
   speciesSelection: SpeciesSelection | null,
   jackOfAllTrades = false,
+  featEffects: readonly import('../domain/feat/types').FeatEffect[] = [],
 ): ReviewSensesModel {
   const perceptionMod = getSkillModifier(
     abilityScores.wisdom,
@@ -660,6 +664,13 @@ function buildSenses(
     }
   }
 
+  for (const sense of resolveSensesFromFeatEffects(featEffects)) {
+    special.push({
+      label: sense.label,
+      detail: sense.detail,
+    })
+  }
+
   return {
     passives: [
       { label: 'Passive Perception', value: getPassiveScore(perceptionMod) },
@@ -670,6 +681,7 @@ function buildSenses(
       { label: 'Passive Insight', value: getPassiveScore(insightMod) },
     ],
     special,
+    resistances: resolveResistancesFromFeatEffects(featEffects),
   }
 }
 
@@ -966,6 +978,7 @@ export function buildReviewSheetModels(
       input.speciesDefinition,
       character.species,
       jackOfAllTrades,
+      featEffects,
     ),
     proficiencies: buildProficiencies(
       character,

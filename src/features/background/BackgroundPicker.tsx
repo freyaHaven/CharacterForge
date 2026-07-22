@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { EditionId } from '../../domain/types'
 import type {
   AbilityScoreIncreaseSelection,
   BackgroundDefinition,
   BackgroundSelection,
 } from '../../domain/background/types'
+import type { FeatDefinition } from '../../domain/feat/types'
+import {
+  BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+  writeFeatGrantChoice,
+} from '../../domain/feat/featGrantChoiceStorage'
 import { BackgroundCatalogCard } from './BackgroundCatalogCard'
 import { BackgroundChoicesPanel } from './BackgroundChoicesPanel'
 import { BackgroundOverview } from './BackgroundOverview'
@@ -25,6 +31,7 @@ type BackgroundPickerProps = {
   committedSelection: BackgroundSelection | null
   draft: BackgroundSelectionDraft | null
   catalog: BackgroundCatalog
+  featCatalog?: FeatCatalog
   onDraftChange: (draft: BackgroundSelectionDraft | null) => void
   onCommittedSelectionChange: (selection: BackgroundSelection | null) => void
 }
@@ -34,12 +41,15 @@ export function BackgroundPicker({
   committedSelection,
   draft,
   catalog,
+  featCatalog,
   onDraftChange,
   onCommittedSelectionChange,
 }: BackgroundPickerProps) {
   const [backgroundList, setBackgroundList] = useState<BackgroundDefinition[]>(
     [],
   )
+  const [originFeatDefinition, setOriginFeatDefinition] =
+    useState<FeatDefinition | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const activeBackgroundId =
@@ -58,7 +68,9 @@ export function BackgroundPicker({
   const draftValidation =
     draft === null || activeDefinition === null
       ? null
-      : validateBackgroundDraft(draft, editionId, activeDefinition)
+      : validateBackgroundDraft(draft, editionId, activeDefinition, {
+          originFeatDefinition,
+        })
 
   const choiceIssueById = useMemo(() => {
     const issues = draftValidation?.ok === false ? draftValidation.issues : []
@@ -120,12 +132,36 @@ export function BackgroundPicker({
     }
   }, [catalog, editionId])
 
+  useEffect(() => {
+    if (activeDefinition === null || featCatalog === undefined) {
+      setOriginFeatDefinition(null)
+      return
+    }
+
+    let isActive = true
+    void featCatalog.getFeat(activeDefinition.originFeat.featId).then((feat) => {
+      if (!isActive) {
+        return
+      }
+      setOriginFeatDefinition(feat)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [activeDefinition, featCatalog])
+
   async function commitDraft(nextDraft: BackgroundSelectionDraft) {
     const definition = await catalog.getBackground(nextDraft.backgroundId)
+    const originFeat =
+      definition !== null && featCatalog !== undefined
+        ? await featCatalog.getFeat(definition.originFeat.featId)
+        : null
     const { committed } = tryCommitBackgroundDraft(
       nextDraft,
       editionId,
       definition,
+      { originFeatDefinition: originFeat },
     )
 
     if (committed !== null) {
@@ -156,25 +192,32 @@ export function BackgroundPicker({
 
   function selectBackground(backgroundDefinition: BackgroundDefinition) {
     const nextDraft = createBackgroundSelectionDraft(backgroundDefinition.id)
-    const { committed } = tryCommitBackgroundDraft(
-      nextDraft,
-      editionId,
-      backgroundDefinition,
-    )
+    void (async () => {
+      const originFeat =
+        featCatalog !== undefined
+          ? await featCatalog.getFeat(backgroundDefinition.originFeat.featId)
+          : null
+      const { committed } = tryCommitBackgroundDraft(
+        nextDraft,
+        editionId,
+        backgroundDefinition,
+        { originFeatDefinition: originFeat },
+      )
 
-    if (committed !== null) {
-      onDraftChange(null)
-      onCommittedSelectionChange(committed)
-      return
-    }
+      if (committed !== null) {
+        onDraftChange(null)
+        onCommittedSelectionChange(committed)
+        return
+      }
 
-    onDraftChange(nextDraft)
-    onCommittedSelectionChange(null)
+      onDraftChange(nextDraft)
+      onCommittedSelectionChange(null)
+    })()
   }
 
   async function handleChoiceChange(
     choiceId: string,
-    optionId: string | undefined,
+    optionId: string | string[] | undefined,
   ) {
     const currentDraft = ensureDraft()
 
@@ -188,6 +231,28 @@ export function BackgroundPicker({
       optionId,
     )
     await commitDraft(nextDraft)
+  }
+
+  async function handleOriginFeatChoiceChange(
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) {
+    const currentDraft = ensureDraft()
+
+    if (currentDraft === null) {
+      return
+    }
+
+    const nextChoices = writeFeatGrantChoice(
+      currentDraft.choices,
+      BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+      featChoiceId,
+      value,
+    )
+    await commitDraft({
+      ...currentDraft,
+      choices: nextChoices,
+    })
   }
 
   async function handleAbilityScoreIncreaseChange(
@@ -264,11 +329,15 @@ export function BackgroundPicker({
                 abilityScoreIncrease={activeAbilityScoreIncrease}
                 choices={activeChoices}
                 choiceIssueById={choiceIssueById}
+                originFeatDefinition={originFeatDefinition}
                 onAbilityScoreIncreaseChange={(value) => {
                   void handleAbilityScoreIncreaseChange(value)
                 }}
                 onChoiceChange={(choiceId, optionId) => {
                   void handleChoiceChange(choiceId, optionId)
+                }}
+                onOriginFeatChoiceChange={(featChoiceId, value) => {
+                  void handleOriginFeatChoiceChange(featChoiceId, value)
                 }}
               />
             </div>

@@ -1,5 +1,6 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
 import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
+import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { Character } from '../../domain/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import {
@@ -12,6 +13,7 @@ type UseBackgroundEditorOptions = {
   character: Character
   setCharacter: Dispatch<SetStateAction<Character>>
   backgroundCatalog: BackgroundCatalog
+  featCatalog?: FeatCatalog
   onDraftChange?: () => void
 }
 
@@ -19,6 +21,7 @@ export function useBackgroundEditor({
   character,
   setCharacter,
   backgroundCatalog,
+  featCatalog,
   onDraftChange,
 }: UseBackgroundEditorOptions) {
   const [backgroundDraft, setBackgroundDraft] =
@@ -38,6 +41,7 @@ export function useBackgroundEditor({
       character.editionId,
       character.background,
       backgroundDraft,
+      featCatalog,
     )
 
   const backgroundDraftIncomplete = isBackgroundDraftIncomplete(

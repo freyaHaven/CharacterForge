@@ -117,8 +117,17 @@ export function ReviewSensesPanel({ senses }: { senses: ReviewSensesModel }) {
       {senses.special.length > 0 ? (
         <ul className="character-sheet__panel-notes character-sheet__panel-notes--plain">
           {senses.special.map((sense) => (
-            <li key={sense.label}>
+            <li key={`${sense.label}-${sense.detail}`}>
               {sense.label} {sense.detail}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {senses.resistances.length > 0 ? (
+        <ul className="character-sheet__panel-notes character-sheet__panel-notes--plain">
+          {senses.resistances.map((resistance) => (
+            <li key={`${resistance.label}-${resistance.detail}`}>
+              {resistance.label}: {resistance.detail}
             </li>
           ))}
         </ul>

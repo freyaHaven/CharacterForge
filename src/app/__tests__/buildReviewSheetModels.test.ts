@@ -141,6 +141,7 @@ describe('buildReviewSheetModels', () => {
     expect(models.senses.special).toEqual([
       { label: 'Darkvision', detail: '120 ft.' },
     ])
+    expect(models.senses.resistances).toEqual([])
 
     expect(models.proficiencies.armor).toEqual(
       expect.arrayContaining(['Light', 'Medium', 'Heavy', 'Shield']),

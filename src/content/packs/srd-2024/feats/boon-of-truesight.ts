@@ -1,4 +1,5 @@
 import type { FeatDefinition } from '../../../../domain/feat/types'
+import { createAsiScoreIncreaseChoice } from '../../../../domain/feat/asiScoreIncreaseChoice'
 import { SRD_2024_SOURCE } from '../source'
 
 export const boonOfTruesightSrd2024: FeatDefinition = {
@@ -28,6 +29,12 @@ export const boonOfTruesightSrd2024: FeatDefinition = {
       description: 'You have Truesight with a range of 60 feet.',
     },
   ],
+  effects: [{ kind: 'sense', sense: 'truesight', rangeFeet: 60 }],
   repeatable: false,
-  choices: [],
+  choices: [
+    createAsiScoreIncreaseChoice({
+      modes: ['plus-1'],
+      maximum: 30,
+    }),
+  ],
 }

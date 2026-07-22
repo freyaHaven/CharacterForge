@@ -15,6 +15,7 @@ export type FeatValidationIssueCode =
   | 'duplicate-selection'
   | 'already-proficient'
   | 'unknown-choice'
+  | 'ability-score-maximum-exceeded'
 
 export type FeatValidationIssue = {
   code: FeatValidationIssueCode

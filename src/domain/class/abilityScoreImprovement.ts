@@ -4,13 +4,14 @@ import type { FeatEligibility } from '../feat/eligibility'
 import { evaluateFeatEligibility } from '../feat/eligibility'
 import { ABILITY_ABBREVIATIONS } from '../character/sheetMechanics'
 
-export const ASI_MODES = ['plus-2', 'plus-1-1', 'feat'] as const
+export const ASI_MODES = ['plus-2', 'plus-1-1', 'feat', 'plus-1'] as const
 
 export type AsiMode = (typeof ASI_MODES)[number]
 
 export type AsiChoiceValue =
   | { kind: 'mode'; mode: AsiMode }
   | { kind: 'plus-2'; abilityId: AbilityId }
+  | { kind: 'plus-1'; abilityId: AbilityId }
   | { kind: 'plus-1-1'; abilityIds: [AbilityId, AbilityId] }
   | { kind: 'feat'; featId: string }
 
@@ -44,6 +45,8 @@ export function serializeAsiChoice(value: AsiChoiceValue): string {
       return value.mode
     case 'plus-2':
       return `plus-2:${value.abilityId}`
+    case 'plus-1':
+      return `plus-1:${value.abilityId}`
     case 'plus-1-1':
       return `plus-1-1:${value.abilityIds[0]},${value.abilityIds[1]}`
     case 'feat':
@@ -67,6 +70,15 @@ export function parseAsiChoice(value: string): AsiChoiceValue | null {
     }
 
     return { kind: 'plus-2', abilityId }
+  }
+
+  if (value.startsWith('plus-1:')) {
+    const abilityId = value.slice('plus-1:'.length)
+    if (!isAbilityId(abilityId) || abilityId.includes(',') || abilityId.includes(':')) {
+      return null
+    }
+
+    return { kind: 'plus-1', abilityId }
   }
 
   if (value.startsWith('plus-1-1:')) {
@@ -131,7 +143,11 @@ export function getAsiMode(value: string | undefined): AsiMode | null {
     return parsed.mode
   }
 
-  return parsed.kind === 'plus-1-1' ? 'plus-1-1' : parsed.kind
+  if (parsed.kind === 'plus-1-1') {
+    return 'plus-1-1'
+  }
+
+  return parsed.kind
 }
 
 /** Switch mode and clear any previous mode detail. */
@@ -141,6 +157,10 @@ export function selectAsiMode(mode: AsiMode): string {
 
 export function selectAsiPlus2(abilityId: AbilityId): string {
   return serializeAsiChoice({ kind: 'plus-2', abilityId })
+}
+
+export function selectAsiPlus1(abilityId: AbilityId): string {
+  return serializeAsiChoice({ kind: 'plus-1', abilityId })
 }
 
 export function selectAsiPlus1Plus1(
@@ -205,6 +225,11 @@ export function collectAsiAbilityScoreBonuses(
       continue
     }
 
+    if (parsed.kind === 'plus-1') {
+      bonuses[parsed.abilityId] = (bonuses[parsed.abilityId] ?? 0) + 1
+      continue
+    }
+
     if (parsed.kind === 'plus-1-1') {
       for (const abilityId of parsed.abilityIds) {
         bonuses[abilityId] = (bonuses[abilityId] ?? 0) + 1
@@ -243,7 +268,11 @@ export function validateAsiEncodedValue(
     return { ok: false, reason: 'incomplete' }
   }
 
-  if (parsed.kind === 'plus-2' || parsed.kind === 'plus-1-1') {
+  if (
+    parsed.kind === 'plus-2' ||
+    parsed.kind === 'plus-1' ||
+    parsed.kind === 'plus-1-1'
+  ) {
     return { ok: true, complete: true }
   }
 
@@ -285,6 +314,10 @@ export function formatAsiChoiceSummary(
 
   if (parsed.kind === 'plus-2') {
     return `${ABILITY_ABBREVIATIONS[parsed.abilityId]} +2`
+  }
+
+  if (parsed.kind === 'plus-1') {
+    return `${ABILITY_ABBREVIATIONS[parsed.abilityId]} +1`
   }
 
   if (parsed.kind === 'plus-1-1') {

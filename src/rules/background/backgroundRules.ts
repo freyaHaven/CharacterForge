@@ -6,6 +6,13 @@ import type {
   BackgroundDefinition,
   BackgroundSelection,
 } from '../../domain/background/types'
+import {
+  BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+  isFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
+import type { FeatDefinition } from '../../domain/feat/types'
+import { validateFeatDefinitionChoices } from '../../domain/feat/validateFeatChoices'
 import type { EditionId } from '../../domain/types'
 
 export type BackgroundValidationIssueCode =
@@ -16,6 +23,7 @@ export type BackgroundValidationIssueCode =
   | 'missing-required-choice'
   | 'invalid-choice'
   | 'unknown-choice'
+  | 'invalid-origin-feat-choice'
 
 export type BackgroundValidationIssue = {
   code: BackgroundValidationIssueCode
@@ -25,6 +33,10 @@ export type BackgroundValidationIssue = {
 export type BackgroundValidationResult =
   | { ok: true }
   | { ok: false; issues: BackgroundValidationIssue[] }
+
+export type BackgroundValidationOptions = {
+  originFeatDefinition?: FeatDefinition | null
+}
 
 function validateAbilityScoreIncrease(
   definition: BackgroundDefinition,
@@ -54,7 +66,7 @@ function validateAbilityScoreIncrease(
 
 function validateChoiceValue(
   choice: BackgroundChoice,
-  value: string | undefined,
+  value: string | string[] | undefined,
 ): BackgroundValidationIssue[] {
   if (value === undefined) {
     if (choice.required) {
@@ -62,6 +74,10 @@ function validateChoiceValue(
     }
 
     return []
+  }
+
+  if (typeof value !== 'string') {
+    return [{ code: 'invalid-choice', choiceId: choice.id }]
   }
 
   const isValidOption = choice.options.some((option) => option.id === value)
@@ -113,6 +129,7 @@ export function validateBackgroundSelection(
   selection: BackgroundSelection,
   editionId: EditionId,
   definition: BackgroundDefinition | null,
+  options?: BackgroundValidationOptions,
 ): BackgroundValidationResult {
   if (definition === null) {
     return { ok: false, issues: [{ code: 'background-not-found' }] }
@@ -143,7 +160,36 @@ export function validateBackgroundSelection(
     )
   }
 
+  const originFeat = options?.originFeatDefinition
+  if (
+    originFeat !== undefined &&
+    originFeat !== null &&
+    originFeat.id === definition.originFeat.featId
+  ) {
+    const nested = readFeatGrantChoices(
+      selection.choices,
+      BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+    )
+    for (const issue of validateFeatDefinitionChoices(originFeat, nested)) {
+      const code: BackgroundValidationIssueCode =
+        issue.code === 'missing-required-choice'
+          ? 'missing-required-choice'
+          : issue.code === 'unknown-choice'
+            ? 'unknown-choice'
+            : issue.code === 'invalid-choice'
+              ? 'invalid-choice'
+              : 'invalid-origin-feat-choice'
+      issues.push({
+        code,
+        choiceId: issue.choiceId,
+      })
+    }
+  }
+
   for (const choiceId of Object.keys(selection.choices)) {
+    if (isFeatGrantChoiceStorageKey(choiceId)) {
+      continue
+    }
     if (!requiredChoiceIds.has(choiceId)) {
       issues.push({ code: 'unknown-choice', choiceId })
     }

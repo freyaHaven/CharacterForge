@@ -7,17 +7,22 @@ import {
   isAsiMode,
   parseAsiChoice,
   selectAsiMode,
+  selectAsiPlus1,
   selectAsiPlus1Plus1,
   selectAsiPlus2,
   type AsiMode,
 } from '../../domain/class/abilityScoreImprovement'
+import {
+  getAsiScoreIncreaseAbilities,
+  getAsiScoreIncreaseModes,
+} from '../../domain/feat/asiScoreIncreaseChoice'
 import {
   listFeatChoiceOptions,
 } from '../../domain/feat/validateFeatChoices'
 import {
   getSkillOrToolProficiencyOption,
 } from '../../domain/feat/skillOrToolProficiency'
-import type { FeatDefinition } from '../../domain/feat/types'
+import type { FeatChoice, FeatDefinition } from '../../domain/feat/types'
 import { formatAbilityLabel } from '../class/formatClassDetails'
 
 export type FeatSubChoicesFieldsProps = {
@@ -50,23 +55,39 @@ function toggleMultiSelect(
   return [...selected, optionId]
 }
 
+const MODE_LABELS: Record<string, string> = {
+  'plus-2': 'Increase one Ability Score by 2',
+  'plus-1-1': 'Increase two Ability Scores by 1',
+  'plus-1': 'Increase one Ability Score by 1',
+}
+
 function AsiScoreIncreaseFields({
-  choiceId,
+  choice,
   value,
   onChange,
 }: {
-  choiceId: string
+  choice: Extract<FeatChoice, { type: 'asi-score-increase' }>
   value: string | undefined
   onChange: (choiceId: string, value: string) => void
 }) {
   const reactId = useId()
+  const choiceId = choice.id
   const mode = getAsiMode(value)
   const parsed = typeof value === 'string' ? parseAsiChoice(value) : null
   const plus2Ability = parsed?.kind === 'plus-2' ? parsed.abilityId : null
+  const plus1Ability = parsed?.kind === 'plus-1' ? parsed.abilityId : null
   const plus1Abilities = parsed?.kind === 'plus-1-1' ? parsed.abilityIds : null
 
-  // Cycle guard: only plus-2 / plus-1-1 — never nested feat mode.
-  const scoreModes = ASI_CHOICE_OPTIONS.filter((option) => option.id !== 'feat')
+  const allowedModes = getAsiScoreIncreaseModes(choice)
+  const abilityOptions = getAsiScoreIncreaseAbilities(choice)
+
+  const scoreModes = allowedModes.map((modeId) => ({
+    id: modeId,
+    label:
+      MODE_LABELS[modeId] ??
+      ASI_CHOICE_OPTIONS.find((option) => option.id === modeId)?.label ??
+      modeId,
+  }))
 
   const handleModeChange = (nextMode: AsiMode) => {
     if (nextMode === 'feat') {
@@ -75,38 +96,44 @@ function AsiScoreIncreaseFields({
     onChange(choiceId, selectAsiMode(nextMode))
   }
 
+  // Single plus-1 mode: skip mode radios and show ability pick directly.
+  const singlePlus1Only =
+    allowedModes.length === 1 && allowedModes[0] === 'plus-1'
+
   return (
     <div className="class-picker__asi-choice">
-      <div
-        className="choice-accordion__options"
-        role="radiogroup"
-        aria-label="Ability Score Improvement"
-      >
-        {scoreModes.map((option) => {
-          const inputId = `${choiceId}-mode-${option.id}-${reactId}`
-          return (
-            <div key={option.id} className="choice-accordion__option">
-              <input
-                id={inputId}
-                type="radio"
-                name={`${choiceId}-mode-${reactId}`}
-                value={option.id}
-                checked={mode === option.id}
-                onChange={() => {
-                  if (isAsiMode(option.id)) {
-                    handleModeChange(option.id)
-                  }
-                }}
-              />
-              <label htmlFor={inputId}>
-                <span className="choice-accordion__option-label">
-                  {option.label}
-                </span>
-              </label>
-            </div>
-          )
-        })}
-      </div>
+      {!singlePlus1Only ? (
+        <div
+          className="choice-accordion__options"
+          role="radiogroup"
+          aria-label={choice.prompt}
+        >
+          {scoreModes.map((option) => {
+            const inputId = `${choiceId}-mode-${option.id}-${reactId}`
+            return (
+              <div key={option.id} className="choice-accordion__option">
+                <input
+                  id={inputId}
+                  type="radio"
+                  name={`${choiceId}-mode-${reactId}`}
+                  value={option.id}
+                  checked={mode === option.id}
+                  onChange={() => {
+                    if (isAsiMode(option.id)) {
+                      handleModeChange(option.id)
+                    }
+                  }}
+                />
+                <label htmlFor={inputId}>
+                  <span className="choice-accordion__option-label">
+                    {option.label}
+                  </span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
 
       {mode === 'plus-2' ? (
         <div
@@ -114,7 +141,7 @@ function AsiScoreIncreaseFields({
           role="radiogroup"
           aria-label="Ability score to increase by 2"
         >
-          {ALL_ABILITY_OPTIONS.map((abilityId) => {
+          {abilityOptions.map((abilityId) => {
             const inputId = `${choiceId}-plus2-${abilityId}-${reactId}`
             return (
               <div key={abilityId} className="choice-accordion__option">
@@ -126,6 +153,37 @@ function AsiScoreIncreaseFields({
                   checked={plus2Ability === abilityId}
                   onChange={() => {
                     onChange(choiceId, selectAsiPlus2(abilityId))
+                  }}
+                />
+                <label htmlFor={inputId}>
+                  <span className="choice-accordion__option-label">
+                    {formatAbilityLabel(abilityId)}
+                  </span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {mode === 'plus-1' || singlePlus1Only ? (
+        <div
+          className="class-picker__asi-detail choice-accordion__options"
+          role="radiogroup"
+          aria-label="Ability score to increase by 1"
+        >
+          {abilityOptions.map((abilityId) => {
+            const inputId = `${choiceId}-plus1-${abilityId}-${reactId}`
+            return (
+              <div key={abilityId} className="choice-accordion__option">
+                <input
+                  id={inputId}
+                  type="radio"
+                  name={`${choiceId}-plus1-${reactId}`}
+                  value={abilityId}
+                  checked={plus1Ability === abilityId}
+                  onChange={() => {
+                    onChange(choiceId, selectAsiPlus1(abilityId))
                   }}
                 />
                 <label htmlFor={inputId}>
@@ -151,7 +209,8 @@ function AsiScoreIncreaseFields({
                   plus1Abilities?.[1] !== undefined &&
                   plus1Abilities[1] !== first
                     ? plus1Abilities[1]
-                    : (ALL_ABILITY_OPTIONS.find((id) => id !== first) ??
+                    : (abilityOptions.find((id) => id !== first) ??
+                      ALL_ABILITY_OPTIONS.find((id) => id !== first) ??
                       'dexterity')
                 onChange(choiceId, selectAsiPlus1Plus1(first, second))
               }}
@@ -159,7 +218,7 @@ function AsiScoreIncreaseFields({
               <option value="" disabled>
                 Choose ability
               </option>
-              {ALL_ABILITY_OPTIONS.map((abilityId) => (
+              {abilityOptions.map((abilityId) => (
                 <option key={abilityId} value={abilityId}>
                   {formatAbilityLabel(abilityId)}
                 </option>
@@ -176,7 +235,8 @@ function AsiScoreIncreaseFields({
                   plus1Abilities?.[0] !== undefined &&
                   plus1Abilities[0] !== second
                     ? plus1Abilities[0]
-                    : (ALL_ABILITY_OPTIONS.find((id) => id !== second) ??
+                    : (abilityOptions.find((id) => id !== second) ??
+                      ALL_ABILITY_OPTIONS.find((id) => id !== second) ??
                       'strength')
                 onChange(choiceId, selectAsiPlus1Plus1(first, second))
               }}
@@ -184,7 +244,7 @@ function AsiScoreIncreaseFields({
               <option value="" disabled>
                 Choose ability
               </option>
-              {ALL_ABILITY_OPTIONS.map((abilityId) => (
+              {abilityOptions.map((abilityId) => (
                 <option
                   key={abilityId}
                   value={abilityId}
@@ -221,7 +281,7 @@ export function FeatSubChoicesFields({
             <div key={choice.id} className="feat-sub-choices__block">
               <p className="feat-sub-choices__prompt">{choice.prompt}</p>
               <AsiScoreIncreaseFields
-                choiceId={choice.id}
+                choice={choice}
                 value={typeof value === 'string' ? value : undefined}
                 onChange={(choiceId, next) => {
                   onChange(choiceId, next)
@@ -305,6 +365,7 @@ export function FeatSubChoicesFields({
             role="radiogroup"
             aria-label={choice.prompt}
           >
+            <p className="feat-sub-choices__prompt">{choice.prompt}</p>
             {choice.options.map((option) => {
               const inputId = `feat-choice-${choice.id}-${option.id}`
               return (

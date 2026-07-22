@@ -7,7 +7,7 @@ export const alertSrd2024: FeatDefinition = {
   name: 'Alert',
   summary: 'Always on the lookout for danger.',
   description:
-    'You gain Initiative Proficiency and can swap Initiative with a willing ally when you roll Initiative.',
+    'You gain Initiative Proficiency and can swap Initiative with a willing ally when you roll Initiative (unless you or the ally has the Incapacitated condition).',
   source: SRD_2024_SOURCE,
   category: 'origin',
   prerequisite: { kind: 'none' },
@@ -22,7 +22,7 @@ export const alertSrd2024: FeatDefinition = {
       id: 'initiative-swap',
       name: 'Initiative Swap',
       description:
-        'Immediately after you roll Initiative, you can swap your Initiative with that of one willing ally in the same combat.',
+        'Immediately after you roll Initiative, you can swap your Initiative with that of one willing ally in the same combat. You can’t make this swap if you or the ally has the Incapacitated condition.',
     },
   ],
   effects: [{ kind: 'initiative-proficiency' }],

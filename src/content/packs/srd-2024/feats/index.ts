@@ -11,8 +11,11 @@ export { boonOfTruesightSrd2024 } from './boon-of-truesight'
 export { defenseSrd2024 } from './defense'
 export { grapplerSrd2024 } from './grappler'
 export { greatWeaponFightingSrd2024 } from './great-weapon-fighting'
-export { magicInitiateClericSrd2024 } from './magic-initiate-cleric'
-export { magicInitiateWizardSrd2024 } from './magic-initiate-wizard'
+export {
+  magicInitiateClericSrd2024,
+  magicInitiateDruidSrd2024,
+  magicInitiateWizardSrd2024,
+} from './magic-initiate'
 export { savageAttackerSrd2024 } from './savage-attacker'
 export { skilledSrd2024 } from './skilled'
 export { twoWeaponFightingSrd2024 } from './two-weapon-fighting'
@@ -30,8 +33,11 @@ import { boonOfTruesightSrd2024 } from './boon-of-truesight'
 import { defenseSrd2024 } from './defense'
 import { grapplerSrd2024 } from './grappler'
 import { greatWeaponFightingSrd2024 } from './great-weapon-fighting'
-import { magicInitiateClericSrd2024 } from './magic-initiate-cleric'
-import { magicInitiateWizardSrd2024 } from './magic-initiate-wizard'
+import {
+  magicInitiateClericSrd2024,
+  magicInitiateDruidSrd2024,
+  magicInitiateWizardSrd2024,
+} from './magic-initiate'
 import { savageAttackerSrd2024 } from './savage-attacker'
 import { skilledSrd2024 } from './skilled'
 import { twoWeaponFightingSrd2024 } from './two-weapon-fighting'
@@ -52,6 +58,7 @@ export const SRD_2024_FEATS = [
   grapplerSrd2024,
   greatWeaponFightingSrd2024,
   magicInitiateClericSrd2024,
+  magicInitiateDruidSrd2024,
   magicInitiateWizardSrd2024,
   savageAttackerSrd2024,
   skilledSrd2024,

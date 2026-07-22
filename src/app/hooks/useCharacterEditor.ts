@@ -147,6 +147,7 @@ export function useCharacterEditor({
     character,
     setCharacter,
     backgroundCatalog,
+    featCatalog,
     onDraftChange: clearSaveMessage,
   })
 

@@ -191,7 +191,13 @@ export type ClassSpellcasting = {
 
 /** Feat-granted spellcasting (e.g. Magic Initiate). */
 export type FeatSpellcasting = {
-  ability: AbilityId
+  /**
+   * Fixed spellcasting ability. Prefer `abilityFromChoiceId` when the feat
+   * lets the player choose Intelligence, Wisdom, or Charisma.
+   */
+  ability?: AbilityId
+  /** Feat choice id whose selected option id is an AbilityId. */
+  abilityFromChoiceId?: string
   spellListId: string
   entitlements: SpellEntitlement[]
 }

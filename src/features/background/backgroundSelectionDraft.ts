@@ -3,6 +3,7 @@ import type {
   BackgroundDefinition,
   BackgroundSelection,
 } from '../../domain/background/types'
+import type { FeatDefinition } from '../../domain/feat/types'
 import type { EditionId } from '../../domain/types'
 import { validateBackgroundSelection } from '../../rules/background/backgroundRules'
 import type { BackgroundValidationResult } from '../../rules/background/backgroundRules'
@@ -10,7 +11,7 @@ import type { BackgroundValidationResult } from '../../rules/background/backgrou
 export type BackgroundSelectionDraft = {
   backgroundId: string
   abilityScoreIncrease: AbilityScoreIncreaseSelection | null
-  choices: Record<string, string>
+  choices: Record<string, string | string[]>
 }
 
 export function createBackgroundSelectionDraft(
@@ -54,7 +55,7 @@ export function draftToBackgroundSelection(
 export function updateBackgroundDraftChoice(
   draft: BackgroundSelectionDraft,
   choiceId: string,
-  optionId: string | undefined,
+  optionId: string | string[] | undefined,
 ): BackgroundSelectionDraft {
   const nextChoices = { ...draft.choices }
 
@@ -84,6 +85,7 @@ export function validateBackgroundDraft(
   draft: BackgroundSelectionDraft,
   editionId: EditionId,
   definition: BackgroundDefinition | null,
+  options?: { originFeatDefinition?: FeatDefinition | null },
 ): BackgroundValidationResult {
   if (definition === null) {
     return { ok: false, issues: [{ code: 'background-not-found' }] }
@@ -100,6 +102,7 @@ export function validateBackgroundDraft(
     draftToBackgroundSelection(draft),
     editionId,
     definition,
+    options,
   )
 }
 
@@ -107,6 +110,7 @@ export function tryCommitBackgroundDraft(
   draft: BackgroundSelectionDraft,
   editionId: EditionId,
   definition: BackgroundDefinition | null,
+  options?: { originFeatDefinition?: FeatDefinition | null },
 ): {
   committed: BackgroundSelection | null
   validation: BackgroundValidationResult
@@ -133,6 +137,7 @@ export function tryCommitBackgroundDraft(
     selection,
     editionId,
     definition,
+    options,
   )
 
   if (!validation.ok) {

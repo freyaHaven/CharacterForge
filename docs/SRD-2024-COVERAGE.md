@@ -171,24 +171,25 @@ deferred requirement.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | ✅ | Origin feats + 7 epic boons + 4 Fighting Style feats + ASI feat, Grappler, Skilled |
-| UI | 🟡 | Grants via Background / ASI / Epic Boon / Fighting Style / Versatile; **Feats wizard step stays hidden** |
-| Persistence | 🟡 | Class choices + background origin; `character.feat` is **legacy-only** (new UI must not write it) |
-| Validation | ✅ | Unified eligibility + duplicate detection + nested feat sub-choices (`feat-choices:{slot}:…`) |
-| Derived | 🟡 | Magic Initiate spell entitlements; **Alert initiative ✅**; **Defense AC ✅**; Skilled skill/tool + ASI-feat score picks ✅; Savage Attacker / GWF / TWF / Archery combat still display-only |
-| Sheet | 🟡 | Overview lists grants with source labels + choice summaries; feat skills/tools on proficiencies |
-| Tests | 🟡 | `resolveCharacterFeatGrants`, Skilled/ASI nested choice tests, eligibility, progression tests |
+| Content | ✅ | **All SRD 5.2.1 feats** (Alert, Magic Initiate ×3 lists, Savage Attacker, Skilled, ASI, Grappler, 4 Fighting Styles, 7 Epic Boons) |
+| UI | 🟡 | Grants via Background / ASI / Epic Boon / Fighting Style / Versatile / Invocations; **Feats wizard step stays hidden** |
+| Persistence | ✅ | Class/species/background companion keys (`feat-choices:{slot}:…`); schema **v15**; `character.feat` legacy-only |
+| Validation | ✅ | Prerequisites, duplicates, nested ASI/spell-ability/Skilled choices, ASI max 20/30, Finish blocks incomplete grants |
+| Derived | 🟡 | Alert initiative ✅; Defense AC ✅; Epic Boon / Grappler / ASI score picks ✅; Truesight sense ✅; Night Spirit resistance metadata ✅; Magic Initiate spells + ability choice ✅; combat/teleport/dice/free-cast/invisibility still descriptive |
+| Sheet | ✅ | Overview grants + source labels; senses include feat Truesight; resistances list conditional feat metadata |
+| Tests | ✅ | `p211SrdFeats`, Fighting Style, Skilled/ASI nested, eligibility, content-defined fixtures |
 
-**Acquisition paths:** Background origin feat; class ASI feat mode; class Epic Boon
-feat-only grant. Shared pipeline: `resolveCharacterFeatGrants` → eligibility, dedup,
-spell resolution, Overview labels. Nested feat sub-choices (Skilled multi-select,
-ASI-feat +2/+1+1) persist as companion keys on the host choice map — never
-`character.feat`.
+**SRD feat checklist (P2.11):** Alert; Magic Initiate (Cleric/Druid/Wizard variants); Savage Attacker; Ability Score Improvement; Archery; Defense; Great Weapon Fighting; Two-Weapon Fighting; seven Epic Boons. Also bundled: Skilled, Grappler (SRD, outside the “15” narrative list).
 
-**Cycle guards:** The Ability Score Improvement feat is excluded from ASI
-“Choose a Feat” lists (`isFeatExcludedFromAsiFeatModePicker`) to avoid nesting
-ASI inside ASI. Epic Boon **may** select the ASI feat; nested score config uses
-companion keys under `epic-boon`.
+**Magic Initiate:** Shared factory; Int/Wis/Cha ability choice; spell-source isolation via existing entitlements; free cast / Spell Change descriptive until play sheet.
+
+**Epic Boons:** Level 19+ (Spell Recall also `has-spellcasting`); shared `plus-1` ASI choice (max 30; restricted abilities where SRD requires); Truesight / Night Spirit via generic `sense` / `damage-resistance` effects. Peerless Aim, Blink Steps, Improve Fate, Overcome Defenses combat, Free Casting, Merge with Shadows remain Phase 3.
+
+**Acquisition paths:** Background origin feat (nested choices under `feat-choices:origin-feat:…`); class ASI feat mode; Epic Boon; Fighting Style; catalogue feat grants; species Versatile; Warlock Lessons. Shared pipeline: `resolveCharacterFeatGrants` → eligibility, dedup, spell resolution, Overview labels.
+
+**Cycle guards:** ASI feat excluded from ASI “Choose a Feat” lists only. Epic Boon may select the ASI feat with nested score config.
+
+**No feat-id branches in generic resolvers** — behaviour is content metadata + reusable effects/choices.
 
 ---
 
@@ -513,6 +514,7 @@ code (documents through v11 at time of audit).
 - [x] **Bard (P2.8)** — full class, College of Lore, Magical Secrets list expansion, Magical Discoveries, Words of Creation, Jack of All Trades, full Bard spell list; Bardic Inspiration Phase 2 descriptive only
 - [x] **Sorcerer (P2.9)** — full class, Draconic Sorcery, prepared CHA full caster, Metamagic creation-time choices, Elemental Affinity resistance, Draconic Resilience HP/AC, full Sorcerer spell list; Font/Innate/points Phase 2 descriptive only
 - [x] **Warlock (P2.10)** — full class, Fiend Patron, CHA prepared Pact Magic, Eldritch Invocations (prereqs + `limitsByLevel`), Pact Boons as invocations, Mystic Arcanum, Contact Patron, Fiendish Resilience creation-time choice, full Warlock spell list; Magical Cunning / temp HP / familiar / conjure / Hurl Through Hell Phase 2 descriptive only
+- [x] **P2.11 Complete SRD 2024 feats** — all checklist feats + Epic Boon ASI/senses/resistances; Magic Initiate Druid + ability choice; no schema migration
 - [ ] **Species play-time features:** Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration
 - [x] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 via companion keys; ASI feat excluded from ASI feat-mode pickers only (cycle guard)
 - [x] **Skilled sub-choices** — multi-select skill/tool companion keys under feat grants
@@ -522,9 +524,10 @@ code (documents through v11 at time of audit).
 - [x] **Multiclass ability score prerequisites**
 - [x] **Champion Additional Fighting Style** (L7)
 - [x] **Species lineage spell entitlements** (Elf, Gnome, Tiefling, etc.)
-- [ ] **Magic Initiate / Alert / Savage Attacker derived mechanics** where rules affect sheet stats
+- [x] **Magic Initiate / Alert creator-time derived mechanics** (initiative, spell ability choice, entitlements); Savage Attacker / free cast / Spell Change remain play-time
   - Alert initiative proficiency: done (P2.1)
   - Defense Fighting Style AC: done (P2.2)
+  - Magic Initiate ability + Druid list: done (P2.11)
 - [x] **Creation-time nested starting-equipment trees** for bundled classes/backgrounds (Monk artisan tools, Soldier gaming set); future classes reuse the same architecture
 - [ ] **Additional class starting-equipment branch trees** where SRD offers more nested choices (e.g. remaining package sub-picks) — defs not yet authored, not a resolver gap
 - [ ] **Expand spell catalogue** as new casters ship (full lists per class, not stubs)
@@ -532,7 +535,7 @@ code (documents through v11 at time of audit).
 
 ### 2. Required for a usable character sheet during play
 
-- [x] **Apply feat modifiers** (Alert initiative proficiency, etc.) — Alert done; Defense AC done; other feats TBD
+- [x] **Apply feat modifiers** (Alert initiative, Defense AC, Epic Boon ASI/senses/resistances, Grappler ASI) — combat execution still Phase 3
 - [ ] **Apply fighting style / weapon mastery** combat effects (or clearly mark as reference-only)
   - Defense AC while wearing armour: done (P2.2)
 - [x] **Correct speed** from species choices (Wood Elf, Goliath) — Phase 1

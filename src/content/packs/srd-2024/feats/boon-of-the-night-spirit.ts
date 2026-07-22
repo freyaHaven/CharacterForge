@@ -1,4 +1,5 @@
 import type { FeatDefinition } from '../../../../domain/feat/types'
+import { createAsiScoreIncreaseChoice } from '../../../../domain/feat/asiScoreIncreaseChoice'
 import { SRD_2024_SOURCE } from '../source'
 
 export const boonOfTheNightSpiritSrd2024: FeatDefinition = {
@@ -35,6 +36,18 @@ export const boonOfTheNightSpiritSrd2024: FeatDefinition = {
         'While within Dim Light or Darkness, you have Resistance to all damage except Psychic and Radiant.',
     },
   ],
+  effects: [
+    {
+      kind: 'damage-resistance',
+      except: ['psychic', 'radiant'],
+      when: 'dim-light-or-darkness',
+    },
+  ],
   repeatable: false,
-  choices: [],
+  choices: [
+    createAsiScoreIncreaseChoice({
+      modes: ['plus-1'],
+      maximum: 30,
+    }),
+  ],
 }

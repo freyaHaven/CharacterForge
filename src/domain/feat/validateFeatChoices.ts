@@ -2,12 +2,17 @@ import {
   isCompleteAsiChoiceValue,
   parseAsiChoice,
 } from '../class/abilityScoreImprovement'
+import type { AbilityScores } from '../types'
+import {
+  getAsiScoreIncreaseAbilities,
+  getAsiScoreIncreaseMaximum,
+  getAsiScoreIncreaseModes,
+} from './asiScoreIncreaseChoice'
 import type { FeatChoice, FeatDefinition } from './types'
 import {
   getSkillOrToolProficiencyOption,
   listSkillOrToolProficiencyOptions,
 } from './skillOrToolProficiency'
-
 export type FeatChoiceValidationIssueCode =
   | 'missing-required-choice'
   | 'invalid-choice'
@@ -15,6 +20,7 @@ export type FeatChoiceValidationIssueCode =
   | 'duplicate-selection'
   | 'already-proficient'
   | 'unknown-choice'
+  | 'ability-score-maximum-exceeded'
 
 export type FeatChoiceValidationIssue = {
   code: FeatChoiceValidationIssueCode
@@ -31,6 +37,10 @@ export type FeatChoiceValidationContext = {
    * Defaults to true.
    */
   rejectAlreadyOwned?: boolean
+  /**
+   * Ability scores before this feat grant's ASI bonuses (for maximum checks).
+   */
+  abilityScoresBeforeGrant?: AbilityScores
 }
 
 export function listFeatChoiceOptions(choice: FeatChoice): {
@@ -113,6 +123,7 @@ function validateMultiSelectProficiencyChoice(
 function validateAsiScoreIncreaseChoice(
   choice: Extract<FeatChoice, { type: 'asi-score-increase' }>,
   value: string | string[] | undefined,
+  context: FeatChoiceValidationContext | undefined,
 ): FeatChoiceValidationIssue[] {
   if (value === undefined) {
     return choice.required
@@ -136,6 +147,57 @@ function validateAsiScoreIncreaseChoice(
       return [{ code: 'missing-required-choice', choiceId: choice.id }]
     }
     return [{ code: 'invalid-choice', choiceId: choice.id }]
+  }
+
+  const allowedModes = getAsiScoreIncreaseModes(choice)
+  const mode =
+    parsed.kind === 'plus-1-1'
+      ? 'plus-1-1'
+      : parsed.kind === 'plus-1'
+        ? 'plus-1'
+        : 'plus-2'
+
+  if (!allowedModes.includes(mode)) {
+    return [{ code: 'invalid-choice', choiceId: choice.id }]
+  }
+
+  const allowedAbilities = new Set(getAsiScoreIncreaseAbilities(choice))
+  const selectedAbilities =
+    parsed.kind === 'plus-1-1'
+      ? parsed.abilityIds
+      : [parsed.abilityId]
+
+  for (const abilityId of selectedAbilities) {
+    if (!allowedAbilities.has(abilityId)) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+  }
+
+  const maximum = getAsiScoreIncreaseMaximum(choice)
+  const scoresBefore = context?.abilityScoresBeforeGrant
+  if (scoresBefore !== undefined) {
+    const amountByAbility: Partial<Record<string, number>> = {}
+    if (parsed.kind === 'plus-2') {
+      amountByAbility[parsed.abilityId] = 2
+    } else if (parsed.kind === 'plus-1') {
+      amountByAbility[parsed.abilityId] = 1
+    } else {
+      for (const abilityId of parsed.abilityIds) {
+        amountByAbility[abilityId] = (amountByAbility[abilityId] ?? 0) + 1
+      }
+    }
+
+    for (const [abilityId, amount] of Object.entries(amountByAbility)) {
+      const before = scoresBefore[abilityId as keyof AbilityScores]
+      if (typeof before === 'number' && before + (amount ?? 0) > maximum) {
+        return [
+          {
+            code: 'ability-score-maximum-exceeded',
+            choiceId: choice.id,
+          },
+        ]
+      }
+    }
   }
 
   return []
@@ -176,7 +238,7 @@ export function validateFeatDefinitionChoices(
       continue
     }
 
-    issues.push(...validateAsiScoreIncreaseChoice(choice, value))
+    issues.push(...validateAsiScoreIncreaseChoice(choice, value, context))
   }
 
   for (const choiceId of Object.keys(choices)) {
@@ -197,7 +259,8 @@ export function areFeatDefinitionChoicesComplete(
   return !issues.some(
     (issue) =>
       issue.code === 'missing-required-choice' ||
-      issue.code === 'invalid-multi-select-count',
+      issue.code === 'invalid-multi-select-count' ||
+      issue.code === 'ability-score-maximum-exceeded',
   )
 }
 

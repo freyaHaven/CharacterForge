@@ -26,6 +26,7 @@ import type {
   SpellSourceState,
 } from '../../domain/spell/types'
 import type { Character } from '../../domain/types'
+import { resolveFeatSpellcastingAbility } from '../../domain/feat/resolveFeatSpellcastingAbility'
 import {
   collectSpeciesSpellcastingBlocks,
   getSpeciesSpellcastingAbility,
@@ -348,6 +349,7 @@ function formatGrantedFeatSpellcastingLabel(
 
 function collectFeatActiveEntitlements(
   spellcasting: FeatSpellcasting,
+  choices: Record<string, string | string[]>,
   sourceBase:
     | { kind: 'feat'; slot: 'character-feat'; featId: string }
     | {
@@ -361,6 +363,11 @@ function collectFeatActiveEntitlements(
   groupId: string,
   groupLabel: string,
 ): ActiveEntitlement[] {
+  const ability =
+    resolveFeatSpellcastingAbility(spellcasting, choices) ??
+    spellcasting.ability ??
+    'intelligence'
+
   return spellcasting.entitlements.map((entitlement) => ({
     source:
       sourceBase.kind === 'feat'
@@ -386,7 +393,7 @@ function collectFeatActiveEntitlements(
           },
     entitlement,
     label: entitlementLabel(entitlement, groupLabel),
-    ability: spellcasting.ability,
+    ability,
     sourceLevel: 1,
     groupId,
     groupLabel,
@@ -645,6 +652,7 @@ export async function resolveCharacterSpellcasting(
           activeEntitlements.push(
             ...collectFeatActiveEntitlements(
               feat.spellcasting,
+              grant.choices,
               {
                 kind: 'background-origin',
                 backgroundId: grant.source.backgroundId,
@@ -661,6 +669,7 @@ export async function resolveCharacterSpellcasting(
           activeEntitlements.push(
             ...collectFeatActiveEntitlements(
               feat.spellcasting,
+              grant.choices,
               {
                 kind: 'feat',
                 slot: 'character-feat',
@@ -674,6 +683,7 @@ export async function resolveCharacterSpellcasting(
           activeEntitlements.push(
             ...collectFeatActiveEntitlements(
               feat.spellcasting,
+              grant.choices,
               {
                 kind: 'feat',
                 slot: 'class-choice',
@@ -693,6 +703,7 @@ export async function resolveCharacterSpellcasting(
           activeEntitlements.push(
             ...collectFeatActiveEntitlements(
               feat.spellcasting,
+              grant.choices,
               {
                 kind: 'feat',
                 slot: 'class-choice',
@@ -716,6 +727,7 @@ export async function resolveCharacterSpellcasting(
         activeEntitlements.push(
           ...collectFeatActiveEntitlements(
             feat.spellcasting,
+            character.feat.choices,
             {
               kind: 'feat',
               slot: 'character-feat',

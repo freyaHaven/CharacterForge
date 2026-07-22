@@ -74,7 +74,7 @@ export function collectToolIdsFromFeatChoices(
 }
 
 /**
- * Ability bonuses from an ASI-feat nested `asi-score-increase` choice.
+ * Ability bonuses from nested `asi-score-increase` feat choices.
  */
 export function collectAsiFeatAbilityBonuses(
   definition: FeatDefinition,
@@ -93,6 +93,8 @@ export function collectAsiFeatAbilityBonuses(
     const parsed = parseAsiChoice(value)
     if (parsed?.kind === 'plus-2') {
       bonuses[parsed.abilityId] = (bonuses[parsed.abilityId] ?? 0) + 2
+    } else if (parsed?.kind === 'plus-1') {
+      bonuses[parsed.abilityId] = (bonuses[parsed.abilityId] ?? 0) + 1
     } else if (parsed?.kind === 'plus-1-1') {
       for (const abilityId of parsed.abilityIds) {
         bonuses[abilityId] = (bonuses[abilityId] ?? 0) + 1

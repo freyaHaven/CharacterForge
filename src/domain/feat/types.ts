@@ -1,5 +1,7 @@
+import type { AbilityId } from '../abilities/types'
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
+import type { DamageTypeId } from '../species/types'
 import type { FeatSpellcasting } from '../spell/types'
 
 export type { FeatSpellcasting } from '../spell/types'
@@ -16,12 +18,14 @@ export type FeatChoiceOption = {
   description?: string
 }
 
+export type AsiScoreIncreaseMode = 'plus-2' | 'plus-1-1' | 'plus-1'
+
 /**
  * Feat-owned sub-choices.
  *
  * - `single-select` — explicit options on the definition
  * - `multi-select` + `optionSource: 'skill-or-tool-proficiency'` — Skilled-style picks
- * - `asi-score-increase` — nested +2 / +1+1 for the Ability Score Improvement feat
+ * - `asi-score-increase` — nested ability increases (+2 / +1+1 / +1)
  *   (same encoding as class ASI ability modes; no nested feat branch)
  */
 export type FeatChoice =
@@ -46,6 +50,15 @@ export type FeatChoice =
       prompt: string
       type: 'asi-score-increase'
       required: boolean
+      /**
+       * Allowed increase patterns. Defaults to `plus-2` and `plus-1-1`
+       * (Ability Score Improvement feat). Epic Boons / Grappler use `plus-1`.
+       */
+      modes?: AsiScoreIncreaseMode[]
+      /** Eligible abilities. Defaults to all six. */
+      abilities?: AbilityId[]
+      /** Score ceiling after this increase (SRD: 20 or 30). Defaults to 20. */
+      maximum?: number
     }
 
 import type { FeatRequirement } from './requirements'
@@ -72,11 +85,17 @@ export type FeatBenefit = {
   description: string
 }
 
+export type FeatSenseKind =
+  | 'darkvision'
+  | 'blindsight'
+  | 'tremorsense'
+  | 'truesight'
+
 /**
  * Phase 2 creator-time feat effects only.
  *
  * Active-use / combat / temporary features (e.g. Alert Initiative Swap,
- * Great Weapon Fighting rerolls) stay as descriptive benefit text until
+ * Great Weapon Fighting damage treatment) stay as descriptive benefit text until
  * CharacterForge has a play-sheet action system.
  *
  * Proficiency grants from multi-select choices are resolved from choice
@@ -89,6 +108,20 @@ export type FeatEffect =
       amount: number
       /** Defense: only while wearing Light, Medium, or Heavy armour. */
       when?: 'wearing-armor'
+    }
+  | {
+      kind: 'sense'
+      sense: FeatSenseKind
+      rangeFeet: number
+    }
+  | {
+      kind: 'damage-resistance'
+      /** Single damage type. Omit when using `except` (all but listed). */
+      damageType?: DamageTypeId
+      /** Resist all damage except these types (Night Spirit). */
+      except?: DamageTypeId[]
+      /** Conditional resistance — sheet shows metadata; play evaluation deferred. */
+      when?: 'dim-light-or-darkness'
     }
 
 export type FeatDefinition = {

@@ -96,12 +96,18 @@ export async function buildCommittedStepValidationContext(
       characterFeatId: character.feat?.featId ?? null,
     }).ok
 
+  const originFeatDefinition =
+    backgroundDefinition !== null
+      ? (featById.get(backgroundDefinition.originFeat.featId) ?? null)
+      : null
+
   const committedBackgroundValid =
     character.background !== null &&
     validateBackgroundSelection(
       character.background,
       character.editionId,
       backgroundDefinition,
+      { originFeatDefinition },
     ).ok
 
   const committedFeatValid =

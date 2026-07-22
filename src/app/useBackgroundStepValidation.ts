@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { BackgroundCatalog } from '../domain/ports/backgroundCatalog'
+import type { FeatCatalog } from '../domain/ports/featCatalog'
 import type { EditionId } from '../domain/types'
 import type { BackgroundSelection } from '../domain/background/types'
 import {
@@ -16,6 +17,7 @@ export function useBackgroundStepValidation(
   editionId: EditionId,
   committedSelection: BackgroundSelection | null,
   backgroundDraft: BackgroundSelectionDraft | null,
+  featCatalog?: FeatCatalog,
 ) {
   const [backgroundDraftValidation, setBackgroundDraftValidation] =
     useState<BackgroundValidationResult | null>(null)
@@ -30,7 +32,7 @@ export function useBackgroundStepValidation(
 
     let isActive = true
 
-    void catalog.getBackground(backgroundDraft.backgroundId).then((definition) => {
+    void catalog.getBackground(backgroundDraft.backgroundId).then(async (definition) => {
       if (!isActive) {
         return
       }
@@ -43,15 +45,26 @@ export function useBackgroundStepValidation(
         return
       }
 
+      const originFeatDefinition =
+        featCatalog !== undefined
+          ? await featCatalog.getFeat(definition.originFeat.featId)
+          : null
+
+      if (!isActive) {
+        return
+      }
+
       setBackgroundDraftValidation(
-        validateBackgroundDraft(backgroundDraft, editionId, definition),
+        validateBackgroundDraft(backgroundDraft, editionId, definition, {
+          originFeatDefinition,
+        }),
       )
     })
 
     return () => {
       isActive = false
     }
-  }, [backgroundDraft, catalog, editionId])
+  }, [backgroundDraft, catalog, editionId, featCatalog])
 
   useEffect(() => {
     if (committedSelection === null) {
@@ -63,7 +76,16 @@ export function useBackgroundStepValidation(
 
     void catalog
       .getBackground(committedSelection.backgroundId)
-      .then((definition) => {
+      .then(async (definition) => {
+        if (!isActive) {
+          return
+        }
+
+        const originFeatDefinition =
+          definition !== null && featCatalog !== undefined
+            ? await featCatalog.getFeat(definition.originFeat.featId)
+            : null
+
         if (!isActive) {
           return
         }
@@ -73,6 +95,7 @@ export function useBackgroundStepValidation(
             committedSelection,
             editionId,
             definition,
+            { originFeatDefinition },
           ).ok,
         )
       })
@@ -80,7 +103,7 @@ export function useBackgroundStepValidation(
     return () => {
       isActive = false
     }
-  }, [catalog, committedSelection, editionId])
+  }, [catalog, committedSelection, editionId, featCatalog])
 
   return { backgroundDraftValidation, committedBackgroundValid }
 }

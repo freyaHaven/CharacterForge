@@ -1,8 +1,6 @@
 import type { FeatDefinition } from '../../../../domain/feat/types'
-import { ASI_FEAT_SCORE_CHOICE_ID } from '../../../../domain/class/epicBoon'
+import { createAsiScoreIncreaseChoice } from '../../../../domain/feat/asiScoreIncreaseChoice'
 import { SRD_2024_SOURCE } from '../source'
-
-export { ASI_FEAT_SCORE_CHOICE_ID }
 
 export const abilityScoreImprovementSrd2024: FeatDefinition = {
   id: 'srd-2024:ability-score-improvement',
@@ -29,11 +27,9 @@ export const abilityScoreImprovementSrd2024: FeatDefinition = {
   ],
   repeatable: true,
   choices: [
-    {
-      id: ASI_FEAT_SCORE_CHOICE_ID,
-      prompt: 'Ability Score Improvement',
-      type: 'asi-score-increase',
-      required: true,
-    },
+    createAsiScoreIncreaseChoice({
+      modes: ['plus-2', 'plus-1-1'],
+      maximum: 20,
+    }),
   ],
 }

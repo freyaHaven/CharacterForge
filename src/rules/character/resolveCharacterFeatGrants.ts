@@ -18,7 +18,10 @@ import {
   getFightingStyleFeatIdFromChoiceValue,
   isFightingStyleFeatGrantChoiceId,
 } from '../../domain/class/fightingStyle'
-import { readFeatGrantChoices } from '../../domain/feat/featGrantChoiceStorage'
+import {
+  BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
 import { getSpeciesVersatileFeatId } from '../../domain/species/resolveSpeciesDerived'
 import type { Character } from '../../domain/types'
 
@@ -175,7 +178,10 @@ export async function resolveCharacterFeatGrants(
         featNameById.get(featId) ?? background.originFeat.name
       grants.push({
         featId,
-        choices: {},
+        choices: readFeatGrantChoices(
+          character.background.choices,
+          BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+        ),
         source,
         displayLabel: formatGrantDisplayLabel(featName, source),
       })

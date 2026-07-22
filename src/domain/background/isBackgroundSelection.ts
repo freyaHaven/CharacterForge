@@ -54,5 +54,10 @@ export function isBackgroundSelection(
 
   const choices = candidate.choices as Record<string, unknown>
 
-  return Object.values(choices).every((choice) => typeof choice === 'string')
+  return Object.values(choices).every(
+    (choice) =>
+      typeof choice === 'string' ||
+      (Array.isArray(choice) &&
+        choice.every((entry) => typeof entry === 'string')),
+  )
 }

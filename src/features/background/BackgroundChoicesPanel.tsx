@@ -3,18 +3,18 @@ import type {
   BackgroundChoice,
   BackgroundDefinition,
 } from '../../domain/background/types'
+import type { FeatDefinition } from '../../domain/feat/types'
+import {
+  BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+  createFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
 import { getBackgroundChoiceDefinition } from '../../rules/background/backgroundRules'
 import type { BackgroundValidationIssue } from '../../rules/background/backgroundRules'
 import { AbilityScoreIncreaseChoice } from './AbilityScoreIncreaseChoice'
 import { formatBackgroundValidationIssue } from './formatBackgroundValidation'
 import { SingleSelectCardGrid } from '../choices/SingleSelectCardGrid'
-
-type BackgroundSingleSelectFieldProps = {
-  choice: BackgroundChoice
-  value: string | undefined
-  errorId: string | undefined
-  onChange: (choiceId: string, optionId: string | undefined) => void
-}
+import { FeatSubChoicesFields } from '../feat/FeatSubChoicesFields'
 
 function BackgroundSingleSelectField({
   choice,
@@ -49,15 +49,33 @@ function BackgroundSingleSelectField({
   )
 }
 
+type BackgroundSingleSelectFieldProps = {
+  choice: BackgroundChoice
+  value: string | undefined
+  errorId: string | undefined
+  onChange: (
+    choiceId: string,
+    optionId: string | string[] | undefined,
+  ) => void
+}
+
 type BackgroundChoicesPanelProps = {
   definition: BackgroundDefinition
   abilityScoreIncrease: AbilityScoreIncreaseSelection | null
-  choices: Record<string, string>
+  choices: Record<string, string | string[]>
   choiceIssueById: Map<string, BackgroundValidationIssue>
+  originFeatDefinition?: FeatDefinition | null
   onAbilityScoreIncreaseChange: (
     value: AbilityScoreIncreaseSelection | null,
   ) => void
-  onChoiceChange: (choiceId: string, optionId: string | undefined) => void
+  onChoiceChange: (
+    choiceId: string,
+    optionId: string | string[] | undefined,
+  ) => void
+  onOriginFeatChoiceChange?: (
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) => void
 }
 
 function getPlayerChoiceIds(definition: BackgroundDefinition): string[] {
@@ -79,14 +97,21 @@ export function BackgroundChoicesPanel({
   abilityScoreIncrease,
   choices,
   choiceIssueById,
+  originFeatDefinition = null,
   onAbilityScoreIncreaseChange,
   onChoiceChange,
+  onOriginFeatChoiceChange,
 }: BackgroundChoicesPanelProps) {
   const abilityIssue = choiceIssueById.get('ability-score-increase')
   const abilityErrorId =
     abilityIssue === undefined
       ? undefined
       : 'background-choice-error-ability-score-increase'
+
+  const originFeatChoices =
+    originFeatDefinition === null
+      ? {}
+      : readFeatGrantChoices(choices, BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID)
 
   return (
     <section
@@ -114,6 +139,44 @@ export function BackgroundChoicesPanel({
           ) : null}
         </div>
 
+        {originFeatDefinition !== null &&
+        originFeatDefinition.choices.length > 0 &&
+        onOriginFeatChoiceChange !== undefined ? (
+          <div className="background-picker__choice">
+            <h4 className="background-picker__origin-feat-heading">
+              {originFeatDefinition.name}
+            </h4>
+            <FeatSubChoicesFields
+              definition={originFeatDefinition}
+              choices={originFeatChoices}
+              ownedSkillIds={new Set()}
+              ownedToolIds={new Set()}
+              onChange={onOriginFeatChoiceChange}
+            />
+            {originFeatDefinition.choices.map((choice) => {
+              const storageKey = createFeatGrantChoiceStorageKey(
+                BACKGROUND_ORIGIN_FEAT_GRANT_SLOT_ID,
+                choice.id,
+              )
+              const issue =
+                choiceIssueById.get(choice.id) ??
+                choiceIssueById.get(storageKey)
+              if (issue === undefined) {
+                return null
+              }
+              return (
+                <p
+                  key={choice.id}
+                  className="background-picker__choice-error"
+                  role="alert"
+                >
+                  {formatBackgroundValidationIssue(issue)}
+                </p>
+              )
+            })}
+          </div>
+        ) : null}
+
         {getPlayerChoiceIds(definition).map((choiceId) => {
           const choice = getBackgroundChoiceDefinition(definition, choiceId)
 
@@ -126,12 +189,14 @@ export function BackgroundChoicesPanel({
             issue === undefined
               ? undefined
               : `background-choice-error-${choiceId}`
+          const rawValue = choices[choiceId]
+          const value = typeof rawValue === 'string' ? rawValue : undefined
 
           return (
             <div key={choiceId} className="background-picker__choice">
               <BackgroundSingleSelectField
                 choice={choice}
-                value={choices[choiceId]}
+                value={value}
                 errorId={errorId}
                 onChange={onChoiceChange}
               />

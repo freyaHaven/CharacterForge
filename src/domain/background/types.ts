@@ -69,5 +69,6 @@ export type BackgroundAbilityScoreBonuses = Partial<Record<AbilityId, number>>
 export type BackgroundSelection = {
   backgroundId: string
   abilityScoreIncrease: AbilityScoreIncreaseSelection
-  choices: Record<string, string>
+  /** Background tool/choice picks plus optional origin-feat companion keys. */
+  choices: Record<string, string | string[]>
 }
