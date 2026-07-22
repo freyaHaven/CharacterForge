@@ -139,18 +139,51 @@ describe('partitionFeatCatalogue', () => {
     ).toBe(false)
   })
 
-  it('reports entitlement category mismatches without selecting', async () => {
-    const alert = await createBundledFeatCatalog().getFeat('srd-2024:alert')
-    expect(alert).not.toBeNull()
+  it('hides redundant feats by default and surfaces them when toggled', async () => {
+    const feats = await createBundledFeatCatalog().listFeats('srd-2024')
+    const inventory = {
+      tokens: [
+        {
+          kind: 'spell-list-access' as const,
+          id: 'srd-2024:spell-list:wizard',
+          source: { label: 'Wizard', kind: 'class' },
+          how: 'fixed' as const,
+        },
+      ],
+    }
+
+    const hidden = partitionFeatCatalogue({
+      feats,
+      context: { ...baseContext, characterLevel: 1, hasSpellcasting: true },
+      policy: { kind: 'category', category: 'origin' },
+      showUnavailable: false,
+      showRedundant: false,
+      capabilityInventory: inventory,
+    })
 
     expect(
-      evaluateFeatForEntitlement(alert!, baseContext, {
-        kind: 'category',
-        category: 'fighting-style',
-      }),
-    ).toEqual({
-      eligible: false,
-      reason: 'Requires a Fighting Style entitlement',
+      hidden.visible.some(
+        (entry) => entry.definition.id === 'srd-2024:magic-initiate-wizard',
+      ),
+    ).toBe(false)
+    expect(
+      hidden.hiddenRedundant.some(
+        (entry) => entry.definition.id === 'srd-2024:magic-initiate-wizard',
+      ),
+    ).toBe(true)
+
+    const shown = partitionFeatCatalogue({
+      feats,
+      context: { ...baseContext, characterLevel: 1, hasSpellcasting: true },
+      policy: { kind: 'category', category: 'origin' },
+      showUnavailable: false,
+      showRedundant: true,
+      capabilityInventory: inventory,
     })
+
+    const mi = shown.visible.find(
+      (entry) => entry.definition.id === 'srd-2024:magic-initiate-wizard',
+    )
+    expect(mi?.overlap.status).toBe('redundant')
   })
 })

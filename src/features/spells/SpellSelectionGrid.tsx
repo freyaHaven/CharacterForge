@@ -24,6 +24,11 @@ export type SpellSelectionGridProps = {
   eligibilityBySpellId?: ReadonlyMap<string, SpellSelectionEligibility>
   /** When true, unchecked selectable cards are disabled (global pick limit). */
   atSelectionLimit?: boolean
+  /**
+   * When false (default), discouraged/redundant unselected spells are hidden.
+   * Selected redundant spells stay visible so they can be cleared.
+   */
+  showRedundant?: boolean
   onToggleSpell: (spellId: string) => void
 }
 
@@ -200,6 +205,32 @@ function SpellLevelAccordion({
   )
 }
 
+function isRedundantUnselected(
+  spellId: string,
+  selectedSpellIds: ReadonlySet<string>,
+  eligibilityBySpellId?: ReadonlyMap<string, SpellSelectionEligibility>,
+): boolean {
+  if (selectedSpellIds.has(spellId)) {
+    return false
+  }
+  return eligibilityBySpellId?.get(spellId)?.recommendation === 'discouraged'
+}
+
+function filterVisibleSpells(
+  spells: SpellDefinition[],
+  selectedSpellIds: ReadonlySet<string>,
+  eligibilityBySpellId: ReadonlyMap<string, SpellSelectionEligibility> | undefined,
+  showRedundant: boolean,
+): SpellDefinition[] {
+  if (showRedundant) {
+    return spells
+  }
+  return spells.filter(
+    (spell) =>
+      !isRedundantUnselected(spell.id, selectedSpellIds, eligibilityBySpellId),
+  )
+}
+
 /**
  * Responsive catalogue of spell selection cards.
  * Multi-level entitlements use per-level accordions; single-level stays a flat grid.
@@ -215,16 +246,25 @@ export function SpellSelectionGrid({
   invalidSpellIds,
   eligibilityBySpellId,
   atSelectionLimit = false,
+  showRedundant = false,
   onToggleSpell,
 }: SpellSelectionGridProps) {
+  const visibleSpells = filterVisibleSpells(
+    selectableSpells,
+    selectedSpellIds,
+    eligibilityBySpellId,
+    showRedundant,
+  )
+
   const spellsByLevel = new Map<number, SpellDefinition[]>()
-  for (const spell of selectableSpells) {
+  for (const spell of visibleSpells) {
     const bucket = spellsByLevel.get(spell.level) ?? []
     bucket.push(spell)
     spellsByLevel.set(spell.level, bucket)
   }
 
   const useLevelAccordions = levelRows.length > 0
+  const hiddenRedundantCount = selectableSpells.length - visibleSpells.length
 
   return (
     <section
@@ -275,7 +315,7 @@ export function SpellSelectionGrid({
         <SpellCardList
           idPrefix={idPrefix}
           listLabel={title}
-          spells={selectableSpells}
+          spells={visibleSpells}
           selectedSpellIds={selectedSpellIds}
           invalidSpellIds={invalidSpellIds}
           eligibilityBySpellId={eligibilityBySpellId}
@@ -283,6 +323,14 @@ export function SpellSelectionGrid({
           onToggleSpell={onToggleSpell}
         />
       )}
+
+      {!showRedundant && hiddenRedundantCount > 0 ? (
+        <p className="spell-selection-grid__redundant-hint" role="status">
+          {hiddenRedundantCount} redundant{' '}
+          {hiddenRedundantCount === 1 ? 'choice' : 'choices'} hidden — enable
+          “Show redundant choices” to browse them.
+        </p>
+      ) : null}
     </section>
   )
 }

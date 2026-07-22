@@ -140,12 +140,12 @@ function buildDuplicateReason(
   const parts: string[] = []
   if (otherSourceOrigins.length > 0) {
     parts.push(
-      `Already available from ${otherSourceOrigins.map(formatOrigin).join('; ')}`,
+      `Already known from: ${otherSourceOrigins.map(formatOrigin).join('; ')}`,
     )
   }
   if (currentSourceOrigins.length > 0) {
     parts.push(
-      `Already available from ${currentSourceOrigins.map(formatOrigin).join('; ')}`,
+      `Already known from: ${currentSourceOrigins.map(formatOrigin).join('; ')}`,
     )
   }
   if (parts.length === 0) {

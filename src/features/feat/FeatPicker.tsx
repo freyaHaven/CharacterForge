@@ -12,6 +12,8 @@ import {
   partitionFeatCatalogue,
   type FeatEntitlementPolicy,
 } from '../../domain/feat/catalogueEligibility'
+import type { CharacterCapabilityInventory } from '../../domain/capability/types'
+import { emptyCapabilityInventory } from '../../domain/capability/types'
 import { validateFeatSelection } from '../../rules/feat/featRules'
 import { FeatCatalogCard } from './FeatCatalogCard'
 import { FeatOverview } from './FeatOverview'
@@ -37,6 +39,8 @@ type FeatPickerProps = {
   eligibilityContext?: FeatEligibilityContext
   /** Entitlement policy for this picker (defaults to any qualifying feat). */
   entitlementPolicy?: FeatEntitlementPolicy
+  /** Character capabilities for redundant-feat detection. */
+  capabilityInventory?: CharacterCapabilityInventory
   /** Optional override used by tests. */
   getEligibility?: (definition: FeatDefinition) => FeatEligibility
 }
@@ -50,12 +54,14 @@ export function FeatPicker({
   onCommittedSelectionChange,
   eligibilityContext = EMPTY_FEAT_ELIGIBILITY_CONTEXT,
   entitlementPolicy = { kind: 'any-qualifying' },
+  capabilityInventory = emptyCapabilityInventory(),
   getEligibility,
 }: FeatPickerProps) {
   const [featList, setFeatList] = useState<FeatDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showUnavailable, setShowUnavailable] = useState(false)
+  const [showRedundant, setShowRedundant] = useState(false)
 
   const activeFeatId = draft?.featId ?? committedSelection?.featId ?? null
   const activeChoices = draft?.choices ?? committedSelection?.choices ?? {}
@@ -79,23 +85,27 @@ export function FeatPicker({
       for (const definition of featList) {
         const eligibility = getEligibility(definition)
         const isSelected = activeFeatId === definition.id
+        const overlap = { status: 'recommended' as const, reasons: [] }
         if (eligibility.eligible) {
           eligible.push({
             definition,
             eligibility,
             retainedInvalid: false,
+            overlap,
           })
         } else if (isSelected) {
           retained.push({
             definition,
             eligibility,
             retainedInvalid: true,
+            overlap,
           })
         } else {
           unavailable.push({
             definition,
             eligibility,
             retainedInvalid: false,
+            overlap,
           })
         }
       }
@@ -111,13 +121,17 @@ export function FeatPicker({
       policy: entitlementPolicy,
       selectedFeatId: activeFeatId,
       showUnavailable,
+      showRedundant,
+      capabilityInventory,
     }).visible
   }, [
     activeFeatId,
+    capabilityInventory,
     eligibilityContext,
     entitlementPolicy,
     featList,
     getEligibility,
+    showRedundant,
     showUnavailable,
   ])
 
@@ -171,6 +185,7 @@ export function FeatPicker({
   useEffect(() => {
     setSearchQuery('')
     setShowUnavailable(false)
+    setShowRedundant(false)
   }, [editionId])
 
   useEffect(() => {
@@ -321,6 +336,16 @@ export function FeatPicker({
                 />
                 <span>Show unavailable feats</span>
               </label>
+              <label className="feat-picker__show-unavailable">
+                <input
+                  type="checkbox"
+                  checked={showRedundant}
+                  onChange={(event) => {
+                    setShowRedundant(event.target.checked)
+                  }}
+                />
+                <span>Show redundant choices</span>
+              </label>
             </div>
 
             {filteredEntries.length === 0 ? (
@@ -345,6 +370,7 @@ export function FeatPicker({
                     isSelected={activeFeatId === entry.definition.id}
                     eligibility={entry.eligibility}
                     retainedInvalid={entry.retainedInvalid}
+                    overlap={entry.overlap}
                     onSelect={previewFeat}
                   />
                 ))}

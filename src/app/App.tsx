@@ -29,6 +29,7 @@ import { BasicsStep } from './wizard/steps/BasicsStep'
 import { ClassStep } from './wizard/steps/ClassStep'
 import { EquipmentStep } from './wizard/steps/EquipmentStep'
 import { FeatsStep } from './wizard/steps/FeatsStep'
+import { buildCharacterCapabilityInventory } from '../rules/capability/buildCharacterCapabilityInventory'
 import { InventoryStep } from './wizard/steps/InventoryStep'
 import { SpellsStep } from './wizard/steps/SpellsStep'
 import { ReviewStep } from './wizard/steps/ReviewStep'
@@ -386,6 +387,9 @@ export default function App({ randomSource = Math.random }: AppProps) {
                     hasFightingStyle: true,
                     takenFeatIds: [],
                   }}
+                  capabilityInventory={buildCharacterCapabilityInventory({
+                    spellcasting: editor.spellcastingReview,
+                  })}
                   onDraftChange={feat.setFeatDraft}
                   onCommittedSelectionChange={feat.commitFeatSelection}
                 />

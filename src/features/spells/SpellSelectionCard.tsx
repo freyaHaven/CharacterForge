@@ -80,7 +80,7 @@ export function SpellSelectionCard({
                 : 'spell-selection-card__badge spell-selection-card__badge--elsewhere'
             }
           >
-            {isBlocked ? 'Already available' : 'Also available elsewhere'}
+            {isBlocked ? 'Already known' : 'Redundant'}
           </span>
           <span id={eligibilityId} className="visually-hidden">
             {duplicateReason}

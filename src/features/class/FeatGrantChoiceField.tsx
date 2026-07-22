@@ -8,6 +8,8 @@ import {
   partitionFeatCatalogue,
   type FeatEntitlementPolicy,
 } from '../../domain/feat/catalogueEligibility'
+import type { CharacterCapabilityInventory } from '../../domain/capability/types'
+import { emptyCapabilityInventory } from '../../domain/capability/types'
 import { selectEpicBoonFeat } from '../../domain/class/epicBoon'
 import { getEpicBoonFeatIdFromChoiceValue } from '../../domain/class/epicBoon'
 import { getFightingStyleFeatIdFromChoiceValue } from '../../domain/class/fightingStyle'
@@ -21,6 +23,8 @@ export type FeatGrantChoiceFieldProps = {
   featCatalog: FeatCatalog
   takenFeatIds: readonly string[]
   eligibilityContext: FeatEligibilityContext
+  /** Character capabilities for redundant-feat detection. */
+  capabilityInventory?: CharacterCapabilityInventory
   /** Optional recommended feat id (e.g. class Epic Boon recommendation). */
   recommendedFeatId?: string | null
   /** When set, only feats in this category are listed. */
@@ -74,6 +78,7 @@ export function FeatGrantChoiceField({
   featCatalog,
   takenFeatIds,
   eligibilityContext,
+  capabilityInventory = emptyCapabilityInventory(),
   recommendedFeatId = null,
   categoryFilter = null,
   alternateOptions = [],
@@ -87,6 +92,7 @@ export function FeatGrantChoiceField({
   const reactId = useId()
   const [feats, setFeats] = useState<FeatDefinition[]>([])
   const [showUnavailable, setShowUnavailable] = useState(false)
+  const [showRedundant, setShowRedundant] = useState(false)
   const selectedFeatId =
     categoryFilter === 'fighting-style'
       ? getFightingStyleFeatIdFromChoiceValue(value)
@@ -139,14 +145,18 @@ export function FeatGrantChoiceField({
       policy,
       selectedFeatId,
       showUnavailable,
+      showRedundant,
+      capabilityInventory,
     })
     return sortCatalogueEntries(partitioned.visible, recommendedFeatId)
   }, [
+    capabilityInventory,
     contextWithTaken,
     feats,
     policy,
     recommendedFeatId,
     selectedFeatId,
+    showRedundant,
     showUnavailable,
   ])
 
@@ -171,6 +181,16 @@ export function FeatGrantChoiceField({
           }}
         />
         <span>Show unavailable feats</span>
+      </label>
+      <label className="feat-picker__show-unavailable">
+        <input
+          type="checkbox"
+          checked={showRedundant}
+          onChange={(event) => {
+            setShowRedundant(event.target.checked)
+          }}
+        />
+        <span>Show redundant choices</span>
       </label>
       <div
         className="class-picker__asi-feat-options"
@@ -249,6 +269,12 @@ export function FeatGrantChoiceField({
                 <span className="class-picker__choice-option-description">
                   {feat.summary}
                 </span>
+                {entry.overlap.status === 'redundant' && !disabled ? (
+                  <span className="class-picker__choice-option-reason class-picker__choice-option-reason--redundant">
+                    {entry.overlap.reasons[0]?.message ??
+                      'Most benefits overlap with capabilities you already have.'}
+                  </span>
+                ) : null}
                 {disabled ? (
                   <span className="class-picker__choice-option-reason">
                     {!entry.eligibility.eligible

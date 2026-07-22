@@ -132,6 +132,7 @@ function SelectEntitlementEditor({
   availableSpells: SpellDefinition[]
   invalidSpellIds: ReadonlySet<string>
 }) {
+  const [showRedundant, setShowRedundant] = useState(false)
   const selected = new Set(entitlement.selectedSpellIds)
   const grantedIds = new Set(
     entitlement.grantedSpells.map((grant) => grant.spellId),
@@ -337,6 +338,16 @@ function SelectEntitlementEditor({
       entitlement.description.length > 0 ? (
         <p className="spells-source__note">{entitlement.description}</p>
       ) : null}
+      <label className="feat-picker__show-unavailable spells-source__redundant-toggle">
+        <input
+          type="checkbox"
+          checked={showRedundant}
+          onChange={(event) => {
+            setShowRedundant(event.target.checked)
+          }}
+        />
+        <span>Show redundant choices</span>
+      </label>
       <SpellSelectionGrid
         idPrefix={idPrefix}
         title={entitlement.label}
@@ -348,6 +359,7 @@ function SelectEntitlementEditor({
         invalidSpellIds={invalidSpellIds}
         eligibilityBySpellId={eligibilityBySpellId}
         atSelectionLimit={atSelectionLimit}
+        showRedundant={showRedundant}
         onToggleSpell={toggle}
       />
     </>

@@ -4,6 +4,13 @@ import {
   type FeatEligibility,
   type FeatEligibilityContext,
 } from './eligibility'
+import { deriveFeatOptionGrants } from '../capability/deriveFeatOptionGrants'
+import { evaluateOptionOverlap } from '../capability/evaluateOptionOverlap'
+import type {
+  CharacterCapabilityInventory,
+  OverlapVerdict,
+} from '../capability/types'
+import { emptyCapabilityInventory } from '../capability/types'
 
 /**
  * Why a feat is being offered — entitlement category, not UI chrome.
@@ -33,6 +40,8 @@ export type FeatCatalogueEntry = {
    * Always kept visible so the player can clear or replace it.
    */
   retainedInvalid: boolean
+  /** Capability-overlap recommendation when inventory was provided. */
+  overlap: OverlapVerdict
 }
 
 export type PartitionFeatCatalogueInput = {
@@ -43,15 +52,27 @@ export type PartitionFeatCatalogueInput = {
   selectedFeatId?: string | null
   /** When true, ineligible feats appear (disabled) alongside eligible ones. */
   showUnavailable: boolean
+  /**
+   * When true, eligible-but-redundant feats appear (labelled) alongside recommended ones.
+   * Default hides them so the catalogue prioritises meaningful choices.
+   */
+  showRedundant?: boolean
   /** Feat ids excluded from the catalogue entirely (e.g. ASI feat itself). */
   excludeFeatIds?: readonly string[]
+  /**
+   * Character capability inventory for overlap evaluation.
+   * When omitted, all eligible feats are treated as recommended.
+   */
+  capabilityInventory?: CharacterCapabilityInventory
 }
 
 export type PartitionFeatCatalogueResult = {
-  /** Entries to render in the selectable catalogue (order preserved from input after filter). */
+  /** Entries to render in the selectable catalogue. */
   visible: FeatCatalogueEntry[]
-  /** Ineligible entries hidden unless `showUnavailable` (excludes retained-invalid). */
+  /** Ineligible entries hidden unless `showUnavailable`. */
   hiddenUnavailable: FeatCatalogueEntry[]
+  /** Eligible-but-redundant entries hidden unless `showRedundant`. */
+  hiddenRedundant: FeatCatalogueEntry[]
 }
 
 function categoryAllowed(
@@ -92,6 +113,13 @@ function formatCategoryForReason(category: FeatCategory): string {
   }
 }
 
+function evaluateOverlapForFeat(
+  definition: FeatDefinition,
+  inventory: CharacterCapabilityInventory,
+): OverlapVerdict {
+  return evaluateOptionOverlap(deriveFeatOptionGrants(definition), inventory)
+}
+
 /**
  * Entitlement-aware eligibility: category policy first, then character prerequisites.
  */
@@ -113,16 +141,19 @@ export function evaluateFeatForEntitlement(
 /**
  * Partitions a feat catalogue for entitlement pickers.
  *
- * Default: eligible feats only, plus any committed invalid selection.
- * Optional: surface unavailable feats as disabled entries with reasons.
+ * Default: recommended eligible feats only, plus any committed invalid selection.
+ * Optional toggles surface unavailable and/or redundant feats.
  */
 export function partitionFeatCatalogue(
   input: PartitionFeatCatalogueInput,
 ): PartitionFeatCatalogueResult {
   const exclude = new Set(input.excludeFeatIds ?? [])
   const selectedFeatId = input.selectedFeatId ?? null
+  const inventory = input.capabilityInventory ?? emptyCapabilityInventory()
+  const showRedundant = input.showRedundant === true
 
-  const eligible: FeatCatalogueEntry[] = []
+  const recommended: FeatCatalogueEntry[] = []
+  const redundant: FeatCatalogueEntry[] = []
   const retainedInvalid: FeatCatalogueEntry[] = []
   const unavailable: FeatCatalogueEntry[] = []
   const seenIds = new Set<string>()
@@ -137,15 +168,22 @@ export function partitionFeatCatalogue(
       input.context,
       input.policy,
     )
+    const overlap = evaluateOverlapForFeat(definition, inventory)
     const isSelected = selectedFeatId === definition.id
 
     if (eligibility.eligible) {
-      eligible.push({
+      const entry: FeatCatalogueEntry = {
         definition,
         eligibility,
         retainedInvalid: false,
-      })
+        overlap,
+      }
       seenIds.add(definition.id)
+      if (overlap.status === 'redundant') {
+        redundant.push(entry)
+      } else {
+        recommended.push(entry)
+      }
       continue
     }
 
@@ -154,6 +192,7 @@ export function partitionFeatCatalogue(
         definition,
         eligibility,
         retainedInvalid: true,
+        overlap,
       })
       seenIds.add(definition.id)
       continue
@@ -163,10 +202,10 @@ export function partitionFeatCatalogue(
       definition,
       eligibility,
       retainedInvalid: false,
+      overlap,
     })
   }
 
-  // Soft-invalid: selected feat missing from catalogue (wrong edition / pack).
   if (
     selectedFeatId !== null &&
     !seenIds.has(selectedFeatId) &&
@@ -181,16 +220,37 @@ export function partitionFeatCatalogue(
           reason: 'This feat is no longer available for this character',
         },
         retainedInvalid: true,
+        overlap: { status: 'unavailable', reasons: [] },
       })
     }
   }
 
-  const visible: FeatCatalogueEntry[] = [...eligible, ...retainedInvalid]
+  const hiddenRedundant = showRedundant
+    ? []
+    : redundant.filter((entry) => entry.definition.id !== selectedFeatId)
+
+  const visibleRedundant = showRedundant
+    ? redundant
+    : redundant.filter((entry) => entry.definition.id === selectedFeatId)
+
+  const visible: FeatCatalogueEntry[] = [
+    ...recommended,
+    ...visibleRedundant,
+    ...retainedInvalid,
+  ]
 
   if (input.showUnavailable) {
     visible.push(...unavailable)
-    return { visible, hiddenUnavailable: [] }
+    return {
+      visible,
+      hiddenUnavailable: [],
+      hiddenRedundant,
+    }
   }
 
-  return { visible, hiddenUnavailable: unavailable }
+  return {
+    visible,
+    hiddenUnavailable: unavailable,
+    hiddenRedundant,
+  }
 }

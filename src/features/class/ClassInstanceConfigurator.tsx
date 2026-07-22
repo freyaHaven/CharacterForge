@@ -24,6 +24,10 @@ import {
   characterHasFightingStyle,
   characterHasSpellcasting,
 } from '../../rules/character/buildFeatEligibilityContext'
+import {
+  buildCharacterCapabilityInventory,
+  buildSpellListAccessTokensFromClasses,
+} from '../../rules/capability/buildCharacterCapabilityInventory'
 import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { getIneligibleClassChoiceOptionIds } from '../../domain/class/classOptionPrerequisites'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
@@ -214,6 +218,17 @@ export function ClassInstanceConfigurator({
       takenFeatIds: [],
     }),
     [abilityScores, characterLevel, classesForEligibility, definitionsMap],
+  )
+
+  const capabilityInventory = useMemo(
+    () =>
+      buildCharacterCapabilityInventory({
+        extraTokens: buildSpellListAccessTokensFromClasses(
+          classesForEligibility,
+          definitionsMap,
+        ),
+      }),
+    [classesForEligibility, definitionsMap],
   )
 
   const crossInstanceTakenFeatIds = useMemo(() => {
@@ -414,6 +429,7 @@ export function ClassInstanceConfigurator({
                                   ...crossInstanceTakenFeatIds,
                                 ]}
                                 eligibilityContext={eligibilityContext}
+                                capabilityInventory={capabilityInventory}
                                 featChoices={readFeatGrantChoices(
                                   activeChoices,
                                   linkedSingleSelect.id,
@@ -470,6 +486,7 @@ export function ClassInstanceConfigurator({
                                   ...crossInstanceTakenFeatIds,
                                 ]}
                                 eligibilityContext={eligibilityContext}
+                                capabilityInventory={capabilityInventory}
                                 recommendedFeatId={
                                   linkedSingleSelect.recommendedFeatId ?? null
                                 }
@@ -529,6 +546,7 @@ export function ClassInstanceConfigurator({
                                   ...crossInstanceTakenFeatIds,
                                 ]}
                                 eligibilityContext={eligibilityContext}
+                                capabilityInventory={capabilityInventory}
                                 recommendedFeatId={
                                   linkedSingleSelect.recommendedFeatId ?? null
                                 }
@@ -590,6 +608,7 @@ export function ClassInstanceConfigurator({
                                   ...crossInstanceTakenFeatIds,
                                 ]}
                                 eligibilityContext={eligibilityContext}
+                                capabilityInventory={capabilityInventory}
                                 recommendedFeatId={
                                   linkedSingleSelect.recommendedFeatId ?? null
                                 }

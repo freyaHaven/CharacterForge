@@ -162,7 +162,7 @@ describe('SpellSelectionCard', () => {
           alreadyAvailableFromOtherSource: true,
           duplicateWithinCurrentSource: false,
           ownedByCurrentEntitlement: false,
-          duplicateReason: 'Already available from Cleric — Cantrips',
+          duplicateReason: 'Already known from: Cleric — Cantrips',
           otherSourceOrigins: [],
           currentSourceOrigins: [],
           policy: 'forbid',
@@ -173,7 +173,7 @@ describe('SpellSelectionCard', () => {
       />,
     )
 
-    expect(screen.getByText('Already available')).toBeInTheDocument()
+    expect(screen.getByText('Already known')).toBeInTheDocument()
     expect(screen.getByRole('checkbox')).toBeDisabled()
     await user.click(screen.getByText('Guidance'))
     expect(onToggle).not.toHaveBeenCalled()

@@ -3,6 +3,7 @@ import type { FeatEligibility } from '../../domain/feat/eligibility'
 import {
   formatFeatPrerequisite,
 } from '../../domain/feat/eligibility'
+import type { OverlapVerdict } from '../../domain/capability/types'
 import { SelectionCheckIcon } from '../species/SpeciesUiIcons'
 import {
   formatFeatCategoryBadge,
@@ -14,6 +15,7 @@ type FeatCatalogCardProps = {
   eligibility: FeatEligibility
   /** Committed selection that fails eligibility — shown with validation copy. */
   retainedInvalid?: boolean
+  overlap?: OverlapVerdict | null
   onSelect: (featDefinition: FeatDefinition) => void
 }
 
@@ -22,10 +24,14 @@ export function FeatCatalogCard({
   isSelected,
   eligibility,
   retainedInvalid = false,
+  overlap = null,
   onSelect,
 }: FeatCatalogCardProps) {
   const cardNameId = `feat-card-${featDefinition.id}-name`
   const isDisabled = !eligibility.eligible
+  const isRedundant =
+    eligibility.eligible && overlap?.status === 'redundant'
+  const redundantReason = overlap?.reasons[0]?.message
   const prerequisiteLabel = formatFeatPrerequisite(featDefinition.prerequisite)
 
   const className = [
@@ -33,6 +39,7 @@ export function FeatCatalogCard({
     isSelected ? 'feat-picker__card--selected' : null,
     isDisabled ? 'feat-picker__card--disabled' : null,
     retainedInvalid ? 'feat-picker__card--invalid' : null,
+    isRedundant ? 'feat-picker__card--redundant' : null,
   ]
     .filter(Boolean)
     .join(' ')
@@ -65,6 +72,9 @@ export function FeatCatalogCard({
         <span className="feat-picker__card-category">
           {formatFeatCategoryBadge(featDefinition.category)}
         </span>
+        {isRedundant ? (
+          <span className="feat-picker__card-redundant-badge">Redundant</span>
+        ) : null}
         <span className="feat-picker__card-summary">
           {featDefinition.summary}
         </span>
@@ -72,14 +82,18 @@ export function FeatCatalogCard({
           className={
             isDisabled
               ? 'feat-picker__card-prereq feat-picker__card-prereq--failed'
-              : 'feat-picker__card-prereq'
+              : isRedundant
+                ? 'feat-picker__card-prereq feat-picker__card-prereq--redundant'
+                : 'feat-picker__card-prereq'
           }
         >
           {isDisabled
             ? retainedInvalid
               ? `Invalid selection: ${eligibility.reason}`
               : eligibility.reason
-            : `Prerequisite: ${prerequisiteLabel}`}
+            : isRedundant && redundantReason !== undefined
+              ? redundantReason
+              : `Prerequisite: ${prerequisiteLabel}`}
         </span>
       </button>
     </li>

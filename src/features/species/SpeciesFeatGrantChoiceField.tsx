@@ -46,6 +46,7 @@ export function SpeciesFeatGrantChoiceField({
   const reactId = useId()
   const [feats, setFeats] = useState<FeatDefinition[]>([])
   const [showUnavailable, setShowUnavailable] = useState(false)
+  const [showRedundant, setShowRedundant] = useState(false)
   const selectedFeatId =
     typeof value === 'string' && value.length > 0 ? value : null
 
@@ -78,6 +79,7 @@ export function SpeciesFeatGrantChoiceField({
       policy: { kind: 'category', category: featCategory },
       selectedFeatId,
       showUnavailable,
+      showRedundant,
     })
 
     return [...partitioned.visible].sort((left, right) => {
@@ -97,6 +99,7 @@ export function SpeciesFeatGrantChoiceField({
     feats,
     recommendedFeatId,
     selectedFeatId,
+    showRedundant,
     showUnavailable,
   ])
 
@@ -116,6 +119,16 @@ export function SpeciesFeatGrantChoiceField({
           }}
         />
         <span>Show unavailable feats</span>
+      </label>
+      <label className="feat-picker__show-unavailable">
+        <input
+          type="checkbox"
+          checked={showRedundant}
+          onChange={(event) => {
+            setShowRedundant(event.target.checked)
+          }}
+        />
+        <span>Show redundant choices</span>
       </label>
       <div
         className="class-picker__asi-feat-options"
@@ -176,6 +189,11 @@ export function SpeciesFeatGrantChoiceField({
                         ? `Invalid selection: ${entry.eligibility.reason}`
                         : entry.eligibility.reason
                       : null}
+                  </span>
+                ) : entry.overlap.status === 'redundant' ? (
+                  <span className="class-picker__choice-option-reason class-picker__choice-option-reason--redundant">
+                    {entry.overlap.reasons[0]?.message ??
+                      'Most benefits overlap with capabilities you already have.'}
                   </span>
                 ) : null}
               </label>

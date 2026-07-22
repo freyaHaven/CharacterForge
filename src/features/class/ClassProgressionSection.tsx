@@ -22,6 +22,10 @@ import {
   characterHasFightingStyle,
   characterHasSpellcasting,
 } from '../../rules/character/buildFeatEligibilityContext'
+import {
+  buildCharacterCapabilityInventory,
+  buildSpellListAccessTokensFromClasses,
+} from '../../rules/capability/buildCharacterCapabilityInventory'
 import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { validateClassSelection } from '../../rules/class/classRules'
 import { resolveDeferredRequirementsForInstances } from '../../rules/class/resolveCharacterDeferredRequirements'
@@ -173,6 +177,17 @@ export function ClassProgressionSection({
       classDefinitionsById,
       eligibilityClasses,
     ],
+  )
+
+  const capabilityInventory = useMemo(
+    () =>
+      buildCharacterCapabilityInventory({
+        extraTokens: buildSpellListAccessTokensFromClasses(
+          eligibilityClasses,
+          classDefinitionsById,
+        ),
+      }),
+    [classDefinitionsById, eligibilityClasses],
   )
 
   const crossInstanceTakenFeatIds = useMemo(() => {
@@ -383,6 +398,7 @@ export function ClassProgressionSection({
                           ...crossInstanceTakenFeatIds,
                         ]}
                         eligibilityContext={eligibilityContext}
+                        capabilityInventory={capabilityInventory}
                         featChoices={readFeatGrantChoices(
                           activeChoices,
                           item.singleSelectChoice.id,
@@ -427,6 +443,7 @@ export function ClassProgressionSection({
                           ...crossInstanceTakenFeatIds,
                         ]}
                         eligibilityContext={eligibilityContext}
+                        capabilityInventory={capabilityInventory}
                         recommendedFeatId={
                           item.singleSelectChoice.recommendedFeatId ?? null
                         }
@@ -474,6 +491,7 @@ export function ClassProgressionSection({
                           ...crossInstanceTakenFeatIds,
                         ]}
                         eligibilityContext={eligibilityContext}
+                        capabilityInventory={capabilityInventory}
                         recommendedFeatId={
                           item.singleSelectChoice.recommendedFeatId ?? null
                         }
@@ -523,6 +541,7 @@ export function ClassProgressionSection({
                           ...crossInstanceTakenFeatIds,
                         ]}
                         eligibilityContext={eligibilityContext}
+                        capabilityInventory={capabilityInventory}
                         recommendedFeatId={
                           item.singleSelectChoice.recommendedFeatId ?? null
                         }
