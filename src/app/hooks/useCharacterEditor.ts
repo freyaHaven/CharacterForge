@@ -51,9 +51,21 @@ import type {
   EquipmentItemDefinition,
   EquipmentLoadout,
   EquipmentSelection,
+  InventoryLocation,
 } from '../../domain/equipment/types'
 import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
 import { ownedItemIdsFromInventoryEntries } from '../../domain/equipment/seedInventory'
+import {
+  adjustInventoryCurrency,
+  adjustInventoryEntryQuantity,
+  mergeInventoryStacks,
+  moveInventoryEntry,
+  removeInventoryEntry,
+  setInventoryCurrency,
+  setInventoryEntryQuantity,
+  splitInventoryStack,
+  type InventoryMutationResult,
+} from '../../domain/equipment/inventoryMutations'
 import { reconcileEquipmentLoadout } from '../../domain/equipment/equipmentLoadout'
 import {
   formatGoldPieces,
@@ -404,6 +416,139 @@ export function useCharacterEditor({
       }))
     },
     [clearSaveMessage],
+  )
+
+  const loadInventoryMutationDefinitions = useCallback(async () => {
+    const definitions = new Map<string, EquipmentItemDefinition>()
+    const itemIds = new Set(
+      character.equipment.inventory.entries.map((entry) => entry.itemId),
+    )
+
+    await Promise.all(
+      [...itemIds].map(async (itemId) => {
+        const definition = await equipmentCatalog.getEquipment(itemId)
+        if (definition !== null) {
+          definitions.set(itemId, definition)
+        }
+      }),
+    )
+
+    return definitions
+  }, [character.equipment.inventory.entries, equipmentCatalog])
+
+  const applyInventoryMutation = useCallback(
+    async (
+      mutate: (
+        equipment: typeof character.equipment,
+        definitions: ReadonlyMap<string, EquipmentItemDefinition>,
+      ) => InventoryMutationResult,
+    ): Promise<InventoryMutationResult> => {
+      const definitions = await loadInventoryMutationDefinitions()
+      clearSaveMessage()
+
+      let result: InventoryMutationResult = {
+        ok: false,
+        reason: 'entry-not-found',
+      }
+
+      setCharacter((current) => {
+        result = mutate(current.equipment, definitions)
+        if (!result.ok) {
+          return current
+        }
+
+        return {
+          ...current,
+          equipment: result.equipment,
+        }
+      })
+
+      return result
+    },
+    [clearSaveMessage, loadInventoryMutationDefinitions],
+  )
+
+  const setInventoryQuantity = useCallback(
+    (instanceId: string, quantity: number) =>
+      applyInventoryMutation((equipment, definitions) =>
+        setInventoryEntryQuantity(equipment, instanceId, quantity, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const adjustInventoryQuantity = useCallback(
+    (instanceId: string, delta: number) =>
+      applyInventoryMutation((equipment, definitions) =>
+        adjustInventoryEntryQuantity(equipment, instanceId, delta, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const removeInventoryItem = useCallback(
+    (instanceId: string) =>
+      applyInventoryMutation((equipment, definitions) =>
+        removeInventoryEntry(equipment, instanceId, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const moveInventoryItem = useCallback(
+    (instanceId: string, location: InventoryLocation) =>
+      applyInventoryMutation((equipment, definitions) =>
+        moveInventoryEntry(equipment, instanceId, location, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const splitInventoryItem = useCallback(
+    (instanceId: string, quantity: number) =>
+      applyInventoryMutation((equipment, definitions) =>
+        splitInventoryStack(equipment, instanceId, quantity, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const mergeInventoryItems = useCallback(
+    (targetInstanceId: string, sourceInstanceId: string) =>
+      applyInventoryMutation((equipment, definitions) =>
+        mergeInventoryStacks(
+          equipment,
+          targetInstanceId,
+          sourceInstanceId,
+          { definitionsById: definitions },
+        ),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const setCurrencyGoldPieces = useCallback(
+    (goldPieces: number) =>
+      applyInventoryMutation((equipment, definitions) =>
+        setInventoryCurrency(equipment, goldPieces, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const adjustCurrencyGoldPieces = useCallback(
+    (delta: number) =>
+      applyInventoryMutation((equipment, definitions) =>
+        adjustInventoryCurrency(equipment, delta, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
   )
 
   const inventoryOwnershipKey = character.equipment.inventory
@@ -1002,6 +1147,14 @@ export function useCharacterEditor({
     equipmentValidation,
     setEquipmentSelections,
     setEquipmentLoadout,
+    setInventoryQuantity,
+    adjustInventoryQuantity,
+    removeInventoryItem,
+    moveInventoryItem,
+    splitInventoryItem,
+    mergeInventoryItems,
+    setCurrencyGoldPieces,
+    adjustCurrencyGoldPieces,
     unresolvedDeferredRequirements,
     finishPolicy,
     finishBlockedMessage,
