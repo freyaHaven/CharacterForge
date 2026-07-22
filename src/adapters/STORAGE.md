@@ -1,12 +1,12 @@
 # Storage format
 
-## Current format (schema version 16)
+## Current format (schema version 17)
 
 Characters are persisted inside a versioned envelope:
 
 ```json
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "character": { }
 }
 ```
@@ -23,7 +23,8 @@ The inner character includes:
 - `details: CharacterDetails` — roleplay-facing identity and personality fields
 - `spellSourceStates` — persisted spell source selections
 - `equipment` — starting-equipment `selections`, worn `loadout`, and persisted
-  gameplay `inventory` (entries, currency, `seededFromStartingEquipment`)
+  gameplay `inventory` (entries, currency, `seededFromStartingEquipment`,
+  `customItems`, optional per-entry `catalogSnapshot`)
 
 Each `CharacterClassSelection` has:
 
@@ -55,10 +56,12 @@ the inner character with `isCharacter()`, and returns the domain model.
 | 14 | Persisted `equipment.loadout` |
 | 15 | Normalize equipment selection `path` |
 | 16 | Persisted `equipment.inventory` (entries, currency, seed flag) |
+| 17 | Inventory `customItems` map + optional entry `catalogSnapshot` |
 
-On load, schema 0–15 saves migrate forward to schema 16. Migration path includes
+On load, schema 0–16 saves migrate forward to schema 17. Migration path includes
 the historical steps above; equipment inventory is added empty at v15→v16 and
-seeded lazily once starting equipment is complete in the editor.
+seeded lazily once starting equipment is complete in the editor. Custom item
+definitions are added empty at v16→v17.
 
 ## Migration rules
 
@@ -76,7 +79,7 @@ Explicit import/export uses the same versioned envelope as local storage:
 
 ```json
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "character": { }
 }
 ```

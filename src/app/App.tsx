@@ -397,6 +397,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                       : editor.ownedEquipment.currency.goldPieces
                   }
                   abilityScores={character.abilityScores}
+                  editionId={character.editionId}
                   seeded={
                     character.equipment.inventory.seededFromStartingEquipment
                   }
@@ -409,6 +410,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   onMerge={editor.mergeInventoryItems}
                   onSetCurrency={editor.setCurrencyGoldPieces}
                   onAdjustCurrency={editor.adjustCurrencyGoldPieces}
+                  onAddCatalogueItem={editor.addCatalogueInventoryItem}
+                  onAddCustomItem={editor.addCustomInventoryItem}
                 />
               ),
               review: (

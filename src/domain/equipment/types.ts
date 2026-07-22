@@ -41,12 +41,45 @@ export type InventoryLocation =
 /**
  * One owned stack or item instance in the character's inventory.
  * Persisted as gameplay state once seeded from starting equipment (P3.1).
+ *
+ * Catalogue-backed entries use a stable catalogue `itemId` and optional
+ * `catalogSnapshot` for display when the definition is missing.
+ * Custom entries use a `custom:…` `itemId` that keys into `CharacterInventory.customItems`.
  */
 export type InventoryEntry = {
   instanceId: string
   itemId: string
   quantity: number
   location: InventoryLocation
+  /**
+   * Lightweight catalogue fallback (name/category only). Present on items added
+   * from the catalogue so missing packs still render a usable label.
+   * Never treated as live catalogue ownership.
+   */
+  catalogSnapshot?: InventoryCatalogSnapshot
+}
+
+/**
+ * Snapshot retained on catalogue-backed inventory entries for unresolved defs.
+ */
+export type InventoryCatalogSnapshot = {
+  name: string
+  category?: EquipmentItemCategory
+}
+
+/**
+ * Player-authored item definition stored on the character (not in content packs).
+ * Enough data to render and weigh without catalogue lookup.
+ */
+export type CustomInventoryItemDefinition = {
+  id: string
+  name: string
+  notes?: string
+  /** Unit weight in pounds. Omitted/`undefined` means unknown weight. */
+  weightLb?: number
+  /** Unit cost in gold pieces. Omitted means unknown cost. */
+  costGp?: number
+  category?: EquipmentItemCategory
 }
 
 /**
@@ -61,6 +94,11 @@ export type CharacterInventory = {
    * overwritten by subsequent starting-equipment resolution.
    */
   seededFromStartingEquipment: boolean
+  /**
+   * Custom item definitions keyed by id (matches `InventoryEntry.itemId`).
+   * Catalogue-backed entries do not appear here.
+   */
+  customItems: Record<string, CustomInventoryItemDefinition>
 }
 
 /** How a weapon or shield occupies the character's hands. */
@@ -260,6 +298,7 @@ export const EMPTY_CHARACTER_INVENTORY: CharacterInventory = {
   entries: [],
   currency: { goldPieces: 0 },
   seededFromStartingEquipment: false,
+  customItems: {},
 }
 
 export const EMPTY_CHARACTER_EQUIPMENT: CharacterEquipment = {

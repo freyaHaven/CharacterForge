@@ -43,7 +43,11 @@ export function buildPlayResolvedEquipmentView(
   catalogById: ReadonlyMap<string, EquipmentItemDefinition>,
   startingEquipmentSources: ResolvedEquipment['sources'],
 ): ResolvedEquipment {
-  const entries = enrichPersistedInventoryEntries(inventory.entries, catalogById)
+  const entries = enrichPersistedInventoryEntries(
+    inventory.entries,
+    catalogById,
+    inventory.customItems,
+  )
   const merged = mergeEnrichedInventoryByItemId(entries, catalogById)
 
   return {

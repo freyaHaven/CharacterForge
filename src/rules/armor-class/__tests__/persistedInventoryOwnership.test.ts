@@ -23,6 +23,7 @@ describe('persisted inventory ownership for AC / loadout', () => {
       ],
       currency: { goldPieces: 0 },
       seededFromStartingEquipment: true,
+      customItems: {},
     }
 
     const playView = buildPlayResolvedEquipmentView(

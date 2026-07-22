@@ -95,6 +95,7 @@ function okResult() {
         entries: [],
         currency: { goldPieces: 0 },
         seededFromStartingEquipment: true,
+        customItems: {},
       },
       loadout: EMPTY_EQUIPMENT_LOADOUT,
     },
@@ -113,6 +114,11 @@ function renderPage(
     goldPieces: 18,
     abilityScores: DEFAULT_ABILITY_SCORES,
     definitionsById: SRD_2024_EQUIPMENT_BY_ID,
+    editionId: 'srd-2024' as const,
+    equipmentCatalog: {
+      getEquipment: vi.fn(async (id: string) => SRD_2024_EQUIPMENT_BY_ID.get(id) ?? null),
+      listEquipment: vi.fn(async () => [...SRD_2024_EQUIPMENT_BY_ID.values()]),
+    },
     seeded: true,
     onSetQuantity: vi.fn(async () => okResult()),
     onAdjustQuantity: vi.fn(async () => okResult()),
@@ -121,9 +127,9 @@ function renderPage(
     onSplit: vi.fn(async () => okResult()),
     onMerge: vi.fn(async () => okResult()),
     onSetCurrency: vi.fn(async () => okResult()),
-    onAdjustCurrency: vi.fn(async () =>
-      okResult(),
-    ),
+    onAdjustCurrency: vi.fn(async () => okResult()),
+    onAddCatalogueItem: vi.fn(async () => okResult()),
+    onAddCustomItem: vi.fn(async () => okResult()),
     ...overrides,
   }
 
@@ -197,26 +203,36 @@ describe('InventoryPage', () => {
   })
 
   it('updates the weight summary when entry quantities change via props', () => {
+    const baseProps = {
+      loadout: {
+        ...EMPTY_EQUIPMENT_LOADOUT,
+        armorItemId: 'srd-2024:chain-mail',
+      },
+      goldPieces: 18,
+      abilityScores: DEFAULT_ABILITY_SCORES,
+      definitionsById: SRD_2024_EQUIPMENT_BY_ID,
+      editionId: 'srd-2024' as const,
+      equipmentCatalog: {
+        getEquipment: vi.fn(async (id: string) =>
+          SRD_2024_EQUIPMENT_BY_ID.get(id) ?? null,
+        ),
+        listEquipment: vi.fn(async () => [...SRD_2024_EQUIPMENT_BY_ID.values()]),
+      },
+      seeded: true,
+      onSetQuantity: vi.fn(async () => okResult()),
+      onAdjustQuantity: vi.fn(async () => okResult()),
+      onRemove: vi.fn(async () => okResult()),
+      onMove: vi.fn(async () => okResult()),
+      onSplit: vi.fn(async () => okResult()),
+      onMerge: vi.fn(async () => okResult()),
+      onSetCurrency: vi.fn(async () => okResult()),
+      onAdjustCurrency: vi.fn(async () => okResult()),
+      onAddCatalogueItem: vi.fn(async () => okResult()),
+      onAddCustomItem: vi.fn(async () => okResult()),
+    }
+
     const { rerender } = render(
-      <InventoryPage
-        entries={sampleEntries}
-        loadout={{
-          ...EMPTY_EQUIPMENT_LOADOUT,
-          armorItemId: 'srd-2024:chain-mail',
-        }}
-        goldPieces={18}
-        abilityScores={DEFAULT_ABILITY_SCORES}
-        definitionsById={SRD_2024_EQUIPMENT_BY_ID}
-        seeded
-        onSetQuantity={vi.fn(async () => okResult())}
-        onAdjustQuantity={vi.fn(async () => okResult())}
-        onRemove={vi.fn(async () => okResult())}
-        onMove={vi.fn(async () => okResult())}
-        onSplit={vi.fn(async () => okResult())}
-        onMerge={vi.fn(async () => okResult())}
-        onSetCurrency={vi.fn(async () => okResult())}
-        onAdjustCurrency={vi.fn(async () => okResult())}
-      />,
+      <InventoryPage entries={sampleEntries} {...baseProps} />,
     )
 
     expect(screen.getByText(/At least 72 lb \/ 150 lb/i)).toBeInTheDocument()
@@ -226,27 +242,7 @@ describe('InventoryPage', () => {
         ? { ...item, quantity: 2 }
         : item,
     )
-    rerender(
-      <InventoryPage
-        entries={heavier}
-        loadout={{
-          ...EMPTY_EQUIPMENT_LOADOUT,
-          armorItemId: 'srd-2024:chain-mail',
-        }}
-        goldPieces={18}
-        abilityScores={DEFAULT_ABILITY_SCORES}
-        definitionsById={SRD_2024_EQUIPMENT_BY_ID}
-        seeded
-        onSetQuantity={vi.fn(async () => okResult())}
-        onAdjustQuantity={vi.fn(async () => okResult())}
-        onRemove={vi.fn(async () => okResult())}
-        onMove={vi.fn(async () => okResult())}
-        onSplit={vi.fn(async () => okResult())}
-        onMerge={vi.fn(async () => okResult())}
-        onSetCurrency={vi.fn(async () => okResult())}
-        onAdjustCurrency={vi.fn(async () => okResult())}
-      />,
-    )
+    rerender(<InventoryPage entries={heavier} {...baseProps} />)
 
     // 72 - 55 + 110 = 127
     expect(screen.getByText(/At least 127 lb \/ 150 lb/i)).toBeInTheDocument()
@@ -420,5 +416,80 @@ describe('InventoryPage', () => {
     expect(
       screen.getByRole('button', { name: /increase arrows quantity/i }),
     ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add Item' })).toBeDisabled()
+  })
+
+  it('adds a catalogue item through Browse Catalogue', async () => {
+    const user = userEvent.setup()
+    const props = renderPage()
+
+    await user.click(screen.getByRole('button', { name: 'Add Item' }))
+    await user.click(screen.getByRole('tab', { name: 'Browse Catalogue' }))
+    await user.type(screen.getByPlaceholderText(/search by name or tag/i), 'dagger')
+    await user.click(await screen.findByRole('option', { name: /Dagger/i }))
+    await user.clear(screen.getByLabelText(/^Quantity$/i))
+    await user.type(screen.getByLabelText(/^Quantity$/i), '2')
+    await user.click(
+      screen.getByRole('button', { name: 'Add from Catalogue' }),
+    )
+
+    expect(props.onAddCatalogueItem).toHaveBeenCalledWith({
+      itemId: 'srd-2024:dagger',
+      quantity: 2,
+      location: { kind: 'carried' },
+      mergeMode: 'always-new',
+    })
+  })
+
+  it('validates custom item creation and submits a valid custom item', async () => {
+    const user = userEvent.setup()
+    const props = renderPage()
+
+    await user.click(screen.getByRole('button', { name: 'Add Item' }))
+    await user.click(screen.getByRole('tab', { name: 'Create Custom Item' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Create Custom Item' }),
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(/enter a name/i)
+    expect(props.onAddCustomItem).not.toHaveBeenCalled()
+
+    await user.type(screen.getByLabelText(/^Name$/i), 'Lucky Charm')
+    await user.clear(screen.getByLabelText(/^Quantity$/i))
+    await user.type(screen.getByLabelText(/^Quantity$/i), '1')
+    await user.type(screen.getByLabelText(/Unit weight/i), '0.25')
+    await user.click(
+      screen.getByRole('button', { name: 'Create Custom Item' }),
+    )
+
+    expect(props.onAddCustomItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Lucky Charm',
+        quantity: 1,
+        weightLb: 0.25,
+        location: { kind: 'carried' },
+      }),
+    )
+  })
+
+  it('renders custom and unknown-catalogue fallback labels', () => {
+    renderPage({
+      entries: [
+        entry({
+          instanceId: 'inst:custom',
+          itemId: 'custom:abc',
+          name: 'Heirloom',
+          weightLb: 1,
+        }),
+        entry({
+          instanceId: 'inst:missing',
+          itemId: 'pack:missing',
+          name: 'Vanished Relic',
+          weightLb: null,
+        }),
+      ],
+    })
+
+    expect(screen.getByText(/Custom item/i)).toBeInTheDocument()
+    expect(screen.getByText(/Unknown catalogue item/i)).toBeInTheDocument()
   })
 })

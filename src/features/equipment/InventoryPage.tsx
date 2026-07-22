@@ -1,13 +1,17 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import type { AbilityScores } from '../../domain/types'
+import type { AbilityScores, EditionId } from '../../domain/types'
 import type {
   EquipmentItemDefinition,
   EquipmentLoadout,
   InventoryLocation,
 } from '../../domain/equipment/types'
+import type { EquipmentCatalog } from '../../domain/ports/equipmentCatalog'
+import { isCustomItemId } from '../../domain/equipment/customItems'
 import {
   areInventoryStacksMergeCompatible,
   formatInventoryMutationError,
+  type AddCatalogueInventoryItemInput,
+  type AddCustomInventoryItemInput,
   type InventoryMutationResult,
 } from '../../domain/equipment/inventoryMutations'
 import {
@@ -20,6 +24,7 @@ import { isItemEquipped } from '../../domain/equipment/equipmentLoadout'
 import type { ResolvedInventoryEntry } from '../../rules/character/resolveCharacterEquipment'
 import { formatGoldPieces } from './formatEquipment'
 import { InventoryWeightSummary } from './InventoryWeightSummary'
+import { AddInventoryItemPanel } from './AddInventoryItemPanel'
 
 export type InventoryPageProps = {
   entries: readonly ResolvedInventoryEntry[]
@@ -27,6 +32,8 @@ export type InventoryPageProps = {
   goldPieces: number
   abilityScores: AbilityScores
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>
+  editionId: EditionId
+  equipmentCatalog: EquipmentCatalog
   seeded: boolean
   onSetQuantity: (
     instanceId: string,
@@ -51,6 +58,12 @@ export type InventoryPageProps = {
   ) => Promise<InventoryMutationResult>
   onSetCurrency: (goldPieces: number) => Promise<InventoryMutationResult>
   onAdjustCurrency: (delta: number) => Promise<InventoryMutationResult>
+  onAddCatalogueItem: (
+    input: AddCatalogueInventoryItemInput,
+  ) => Promise<InventoryMutationResult>
+  onAddCustomItem: (
+    input: AddCustomInventoryItemInput,
+  ) => Promise<InventoryMutationResult>
 }
 
 type InventoryTab =
@@ -144,6 +157,8 @@ export function InventoryPage({
   goldPieces,
   abilityScores,
   definitionsById,
+  editionId,
+  equipmentCatalog,
   seeded,
   onSetQuantity,
   onAdjustQuantity,
@@ -153,6 +168,8 @@ export function InventoryPage({
   onMerge,
   onSetCurrency,
   onAdjustCurrency,
+  onAddCatalogueItem,
+  onAddCustomItem,
 }: InventoryPageProps) {
   const headingId = useId()
   const [search, setSearch] = useState('')
@@ -193,6 +210,18 @@ export function InventoryPage({
     )
     return map
   }, [weightBreakdown.entries])
+
+  const containerOptions = useMemo(
+    () =>
+      entries
+        .filter((entry) => entry.isContainer)
+        .map((entry) => ({
+          instanceId: entry.instanceId,
+          name: displayName(entry),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [entries],
+  )
 
   const visibleEntries = useMemo(() => {
     const searched = entries.filter((entry) => matchesNameSearch(entry, search))
@@ -383,6 +412,16 @@ export function InventoryPage({
         </fieldset>
       </div>
 
+      <AddInventoryItemPanel
+        editionId={editionId}
+        equipmentCatalog={equipmentCatalog}
+        definitionsById={definitionsById}
+        containerOptions={containerOptions}
+        disabled={!seeded}
+        onAddCatalogue={onAddCatalogueItem}
+        onAddCustom={onAddCustomItem}
+      />
+
       {entries.length === 0 ? (
         <p className="inventory-page__empty" role="status">
           {seeded
@@ -478,7 +517,10 @@ export function InventoryPage({
                       quantityDrafts[entry.instanceId] ?? String(entry.quantity)
                     const destinations = containerDestinations(entry)
                     const mergeTargets = mergeTargetsFor(entry)
-                    const unknownCatalogue = !definitionsById.has(entry.itemId)
+                    const unknownCatalogue =
+                      !definitionsById.has(entry.itemId) &&
+                      !isCustomItemId(entry.itemId)
+                    const isCustom = isCustomItemId(entry.itemId)
                     const weightDetail = weightByInstanceId.get(entry.instanceId)
                     const weightDisplay =
                       weightDetail !== undefined
@@ -501,7 +543,10 @@ export function InventoryPage({
                             </span>
                             <span className="inventory-page__item-meta">
                               {entry.category}
-                              {unknownCatalogue ? ' · Unknown catalogue item' : ''}
+                              {isCustom ? ' · Custom item' : ''}
+                              {unknownCatalogue
+                                ? ' · Unknown catalogue item'
+                                : ''}
                             </span>
                             {equipped ? (
                               <span className="inventory-page__equipped-badge">

@@ -1,8 +1,8 @@
 # P3.1 — Inventory System (Implementation Plan)
 
-**Status:** Slices A–C and E implemented (persisted inventory, mutation APIs, Inventory UI, weight & carrying-capacity display)  
+**Status:** Slices A–E implemented (persisted inventory, mutation APIs, Inventory UI, add-from-catalogue & custom items, weight & carrying-capacity display)  
 **Parent roadmap:** [PHASE-3-ROADMAP.md](./PHASE-3-ROADMAP.md)  
-**Current schema:** `16` (`CURRENT_SCHEMA_VERSION` in `src/adapters/storage/storedCharacter.ts`)  
+**Current schema:** `17` (`CURRENT_SCHEMA_VERSION` in `src/adapters/storage/storedCharacter.ts`)  
 **Audit date:** 2026-07-22
 
 ---
@@ -444,6 +444,8 @@ Do not block Finish on encumbrance or play inventory edits.
 ---
 
 ### Slice D — Custom items + add-from-catalog
+
+**Status:** Implemented (add-from-catalogue + custom items; no definition editing)
 
 **Deliver:** custom item definitions on character; “Add item” from catalog subset; appear in inventory with weight/cost.
 

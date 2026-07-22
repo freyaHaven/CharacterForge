@@ -66,6 +66,7 @@ function equipmentWith(
       entries,
       currency: { goldPieces: 10 },
       seededFromStartingEquipment: true,
+      customItems: {},
     },
     loadout: EMPTY_EQUIPMENT_LOADOUT,
     ...overrides,

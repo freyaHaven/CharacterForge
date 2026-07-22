@@ -56,6 +56,8 @@ import type {
 import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
 import { ownedItemIdsFromInventoryEntries } from '../../domain/equipment/seedInventory'
 import {
+  addCatalogueInventoryItem,
+  addCustomInventoryItem,
   adjustInventoryCurrency,
   adjustInventoryEntryQuantity,
   mergeInventoryStacks,
@@ -64,8 +66,11 @@ import {
   setInventoryCurrency,
   setInventoryEntryQuantity,
   splitInventoryStack,
+  type AddCatalogueInventoryItemInput,
+  type AddCustomInventoryItemInput,
   type InventoryMutationResult,
 } from '../../domain/equipment/inventoryMutations'
+import { mergeCustomDefinitionsIntoCatalog } from '../../domain/equipment/customItems'
 import { reconcileEquipmentLoadout } from '../../domain/equipment/equipmentLoadout'
 import {
   formatGoldPieces,
@@ -433,8 +438,15 @@ export function useCharacterEditor({
       }),
     )
 
-    return definitions
-  }, [character.equipment.inventory.entries, equipmentCatalog])
+    return mergeCustomDefinitionsIntoCatalog(
+      definitions,
+      character.equipment.inventory.customItems ?? {},
+    )
+  }, [
+    character.equipment.inventory.customItems,
+    character.equipment.inventory.entries,
+    equipmentCatalog,
+  ])
 
   const applyInventoryMutation = useCallback(
     async (
@@ -545,6 +557,32 @@ export function useCharacterEditor({
     (delta: number) =>
       applyInventoryMutation((equipment, definitions) =>
         adjustInventoryCurrency(equipment, delta, {
+          definitionsById: definitions,
+        }),
+      ),
+    [applyInventoryMutation],
+  )
+
+  const addCatalogueInventoryItemToCharacter = useCallback(
+    async (input: AddCatalogueInventoryItemInput) => {
+      const definition = await equipmentCatalog.getEquipment(input.itemId)
+      return applyInventoryMutation((equipment, definitions) => {
+        const nextDefinitions = new Map(definitions)
+        if (definition !== null) {
+          nextDefinitions.set(input.itemId, definition)
+        }
+        return addCatalogueInventoryItem(equipment, input, {
+          definitionsById: nextDefinitions,
+        })
+      })
+    },
+    [applyInventoryMutation, equipmentCatalog],
+  )
+
+  const addCustomInventoryItemToCharacter = useCallback(
+    (input: AddCustomInventoryItemInput) =>
+      applyInventoryMutation((equipment, definitions) =>
+        addCustomInventoryItem(equipment, input, {
           definitionsById: definitions,
         }),
       ),
@@ -1156,6 +1194,8 @@ export function useCharacterEditor({
     mergeInventoryItems,
     setCurrencyGoldPieces,
     adjustCurrencyGoldPieces,
+    addCatalogueInventoryItem: addCatalogueInventoryItemToCharacter,
+    addCustomInventoryItem: addCustomInventoryItemToCharacter,
     unresolvedDeferredRequirements,
     finishPolicy,
     finishBlockedMessage,

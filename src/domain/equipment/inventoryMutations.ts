@@ -1,6 +1,7 @@
 import type {
   CharacterEquipment,
   CharacterInventory,
+  CustomInventoryItemDefinition,
   EquipmentItemDefinition,
   EquipmentLoadout,
   InventoryEntry,
@@ -9,6 +10,17 @@ import type {
 import { isStorageContainer } from './inventory'
 import { reconcileEquipmentLoadout } from './equipmentLoadout'
 import { ownedItemIdsFromInventoryEntries } from './seedInventory'
+import {
+  areCustomDefinitionsEquivalent,
+  createCatalogSnapshot,
+  createCustomItemId,
+  definitionFromCustomItem,
+  isCustomItemId,
+  isValidCustomItemName,
+  isValidOptionalNonNegativeFinite,
+  mergeCustomDefinitionsIntoCatalog,
+  pruneUnusedCustomItems,
+} from './customItems'
 
 export type InventoryMutationErrorReason =
   | 'entry-not-found'
@@ -21,6 +33,10 @@ export type InventoryMutationErrorReason =
   | 'container-cycle'
   | 'negative-currency'
   | 'invalid-currency'
+  | 'invalid-name'
+  | 'invalid-weight'
+  | 'invalid-cost'
+  | 'unknown-catalogue-item'
 
 export type InventoryMutationResult =
   | { ok: true; equipment: CharacterEquipment }
@@ -29,9 +45,38 @@ export type InventoryMutationResult =
 export type InventoryMutationContext = {
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>
   /**
-   * Factory for new stack instance ids (split). Defaults to `play:{itemId}:{uuid}`.
+   * Factory for new stack instance ids (split / add). Defaults to `play:{itemId}:{uuid}`.
    */
   createInstanceId?: (itemId: string) => string
+}
+
+export type InventoryStackMergeMode = 'always-new' | 'merge-if-compatible'
+
+export type AddCatalogueInventoryItemInput = {
+  itemId: string
+  quantity: number
+  location: InventoryLocation
+  /**
+   * Default `always-new` — never silently merge.
+   * Use `merge-if-compatible` only when the UI explicitly offers stacking.
+   */
+  mergeMode?: InventoryStackMergeMode
+}
+
+export type AddCustomInventoryItemInput = {
+  name: string
+  quantity: number
+  location: InventoryLocation
+  notes?: string
+  weightLb?: number | null
+  costGp?: number | null
+  category?: CustomInventoryItemDefinition['category']
+  /**
+   * Custom creation always allocates a new custom definition id, so stacks of
+   * separately created customs never merge by name. `mergeMode` is reserved for
+   * future “add more of this custom” flows and defaults to `always-new`.
+   */
+  mergeMode?: InventoryStackMergeMode
 }
 
 /**
@@ -77,14 +122,18 @@ export function locationsEqual(
 }
 
 /**
- * Stacks may merge only when they share catalogue `itemId` and the same
- * location. Containers never merge (contents would orphan). Display names are
- * ignored. Loadout is itemId-based, so equipped status is not a merge key.
+ * Stacks may merge only when they share `itemId` and the same location.
+ * Containers never merge. Display names are ignored.
+ *
+ * Custom stacks merge only when they share the same custom definition id
+ * (and therefore equivalent persisted custom data) — never by name alone.
+ * Loadout is itemId-based, so equipped status is not a merge key.
  */
 export function areInventoryStacksMergeCompatible(
   left: Pick<InventoryEntry, 'instanceId' | 'itemId' | 'location'>,
   right: Pick<InventoryEntry, 'instanceId' | 'itemId' | 'location'>,
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>,
+  customItems: Readonly<Record<string, CustomInventoryItemDefinition>> = {},
 ): boolean {
   if (left.instanceId === right.instanceId) {
     return false
@@ -98,9 +147,26 @@ export function areInventoryStacksMergeCompatible(
     return false
   }
 
+  const leftCustom = customItems[left.itemId]
+  const rightCustom = customItems[right.itemId]
+  if (leftCustom !== undefined || rightCustom !== undefined) {
+    if (!areCustomDefinitionsEquivalent(leftCustom, rightCustom)) {
+      return false
+    }
+  }
+
+  const leftDefinition =
+    definitionsById.get(left.itemId) ??
+    (leftCustom !== undefined ? definitionFromCustomItem(leftCustom) : undefined)
+  const rightDefinition =
+    definitionsById.get(right.itemId) ??
+    (rightCustom !== undefined
+      ? definitionFromCustomItem(rightCustom)
+      : undefined)
+
   if (
-    isStorageContainer(definitionsById.get(left.itemId)) ||
-    isStorageContainer(definitionsById.get(right.itemId))
+    isStorageContainer(leftDefinition) ||
+    isStorageContainer(rightDefinition)
   ) {
     return false
   }
@@ -183,18 +249,29 @@ function finalizeEquipment(
   nextInventory: CharacterInventory,
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>,
 ): CharacterEquipment {
+  const customItems = pruneUnusedCustomItems(
+    nextInventory.customItems ?? {},
+    nextInventory.entries,
+  )
+
   const inventory: CharacterInventory = {
     entries: nextInventory.entries,
     currency: { goldPieces: nextInventory.currency.goldPieces },
     seededFromStartingEquipment:
       equipment.inventory.seededFromStartingEquipment,
+    customItems,
   }
+
+  const definitions = mergeCustomDefinitionsIntoCatalog(
+    definitionsById,
+    customItems,
+  )
 
   const ownedItemIds = ownedItemIdsFromInventoryEntries(inventory.entries)
   const loadout: EquipmentLoadout = reconcileEquipmentLoadout(
     equipment.loadout,
     ownedItemIds,
-    definitionsById,
+    definitions,
     { inferEmptySlots: false },
   )
 
@@ -295,8 +372,13 @@ export function removeInventoryEntry(
     return { ok: false, reason: 'entry-not-found' }
   }
 
+  const definitions = resolveDefinitionsForMutation(
+    equipment,
+    context.definitionsById,
+  )
+
   let entries = equipment.inventory.entries
-  if (isStorageContainer(context.definitionsById.get(entry.itemId))) {
+  if (isStorageContainer(definitions.get(entry.itemId))) {
     entries = ejectContentsToCarried(entries, instanceId)
   }
 
@@ -354,7 +436,11 @@ export function moveInventoryEntry(
     return { ok: false, reason: 'container-not-found' }
   }
 
-  if (!isStorageContainer(context.definitionsById.get(container.itemId))) {
+  const definitions = resolveDefinitionsForMutation(
+    equipment,
+    context.definitionsById,
+  )
+  if (!isStorageContainer(definitions.get(container.itemId))) {
     return { ok: false, reason: 'not-a-container' }
   }
 
@@ -472,6 +558,7 @@ export function mergeInventoryStacks(
       target,
       source,
       context.definitionsById,
+      equipment.inventory.customItems,
     )
   ) {
     return { ok: false, reason: 'incompatible-merge' }
@@ -569,9 +656,228 @@ export function formatInventoryMutationError(
       return 'Gold pieces cannot go below zero.'
     case 'invalid-currency':
       return 'Enter a valid gold amount of zero or more.'
+    case 'invalid-name':
+      return 'Enter a name for the custom item.'
+    case 'invalid-weight':
+      return 'Weight must be zero or a positive number when provided.'
+    case 'invalid-cost':
+      return 'Cost must be zero or a positive number when provided.'
+    case 'unknown-catalogue-item':
+      return 'That catalogue item is not available.'
     default: {
       const _exhaustive: never = reason
       return _exhaustive
     }
   }
+}
+
+function resolveDefinitionsForMutation(
+  equipment: CharacterEquipment,
+  definitionsById: ReadonlyMap<string, EquipmentItemDefinition>,
+): Map<string, EquipmentItemDefinition> {
+  return mergeCustomDefinitionsIntoCatalog(
+    definitionsById,
+    equipment.inventory.customItems ?? {},
+  )
+}
+
+function validateDestination(
+  equipment: CharacterEquipment,
+  location: InventoryLocation,
+  definitionsById: ReadonlyMap<string, EquipmentItemDefinition>,
+): InventoryMutationResult | null {
+  if (location.kind === 'carried') {
+    return null
+  }
+
+  const definitions = resolveDefinitionsForMutation(equipment, definitionsById)
+  const container = findEntry(
+    equipment.inventory.entries,
+    location.containerInstanceId,
+  )
+  if (container === undefined) {
+    return { ok: false, reason: 'container-not-found' }
+  }
+
+  if (!isStorageContainer(definitions.get(container.itemId))) {
+    return { ok: false, reason: 'not-a-container' }
+  }
+
+  return null
+}
+
+function findCompatibleMergeTarget(
+  entries: readonly InventoryEntry[],
+  candidate: Pick<InventoryEntry, 'itemId' | 'location'>,
+  definitionsById: ReadonlyMap<string, EquipmentItemDefinition>,
+  customItems: Readonly<Record<string, CustomInventoryItemDefinition>>,
+): InventoryEntry | undefined {
+  return entries.find((entry) =>
+    areInventoryStacksMergeCompatible(
+      entry,
+      {
+        instanceId: '__new__',
+        itemId: candidate.itemId,
+        location: candidate.location,
+      },
+      definitionsById,
+      customItems,
+    ),
+  )
+}
+
+/**
+ * Add a catalogue-backed item to gameplay inventory.
+ * Does not touch selections or the seed marker.
+ * Default merge mode is `always-new` (explicit opt-in to stack merge).
+ */
+export function addCatalogueInventoryItem(
+  equipment: CharacterEquipment,
+  input: AddCatalogueInventoryItemInput,
+  context: InventoryMutationContext,
+): InventoryMutationResult {
+  if (!isPositiveInteger(input.quantity)) {
+    return { ok: false, reason: 'invalid-quantity' }
+  }
+
+  const definition = context.definitionsById.get(input.itemId)
+  if (definition === undefined || isCustomItemId(input.itemId)) {
+    return { ok: false, reason: 'unknown-catalogue-item' }
+  }
+
+  const destinationError = validateDestination(
+    equipment,
+    input.location,
+    context.definitionsById,
+  )
+  if (destinationError !== null) {
+    return destinationError
+  }
+
+  const mergeMode = input.mergeMode ?? 'always-new'
+  const customItems = equipment.inventory.customItems ?? {}
+  const definitions = resolveDefinitionsForMutation(
+    equipment,
+    context.definitionsById,
+  )
+
+  if (mergeMode === 'merge-if-compatible') {
+    const existing = findCompatibleMergeTarget(
+      equipment.inventory.entries,
+      { itemId: input.itemId, location: input.location },
+      definitions,
+      customItems,
+    )
+    if (existing !== undefined) {
+      return setInventoryEntryQuantity(
+        equipment,
+        existing.instanceId,
+        existing.quantity + input.quantity,
+        context,
+      )
+    }
+  }
+
+  const createInstanceId =
+    context.createInstanceId ?? createDefaultPlayInstanceId
+  const entry: InventoryEntry = {
+    instanceId: createInstanceId(input.itemId),
+    itemId: input.itemId,
+    quantity: input.quantity,
+    location: input.location,
+    catalogSnapshot: createCatalogSnapshot(definition),
+  }
+
+  return success(
+    equipment,
+    {
+      ...equipment.inventory,
+      customItems,
+      entries: [...equipment.inventory.entries, entry],
+    },
+    context.definitionsById,
+  )
+}
+
+/**
+ * Create a custom inventory item definition and add a stack to gameplay inventory.
+ * Does not touch selections or the seed marker.
+ * Each call allocates a unique custom id — namesakes never stack together.
+ */
+export function addCustomInventoryItem(
+  equipment: CharacterEquipment,
+  input: AddCustomInventoryItemInput,
+  context: InventoryMutationContext = { definitionsById: new Map() },
+): InventoryMutationResult {
+  const name = input.name.trim()
+  if (!isValidCustomItemName(name)) {
+    return { ok: false, reason: 'invalid-name' }
+  }
+
+  if (!isPositiveInteger(input.quantity)) {
+    return { ok: false, reason: 'invalid-quantity' }
+  }
+
+  if (!isValidOptionalNonNegativeFinite(input.weightLb)) {
+    return { ok: false, reason: 'invalid-weight' }
+  }
+
+  if (!isValidOptionalNonNegativeFinite(input.costGp)) {
+    return { ok: false, reason: 'invalid-cost' }
+  }
+
+  const destinationError = validateDestination(
+    equipment,
+    input.location,
+    context.definitionsById,
+  )
+  if (destinationError !== null) {
+    return destinationError
+  }
+
+  const customId = createCustomItemId()
+  const custom: CustomInventoryItemDefinition = {
+    id: customId,
+    name,
+    ...(input.notes !== undefined && input.notes.trim().length > 0
+      ? { notes: input.notes.trim() }
+      : {}),
+    ...(input.weightLb !== undefined &&
+    input.weightLb !== null &&
+    Number.isFinite(input.weightLb)
+      ? { weightLb: input.weightLb }
+      : {}),
+    ...(input.costGp !== undefined &&
+    input.costGp !== null &&
+    Number.isFinite(input.costGp)
+      ? { costGp: input.costGp }
+      : {}),
+    ...(input.category !== undefined ? { category: input.category } : {}),
+  }
+
+  const createInstanceId =
+    context.createInstanceId ?? createDefaultPlayInstanceId
+  const entry: InventoryEntry = {
+    instanceId: createInstanceId(customId),
+    itemId: customId,
+    quantity: input.quantity,
+    location: input.location,
+  }
+
+  const customItems = {
+    ...(equipment.inventory.customItems ?? {}),
+    [customId]: custom,
+  }
+
+  // Newly created customs always get a fresh id, so mergeMode cannot stack
+  // with an existing entry of a different custom id.
+  return success(
+    equipment,
+    {
+      ...equipment.inventory,
+      customItems,
+      entries: [...equipment.inventory.entries, entry],
+    },
+    context.definitionsById,
+  )
 }

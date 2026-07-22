@@ -1,5 +1,6 @@
 import type {
   CharacterInventory,
+  CustomInventoryItemDefinition,
   EquipmentItemDefinition,
   InventoryEntry,
 } from './types'
@@ -8,6 +9,7 @@ import {
   deriveItemTags,
   isStorageContainer,
 } from './inventory'
+import { definitionFromCustomItem } from './customItems'
 import type { MaterializedInventoryEntry } from './materializeInventory'
 import {
   mergeInventoryQuantities,
@@ -59,27 +61,45 @@ export function seedInventoryFromResolvedEntries(
     entries: toPersistedInventoryEntries(entries),
     currency: { goldPieces },
     seededFromStartingEquipment: true,
+    customItems: {},
   }
 }
 
 export function enrichPersistedInventoryEntries(
   entries: readonly InventoryEntry[],
   catalogById: ReadonlyMap<string, EquipmentItemDefinition>,
+  customItems: Readonly<Record<string, CustomInventoryItemDefinition>> = {},
 ): MaterializedInventoryEntry[] {
   return entries.map((entry) => {
-    const definition = catalogById.get(entry.itemId)
+    const custom = customItems[entry.itemId]
+    const definition =
+      catalogById.get(entry.itemId) ??
+      (custom !== undefined ? definitionFromCustomItem(custom) : undefined)
+
+    const snapshot = entry.catalogSnapshot
+    const name =
+      definition?.name ?? snapshot?.name ?? custom?.name ?? entry.itemId
+    const category =
+      definition?.category ?? snapshot?.category ?? custom?.category ?? 'gear'
 
     return {
       instanceId: entry.instanceId,
       itemId: entry.itemId,
       quantity: entry.quantity,
       location: entry.location,
-      name: definition?.name ?? entry.itemId,
-      category: definition?.category ?? 'gear',
-      weightLb: definition?.weightLb ?? null,
-      costGp: definition?.costGp ?? null,
-      notes: deriveItemNotes(definition),
-      tags: deriveItemTags(definition),
+      name,
+      category,
+      weightLb:
+        definition?.weightLb !== undefined
+          ? definition.weightLb
+          : null,
+      costGp:
+        definition?.costGp !== undefined ? definition.costGp : null,
+      notes:
+        definition !== undefined
+          ? deriveItemNotes(definition)
+          : (custom?.notes ?? ''),
+      tags: definition !== undefined ? deriveItemTags(definition) : [],
       isContainer: isStorageContainer(definition),
     }
   })
@@ -110,8 +130,11 @@ export function mergeEnrichedInventoryByItemId(
 export function totalPersistedInventoryWeightLb(
   entries: readonly InventoryEntry[],
   catalogById: ReadonlyMap<string, EquipmentItemDefinition>,
+  customItems: Readonly<Record<string, CustomInventoryItemDefinition>> = {},
 ): number {
-  return totalWeightLb(enrichPersistedInventoryEntries(entries, catalogById))
+  return totalWeightLb(
+    enrichPersistedInventoryEntries(entries, catalogById, customItems),
+  )
 }
 
 export function ownedItemIdsFromInventoryEntries(

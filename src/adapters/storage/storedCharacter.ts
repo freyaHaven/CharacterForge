@@ -9,7 +9,7 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 16
+export const CURRENT_SCHEMA_VERSION = 17
 
 type CharacterEquipmentBeforeInventory = {
   selections: Character['equipment']['selections']
@@ -148,10 +148,27 @@ export type StoredCharacterV15 = {
 /** Schema v16: persisted gameplay inventory + currency seed flag. */
 export type StoredCharacterV16 = {
   schemaVersion: 16
+  character: Omit<Character, 'equipment'> & {
+    equipment: {
+      selections: Character['equipment']['selections']
+      loadout: Character['equipment']['loadout']
+      inventory: {
+        entries: Character['equipment']['inventory']['entries']
+        currency: Character['equipment']['inventory']['currency']
+        seededFromStartingEquipment: boolean
+        customItems?: Character['equipment']['inventory']['customItems']
+      }
+    }
+  }
+}
+
+/** Schema v17: custom inventory item definitions + optional catalogue snapshots. */
+export type StoredCharacterV17 = {
+  schemaVersion: 17
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV16
+export type StoredCharacter = StoredCharacterV17
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -179,7 +196,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV13
   | StoredCharacterV14
   | StoredCharacterV15
-  | StoredCharacterV16 {
+  | StoredCharacterV16
+  | StoredCharacterV17 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

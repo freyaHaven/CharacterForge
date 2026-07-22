@@ -1,9 +1,13 @@
-import type { AbilityScores } from '../../../domain/types'
+import type { AbilityScores, EditionId } from '../../../domain/types'
 import type {
   EquipmentLoadout,
   InventoryLocation,
 } from '../../../domain/equipment/types'
-import type { InventoryMutationResult } from '../../../domain/equipment/inventoryMutations'
+import type {
+  AddCatalogueInventoryItemInput,
+  AddCustomInventoryItemInput,
+  InventoryMutationResult,
+} from '../../../domain/equipment/inventoryMutations'
 import type { EquipmentCatalog } from '../../../domain/ports/equipmentCatalog'
 import type { ResolvedInventoryEntry } from '../../../rules/character/resolveCharacterEquipment'
 import { InventoryPage } from '../../../features/equipment/InventoryPage'
@@ -14,6 +18,7 @@ export type InventoryStepProps = {
   loadout: EquipmentLoadout
   goldPieces: number
   abilityScores: AbilityScores
+  editionId: EditionId
   seeded: boolean
   equipmentCatalog: EquipmentCatalog
   onSetQuantity: (
@@ -39,6 +44,12 @@ export type InventoryStepProps = {
   ) => Promise<InventoryMutationResult>
   onSetCurrency: (goldPieces: number) => Promise<InventoryMutationResult>
   onAdjustCurrency: (delta: number) => Promise<InventoryMutationResult>
+  onAddCatalogueItem: (
+    input: AddCatalogueInventoryItemInput,
+  ) => Promise<InventoryMutationResult>
+  onAddCustomItem: (
+    input: AddCustomInventoryItemInput,
+  ) => Promise<InventoryMutationResult>
 }
 
 export function InventoryStep({
@@ -60,6 +71,7 @@ export function InventoryStep({
     <InventoryPage
       entries={entries}
       definitionsById={definitionsById}
+      equipmentCatalog={equipmentCatalog}
       {...pageProps}
     />
   )

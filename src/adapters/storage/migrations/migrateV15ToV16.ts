@@ -2,11 +2,11 @@ import type {
   StoredCharacterV15,
   StoredCharacterV16,
 } from '../storedCharacter'
-import { EMPTY_CHARACTER_INVENTORY } from '../../../domain/equipment/types'
 
 /**
  * Adds an empty persisted inventory. Starting equipment is seeded lazily once
  * catalogs resolve and selections are complete (see seedCharacterInventory).
+ * Custom items arrive at v16→v17.
  */
 export function migrateV15ToV16(envelope: unknown): StoredCharacterV16 {
   const v15 = envelope as StoredCharacterV15
@@ -18,7 +18,11 @@ export function migrateV15ToV16(envelope: unknown): StoredCharacterV16 {
       equipment: {
         selections: v15.character.equipment.selections,
         loadout: v15.character.equipment.loadout,
-        inventory: EMPTY_CHARACTER_INVENTORY,
+        inventory: {
+          entries: [],
+          currency: { goldPieces: 0 },
+          seededFromStartingEquipment: false,
+        },
       },
     },
   }
