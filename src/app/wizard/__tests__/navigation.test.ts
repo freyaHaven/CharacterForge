@@ -73,7 +73,10 @@ describe('getAdjacentStep', () => {
   it('skips hidden conditional steps', () => {
     expect(getAdjacentStep('basics', 'next', DEFAULT_CONTEXT)).toBe('class')
     expect(getAdjacentStep('class', 'next', DEFAULT_CONTEXT)).toBe('background')
-    expect(getAdjacentStep('equipment', 'next', DEFAULT_CONTEXT)).toBe('review')
+    expect(getAdjacentStep('equipment', 'next', DEFAULT_CONTEXT)).toBe(
+      'inventory',
+    )
+    expect(getAdjacentStep('inventory', 'next', DEFAULT_CONTEXT)).toBe('review')
   })
 })
 
@@ -150,6 +153,7 @@ describe('canNavigateToStep', () => {
       equipment: { completion: 'not-started', hasValidationErrors: false },
       feats: { completion: 'not-started', hasValidationErrors: false },
       spells: { completion: 'not-started', hasValidationErrors: false },
+      inventory: { completion: 'not-started', hasValidationErrors: false },
       review: { completion: 'not-started', hasValidationErrors: false },
     }
 

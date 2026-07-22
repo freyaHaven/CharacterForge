@@ -15,6 +15,7 @@ describe('WIZARD_STEPS', () => {
       'equipment',
       'feats',
       'spells',
+      'inventory',
       'review',
     ])
   })
@@ -46,6 +47,7 @@ describe('WIZARD_STEPS', () => {
     expect(requiredById.equipment).toBe(false)
     expect(requiredById.feats).toBe(false)
     expect(requiredById.spells).toBe(false)
+    expect(requiredById.inventory).toBe(false)
     expect(requiredById.review).toBe(false)
   })
 

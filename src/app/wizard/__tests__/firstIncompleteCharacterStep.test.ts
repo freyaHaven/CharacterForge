@@ -64,6 +64,7 @@ function createStepStatuses(
     equipment: completeStatus,
     feats: incompleteStatus,
     spells: incompleteStatus,
+    inventory: incompleteStatus,
     review: inProgressStatus,
     ...overrides,
   }

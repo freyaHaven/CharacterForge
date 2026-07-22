@@ -25,6 +25,7 @@ describe('wizard step visibility', () => {
       'species',
       'ability-scores',
       'equipment',
+      'inventory',
       'review',
     ])
   })

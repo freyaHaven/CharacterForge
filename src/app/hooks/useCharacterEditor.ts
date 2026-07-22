@@ -833,6 +833,7 @@ export function useCharacterEditor({
       equipment: stepStatuses.equipment,
       feats: stepStatuses.feats,
       spells: stepStatuses.spells,
+      inventory: stepStatuses.inventory,
     },
   )
   const characterDetailsReviewSections = buildCharacterDetailsReviewSections({

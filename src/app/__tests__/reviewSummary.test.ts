@@ -55,6 +55,7 @@ function createStatuses(
     equipment: defaultStatus,
     feats: defaultStatus,
     spells: defaultStatus,
+    inventory: defaultStatus,
     ...overrides,
   }
 }

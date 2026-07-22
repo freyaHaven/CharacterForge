@@ -29,6 +29,7 @@ import { BasicsStep } from './wizard/steps/BasicsStep'
 import { ClassStep } from './wizard/steps/ClassStep'
 import { EquipmentStep } from './wizard/steps/EquipmentStep'
 import { FeatsStep } from './wizard/steps/FeatsStep'
+import { InventoryStep } from './wizard/steps/InventoryStep'
 import { SpellsStep } from './wizard/steps/SpellsStep'
 import { ReviewStep } from './wizard/steps/ReviewStep'
 import { SpeciesStep } from './wizard/steps/SpeciesStep'
@@ -386,6 +387,30 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   }
                 />
               ),
+              inventory: (
+                <InventoryStep
+                  entries={editor.ownedEquipment.entries}
+                  loadout={character.equipment.loadout}
+                  goldPieces={
+                    character.equipment.inventory.seededFromStartingEquipment
+                      ? character.equipment.inventory.currency.goldPieces
+                      : editor.ownedEquipment.currency.goldPieces
+                  }
+                  weightCarriedLb={editor.ownedEquipment.weightCarriedLb}
+                  seeded={
+                    character.equipment.inventory.seededFromStartingEquipment
+                  }
+                  equipmentCatalog={editor.equipmentCatalog}
+                  onSetQuantity={editor.setInventoryQuantity}
+                  onAdjustQuantity={editor.adjustInventoryQuantity}
+                  onRemove={editor.removeInventoryItem}
+                  onMove={editor.moveInventoryItem}
+                  onSplit={editor.splitInventoryItem}
+                  onMerge={editor.mergeInventoryItems}
+                  onSetCurrency={editor.setCurrencyGoldPieces}
+                  onAdjustCurrency={editor.adjustCurrencyGoldPieces}
+                />
+              ),
               review: (
                 <ReviewStep
                   characterName={character.name}
@@ -429,6 +454,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                     equipment: editor.stepStatuses.equipment,
                     feats: editor.stepStatuses.feats,
                     spells: editor.stepStatuses.spells,
+                    inventory: editor.stepStatuses.inventory,
                   }}
                   summaries={editor.reviewSummaries}
                   characterDetailsReview={editor.characterDetailsReviewSections}

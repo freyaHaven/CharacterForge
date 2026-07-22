@@ -321,6 +321,7 @@ describe('getReviewStepStatus', () => {
         equipment: { completion: 'not-started', hasValidationErrors: false },
         feats: { completion: 'not-started', hasValidationErrors: false },
         spells: { completion: 'not-started', hasValidationErrors: false },
+        inventory: { completion: 'not-started', hasValidationErrors: false },
       }),
     ).toEqual({
       completion: 'in-progress',
@@ -339,6 +340,7 @@ describe('getReviewStepStatus', () => {
         equipment: { completion: 'not-started', hasValidationErrors: false },
         feats: { completion: 'not-started', hasValidationErrors: false },
         spells: { completion: 'not-started', hasValidationErrors: false },
+        inventory: { completion: 'not-started', hasValidationErrors: false },
       }),
     ).toEqual({
       completion: 'complete',
@@ -357,6 +359,7 @@ describe('getReviewStepStatus', () => {
         equipment: { completion: 'not-started', hasValidationErrors: false },
         feats: { completion: 'not-started', hasValidationErrors: false },
         spells: { completion: 'not-started', hasValidationErrors: false },
+        inventory: { completion: 'not-started', hasValidationErrors: false },
       }),
     ).toEqual({
       completion: 'in-progress',

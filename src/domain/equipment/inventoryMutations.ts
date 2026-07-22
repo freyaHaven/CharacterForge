@@ -82,8 +82,8 @@ export function locationsEqual(
  * ignored. Loadout is itemId-based, so equipped status is not a merge key.
  */
 export function areInventoryStacksMergeCompatible(
-  left: InventoryEntry,
-  right: InventoryEntry,
+  left: Pick<InventoryEntry, 'instanceId' | 'itemId' | 'location'>,
+  right: Pick<InventoryEntry, 'instanceId' | 'itemId' | 'location'>,
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>,
 ): boolean {
   if (left.instanceId === right.instanceId) {
@@ -543,4 +543,35 @@ export function adjustInventoryCurrency(
   }
 
   return setInventoryCurrency(equipment, next, context)
+}
+
+export function formatInventoryMutationError(
+  reason: InventoryMutationErrorReason,
+): string {
+  switch (reason) {
+    case 'entry-not-found':
+      return 'That item is no longer in your inventory.'
+    case 'invalid-quantity':
+      return 'Enter a whole number quantity of 1 or more.'
+    case 'insufficient-quantity':
+      return 'There are not enough of that item for this action.'
+    case 'incompatible-merge':
+      return 'Those stacks cannot be merged.'
+    case 'container-not-found':
+      return 'That container is no longer in your inventory.'
+    case 'not-a-container':
+      return 'Items can only be stored in a container.'
+    case 'self-containment':
+      return 'A container cannot hold itself.'
+    case 'container-cycle':
+      return 'That move would nest a container inside itself.'
+    case 'negative-currency':
+      return 'Gold pieces cannot go below zero.'
+    case 'invalid-currency':
+      return 'Enter a valid gold amount of zero or more.'
+    default: {
+      const _exhaustive: never = reason
+      return _exhaustive
+    }
+  }
 }

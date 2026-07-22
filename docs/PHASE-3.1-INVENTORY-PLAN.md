@@ -1,6 +1,6 @@
 # P3.1 — Inventory System (Implementation Plan)
 
-**Status:** Slice A + Slice B implemented (persisted inventory + mutation APIs)  
+**Status:** Slices A–C implemented (persisted inventory, mutation APIs, Inventory UI)  
 **Parent roadmap:** [PHASE-3-ROADMAP.md](./PHASE-3-ROADMAP.md)  
 **Current schema:** `16` (`CURRENT_SCHEMA_VERSION` in `src/adapters/storage/storedCharacter.ts`)  
 **Audit date:** 2026-07-22

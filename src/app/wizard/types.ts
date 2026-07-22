@@ -7,6 +7,7 @@ export type WizardStepId =
   | 'equipment'
   | 'feats'
   | 'spells'
+  | 'inventory'
   | 'review'
 
 export type StepCompletion = 'not-started' | 'in-progress' | 'complete'

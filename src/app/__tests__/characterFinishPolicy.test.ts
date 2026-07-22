@@ -24,6 +24,7 @@ function createStatuses(
     equipment: defaultStatus,
     feats: defaultStatus,
     spells: defaultStatus,
+    inventory: defaultStatus,
     review: { completion: 'in-progress', hasValidationErrors: false },
     ...overrides,
   }

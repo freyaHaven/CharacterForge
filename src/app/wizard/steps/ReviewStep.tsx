@@ -256,8 +256,8 @@ export function ReviewStep({
           id="overview-equipment"
           title="Inventory"
           status={stepStatuses.equipment}
-          editStepId="equipment"
-          editLabel="Manage Equipment"
+          editStepId="inventory"
+          editLabel="Manage Inventory"
           onEdit={onEditStep}
         >
           <EquipmentStatusPanel warnings={equipmentStatusWarnings} />

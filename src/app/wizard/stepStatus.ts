@@ -24,11 +24,12 @@ import { getVisibleWizardSteps, type WizardStepContext } from './stepVisibility'
 import type { StepStatus, WizardStepId } from './types'
 
 /**
- * Steps that use {@link getPlaceholderStepStatus} and have no completion
- * criteria yet. They stay visible in nav but are skipped when choosing the
- * first incomplete step.
+ * Steps skipped when choosing the first incomplete step (gameplay surfaces that
+ * must not interrupt character-creation routing).
  */
-export const PLACEHOLDER_WIZARD_STEP_IDS = [] as const satisfies readonly WizardStepId[]
+export const PLACEHOLDER_WIZARD_STEP_IDS = [
+  'inventory',
+] as const satisfies readonly WizardStepId[]
 
 export function isPlaceholderWizardStep(stepId: WizardStepId): boolean {
   return (PLACEHOLDER_WIZARD_STEP_IDS as readonly WizardStepId[]).includes(
@@ -272,6 +273,24 @@ export function getEquipmentStepStatus(
   }
 }
 
+/**
+ * Inventory is a gameplay surface. Completion reflects seed state only and
+ * never blocks Finish (step is skipped by {@link getFirstIncompleteCharacterStep}).
+ */
+export function getInventoryStepStatus(
+  context: StepValidationContext,
+): StepStatus {
+  if (context.character.equipment.inventory.seededFromStartingEquipment) {
+    return { completion: 'complete', hasValidationErrors: false }
+  }
+
+  if (context.character.equipment.inventory.entries.length > 0) {
+    return { completion: 'in-progress', hasValidationErrors: false }
+  }
+
+  return { completion: 'not-started', hasValidationErrors: false }
+}
+
 export function getPlaceholderStepStatus(): StepStatus {
   return { completion: 'not-started', hasValidationErrors: false }
 }
@@ -327,6 +346,7 @@ export function getNonReviewStepStatuses(
     equipment: getEquipmentStepStatus(context),
     feats: getFeatStepStatus(context),
     spells: getSpellsStepStatus(context),
+    inventory: getInventoryStepStatus(context),
   }
 }
 

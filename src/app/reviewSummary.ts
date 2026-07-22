@@ -372,6 +372,7 @@ export function buildReviewSummaries(
     equipment: buildEquipmentSummary(context),
     feats: buildFeatSummary(context, stepStatuses.feats),
     spells: buildPlaceholderSummary(),
+    inventory: buildEquipmentSummary(context),
   }
 }
 

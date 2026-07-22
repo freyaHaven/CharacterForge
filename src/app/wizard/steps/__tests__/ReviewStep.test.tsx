@@ -37,6 +37,7 @@ const defaultStatuses = {
   equipment: { completion: 'not-started' as const, hasValidationErrors: false },
   feats: { completion: 'not-started' as const, hasValidationErrors: false },
   spells: { completion: 'not-started' as const, hasValidationErrors: false },
+  inventory: { completion: 'not-started' as const, hasValidationErrors: false },
 }
 
 const defaultSummaries = {
@@ -48,6 +49,7 @@ const defaultSummaries = {
   equipment: ['Coming soon'],
   feats: ['Not selected'],
   spells: ['Coming soon'],
+  inventory: ['Coming soon'],
 }
 
 const defaultProps = {
@@ -621,7 +623,7 @@ describe('ReviewStep', () => {
       screen.getByRole('heading', { name: 'Inventory', level: 3 }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Manage Equipment' }),
+      screen.getByRole('button', { name: 'Manage Inventory' }),
     ).toBeInTheDocument()
     expect(screen.getByText(/weight carried: 68 lb/i)).toBeInTheDocument()
     expect(screen.getByText('18 GP')).toBeInTheDocument()
@@ -739,7 +741,7 @@ describe('ReviewStep', () => {
       ),
     ).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Manage Equipment' }))
-    expect(onEditStep).toHaveBeenCalledWith('equipment')
+    await user.click(screen.getByRole('button', { name: 'Manage Inventory' }))
+    expect(onEditStep).toHaveBeenCalledWith('inventory')
   })
 })

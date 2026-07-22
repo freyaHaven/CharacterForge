@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { organizeReviewSheet } from '../organizeReviewSheet'
 import type { StepStatus, WizardStepId } from '../../../types'
 
@@ -19,6 +19,7 @@ function createStatuses(
     equipment: defaultStatus,
     feats: defaultStatus,
     spells: defaultStatus,
+    inventory: defaultStatus,
     ...overrides,
   }
 }
@@ -49,6 +50,7 @@ describe('organizeReviewSheet', () => {
         equipment: ['Coming soon'],
         feats: [],
         spells: [],
+        inventory: [],
       },
       stepStatuses: createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
@@ -133,6 +135,7 @@ describe('organizeReviewSheet', () => {
         equipment: [],
         feats: [],
         spells: [],
+        inventory: [],
       },
       stepStatuses: createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
@@ -199,6 +202,7 @@ describe('organizeReviewSheet', () => {
         equipment: [],
         feats: [],
         spells: [],
+        inventory: [],
       },
       stepStatuses: createStatuses({
         class: { completion: 'complete', hasValidationErrors: false },
@@ -278,6 +282,7 @@ describe('organizeReviewSheet', () => {
         equipment: [],
         feats: [],
         spells: [],
+        inventory: [],
       },
       stepStatuses: createStatuses(),
       sheetModels: emptySheetModels,
@@ -355,6 +360,7 @@ describe('organizeReviewSheet', () => {
         equipment: ['Coming soon'],
         feats: [],
         spells: [],
+        inventory: [],
       },
       stepStatuses: createStatuses(),
       sheetModels: emptySheetModels,
