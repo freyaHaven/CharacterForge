@@ -22,12 +22,24 @@ export function formatSpellLevelBandLabel(level: number): string {
   return `${level}th level`
 }
 
+/**
+ * How a child spell-level group relates to selection limits.
+ * - entitlement — partition/filter only; quota lives on the entitlement header
+ * - group — this level has its own independently enforced pick limit
+ * - informational — no pick limit (granted/browse-only style)
+ */
+export type SpellLevelLimitScope = 'entitlement' | 'group' | 'informational'
+
 export type SpellLevelCountRow = {
   level: number
   label: string
   selected: number
-  /** Spell slots at this level when known; null when not applicable. */
+  /**
+   * Genuine per-group pick limit when `limitScope === 'group'`.
+   * Null for entitlement-wide or informational groups (never spell-slot counts).
+   */
   capacity: number | null
+  limitScope: SpellLevelLimitScope
 }
 
 export type EntitlementCountDisplay = {
@@ -38,17 +50,6 @@ export type EntitlementCountDisplay = {
    * Empty for a single accessible level (level is inlined in `countLabel`).
    */
   levelRows: SpellLevelCountRow[]
-}
-
-function slotsForSpellLevel(
-  slotsByLevel: readonly number[] | null | undefined,
-  spellLevel: number,
-): number | null {
-  if (spellLevel <= 0 || slotsByLevel === undefined || slotsByLevel === null) {
-    return null
-  }
-  const count = slotsByLevel[spellLevel - 1]
-  return count === undefined ? null : count
 }
 
 function shouldInlineSingleLevel(
@@ -63,6 +64,9 @@ function shouldInlineSingleLevel(
 
 /**
  * Build compact vs expanded count presentation for a select entitlement.
+ *
+ * Child level rows are catalogue partitions by default. Pass
+ * `groupLimitsByLevel` only when a level truly has its own pick budget.
  */
 export function buildEntitlementCountDisplay(input: {
   entitlementLabel: string
@@ -73,8 +77,11 @@ export function buildEntitlementCountDisplay(input: {
   selectedSpellIds: readonly string[]
   /** Levels of granted spells that count against the selection limit. */
   countingGrantLevels?: readonly number[]
-  /** Shared multiclass/class slots by spell level (index 0 = 1st level). */
-  slotsByLevel?: readonly number[] | null
+  /**
+   * Optional genuine per-level pick limits (not spell-slot totals).
+   * When omitted, child rows are entitlement-scoped (no `/N` denominator).
+   */
+  groupLimitsByLevel?: ReadonlyMap<number, number> | null
 }): EntitlementCountDisplay {
   const countingGrantLevels = input.countingGrantLevels ?? []
   const used = input.selectedSpellIds.length + countingGrantLevels.length
@@ -113,12 +120,19 @@ export function buildEntitlementCountDisplay(input: {
     }
   }
 
-  const levelRows: SpellLevelCountRow[] = levels.map((level) => ({
-    level,
-    label: formatSpellLevelBandLabel(level),
-    selected: selectedByLevel.get(level) ?? 0,
-    capacity: slotsForSpellLevel(input.slotsByLevel, level),
-  }))
+  const levelRows: SpellLevelCountRow[] = levels.map((level) => {
+    const groupLimit = input.groupLimitsByLevel?.get(level)
+    const hasGroupLimit =
+      groupLimit !== undefined && Number.isFinite(groupLimit) && groupLimit >= 0
+
+    return {
+      level,
+      label: formatSpellLevelBandLabel(level),
+      selected: selectedByLevel.get(level) ?? 0,
+      capacity: hasGroupLimit ? groupLimit : null,
+      limitScope: hasGroupLimit ? 'group' : 'entitlement',
+    }
+  })
 
   return {
     countLabel: `${used}/${input.limit}`,
@@ -126,9 +140,41 @@ export function buildEntitlementCountDisplay(input: {
   }
 }
 
-export function formatLevelCountValue(row: SpellLevelCountRow): string {
-  if (row.capacity === null) {
-    return String(row.selected)
+/**
+ * Compact secondary count for a child level row.
+ * Entitlement-scoped rows never show a `/N` denominator (slots are not pick budgets).
+ */
+export function formatLevelCountValue(row: SpellLevelCountRow): string | null {
+  if (row.limitScope === 'group' && row.capacity !== null) {
+    return `${row.selected}/${row.capacity}`
   }
-  return `${row.selected}/${row.capacity}`
+
+  if (row.selected <= 0) {
+    return null
+  }
+
+  return row.selected === 1 ? '1 selected' : `${row.selected} selected`
+}
+
+/**
+ * Collapsed accordion action text for a spell-level partition.
+ */
+export function formatSpellLevelAccordionSummary(input: {
+  label: string
+  selectedNames: readonly string[]
+  eligibleCount: number
+}): string {
+  if (input.selectedNames.length > 0) {
+    if (input.selectedNames.length <= 2) {
+      return input.selectedNames.join(', ')
+    }
+    return `${input.selectedNames.length} selected`
+  }
+
+  if (input.eligibleCount <= 0) {
+    return 'No additional spells available'
+  }
+
+  const hyphenated = input.label.replace(/ level$/i, '-level')
+  return `Browse ${hyphenated} spells`
 }

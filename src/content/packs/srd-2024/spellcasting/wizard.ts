@@ -45,7 +45,11 @@ export function createWizardSpellbookEntitlements(): SpellEntitlement[] {
         kind: 'by-source-level',
         table: unlockTable(level, WIZARD_SPELLBOOK_PER_LEVEL),
       },
-      levelRange: { min: 1, max: 'slot-ceiling' },
+      levelRange: {
+        min: 1,
+        max: 'slot-ceiling',
+        slotCeilingAt: 'count-unlock-level',
+      },
       label: `Wizard level ${level} spellbook addition`,
       crossSourceDuplicatePolicy: 'allow',
     })
@@ -154,7 +158,11 @@ export function createEvocationSavantSlotEntitlements(): SpellEntitlement[] {
       kind: 'by-source-level' as const,
       table: unlockTable(level, 1),
     },
-    levelRange: { min: 1, max: 'slot-ceiling' as const },
+    levelRange: {
+      min: 1,
+      max: 'slot-ceiling' as const,
+      slotCeilingAt: 'count-unlock-level' as const,
+    },
     schools: ['Evocation'],
     label: `Evocation Savant (level ${level} slot)`,
     crossSourceDuplicatePolicy: 'allow' as const,

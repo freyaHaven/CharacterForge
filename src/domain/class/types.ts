@@ -149,6 +149,12 @@ export type ClassChoice =
       required: boolean
       options: ClassChoiceOption[]
       /**
+       * Machine-readable role for spell-source ordering and similar rules.
+       * Prefer this over parsing choice ids; `id` ending in `-subclass` remains
+       * a fallback for legacy content packs.
+       */
+      role?: 'subclass'
+      /**
        * Optional catalogue feat id recommended for this choice (e.g. Epic Boon).
        * Display-only — does not restrict selection.
        */

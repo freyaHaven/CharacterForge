@@ -3,7 +3,10 @@ import { ChoiceChevronIcon } from '../choices/ChoiceChevronIcon'
 import type { SpellDefinition } from '../../domain/spell/types'
 import type { SpellSelectionEligibility } from '../../rules/spell/spellSelectionEligibility'
 import type { SpellLevelCountRow } from './entitlementCountDisplay'
-import { formatLevelCountValue } from './entitlementCountDisplay'
+import {
+  formatLevelCountValue,
+  formatSpellLevelAccordionSummary,
+} from './entitlementCountDisplay'
 import { SpellSelectionCard } from './SpellSelectionCard'
 
 export type SpellSelectionGridProps = {
@@ -32,7 +35,10 @@ type SpellCardListProps = {
   invalidSpellIds?: ReadonlySet<string>
   eligibilityBySpellId?: ReadonlyMap<string, SpellSelectionEligibility>
   atSelectionLimit: boolean
-  /** When set, unselected spells at this level are blocked once capacity is full. */
+  /**
+   * When set, unselected spells at this level are blocked once a genuine
+   * per-group capacity is full (`limitScope === 'group'`).
+   */
   levelAtCapacity?: boolean
   onToggleSpell: (spellId: string) => void
 }
@@ -116,7 +122,23 @@ function SpellLevelAccordion({
   )
   const countValue = formatLevelCountValue(row)
   const levelAtCapacity =
-    row.capacity !== null && row.selected >= row.capacity
+    row.limitScope === 'group' &&
+    row.capacity !== null &&
+    row.selected >= row.capacity
+
+  const selectedHere = spells.filter((spell) => selectedSpellIds.has(spell.id))
+  const unselectedEligible = spells.filter((spell) => {
+    if (selectedSpellIds.has(spell.id)) {
+      return false
+    }
+    const eligibility = eligibilityBySpellId?.get(spell.id)
+    return eligibility?.recommendation !== 'blocked'
+  })
+  const summaryText = formatSpellLevelAccordionSummary({
+    label: row.label,
+    selectedNames: selectedHere.map((spell) => spell.name),
+    eligibleCount: unselectedEligible.length,
+  })
 
   return (
     <div
@@ -128,7 +150,9 @@ function SpellLevelAccordion({
     >
       <div className="spell-level-accordion__summary">
         <span className="spell-level-accordion__label">{row.label}</span>
-        <span className="spell-level-accordion__count">{countValue}</span>
+        {countValue !== null ? (
+          <span className="spell-level-accordion__count">{countValue}</span>
+        ) : null}
       </div>
 
       <button
@@ -141,11 +165,7 @@ function SpellLevelAccordion({
           setExpanded((current) => !current)
         }}
       >
-        <span>
-          {expanded
-            ? `Hide ${row.label} spells`
-            : `Show ${row.label} spells`}
-        </span>
+        <span>{expanded ? `Hide ${row.label} spells` : summaryText}</span>
         <span className="spell-level-accordion__chevron" aria-hidden="true">
           <ChoiceChevronIcon />
         </span>
@@ -159,7 +179,9 @@ function SpellLevelAccordion({
         className="spell-level-accordion__panel"
       >
         {spells.length === 0 ? (
-          <p className="spell-level-accordion__empty">No spells at this level.</p>
+          <p className="spell-level-accordion__empty">
+            No additional spells available
+          </p>
         ) : (
           <SpellCardList
             idPrefix={`${idPrefix}-l${row.level}`}

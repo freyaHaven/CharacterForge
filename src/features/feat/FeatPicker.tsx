@@ -2,8 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { EditionId } from '../../domain/types'
 import type { FeatDefinition, FeatSelection } from '../../domain/feat/types'
-import { evaluateFeatEligibility } from '../../domain/feat/eligibility'
-import type { FeatEligibility } from '../../domain/feat/eligibility'
+import {
+  EMPTY_FEAT_ELIGIBILITY_CONTEXT,
+  type FeatEligibility,
+  type FeatEligibilityContext,
+} from '../../domain/feat/eligibility'
+import {
+  evaluateFeatForEntitlement,
+  partitionFeatCatalogue,
+  type FeatEntitlementPolicy,
+} from '../../domain/feat/catalogueEligibility'
 import { validateFeatSelection } from '../../rules/feat/featRules'
 import { FeatCatalogCard } from './FeatCatalogCard'
 import { FeatOverview } from './FeatOverview'
@@ -25,7 +33,11 @@ type FeatPickerProps = {
   catalog: FeatCatalog
   onDraftChange: (draft: FeatSelectionDraft | null) => void
   onCommittedSelectionChange: (selection: FeatSelection | null) => void
-  /** Optional override used by tests and future character-context eligibility. */
+  /** Character-scoped eligibility context for prerequisite checks. */
+  eligibilityContext?: FeatEligibilityContext
+  /** Entitlement policy for this picker (defaults to any qualifying feat). */
+  entitlementPolicy?: FeatEntitlementPolicy
+  /** Optional override used by tests. */
   getEligibility?: (definition: FeatDefinition) => FeatEligibility
 }
 
@@ -36,30 +48,100 @@ export function FeatPicker({
   catalog,
   onDraftChange,
   onCommittedSelectionChange,
-  getEligibility = evaluateFeatEligibility,
+  eligibilityContext = EMPTY_FEAT_ELIGIBILITY_CONTEXT,
+  entitlementPolicy = { kind: 'any-qualifying' },
+  getEligibility,
 }: FeatPickerProps) {
   const [featList, setFeatList] = useState<FeatDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showUnavailable, setShowUnavailable] = useState(false)
 
   const activeFeatId = draft?.featId ?? committedSelection?.featId ?? null
   const activeChoices = draft?.choices ?? committedSelection?.choices ?? {}
 
+  const resolveEligibility =
+    getEligibility ??
+    ((definition: FeatDefinition) =>
+      evaluateFeatForEntitlement(
+        definition,
+        eligibilityContext,
+        entitlementPolicy,
+      ))
+
+  const catalogueFeats = useMemo(() => {
+    if (getEligibility !== undefined) {
+      const eligible: ReturnType<typeof partitionFeatCatalogue>['visible'] = []
+      const retained: ReturnType<typeof partitionFeatCatalogue>['visible'] = []
+      const unavailable: ReturnType<typeof partitionFeatCatalogue>['visible'] =
+        []
+
+      for (const definition of featList) {
+        const eligibility = getEligibility(definition)
+        const isSelected = activeFeatId === definition.id
+        if (eligibility.eligible) {
+          eligible.push({
+            definition,
+            eligibility,
+            retainedInvalid: false,
+          })
+        } else if (isSelected) {
+          retained.push({
+            definition,
+            eligibility,
+            retainedInvalid: true,
+          })
+        } else {
+          unavailable.push({
+            definition,
+            eligibility,
+            retainedInvalid: false,
+          })
+        }
+      }
+
+      return showUnavailable
+        ? [...eligible, ...retained, ...unavailable]
+        : [...eligible, ...retained]
+    }
+
+    return partitionFeatCatalogue({
+      feats: featList,
+      context: eligibilityContext,
+      policy: entitlementPolicy,
+      selectedFeatId: activeFeatId,
+      showUnavailable,
+    }).visible
+  }, [
+    activeFeatId,
+    eligibilityContext,
+    entitlementPolicy,
+    featList,
+    getEligibility,
+    showUnavailable,
+  ])
+
   const activeDefinition =
     activeFeatId === null
       ? null
-      : (featList.find((entry) => entry.id === activeFeatId) ?? null)
+      : (featList.find((entry) => entry.id === activeFeatId) ??
+        catalogueFeats.find((entry) => entry.definition.id === activeFeatId)
+          ?.definition ??
+        null)
 
-  const filteredFeats = useMemo(
-    () => filterFeatsByName(featList, searchQuery),
-    [featList, searchQuery],
-  )
+  const filteredEntries = useMemo(() => {
+    const definitions = catalogueFeats.map((entry) => entry.definition)
+    const matched = new Set(
+      filterFeatsByName(definitions, searchQuery).map((feat) => feat.id),
+    )
+    return catalogueFeats.filter((entry) => matched.has(entry.definition.id))
+  }, [catalogueFeats, searchQuery])
 
   const normalizedSearchQuery = searchQuery.trim()
   const isSelectedFeatHidden =
     activeFeatId !== null &&
     normalizedSearchQuery.length > 0 &&
-    !filteredFeats.some((feat) => feat.id === activeFeatId)
+    !filteredEntries.some((entry) => entry.definition.id === activeFeatId)
 
   const draftValidation =
     draft === null
@@ -81,8 +163,14 @@ export function FeatPicker({
     draftValidation?.ok === true &&
     hasPendingDraft
 
+  const activeEligibility =
+    activeDefinition === null
+      ? null
+      : resolveEligibility(activeDefinition)
+
   useEffect(() => {
     setSearchQuery('')
+    setShowUnavailable(false)
   }, [editionId])
 
   useEffect(() => {
@@ -104,7 +192,7 @@ export function FeatPicker({
   }, [catalog, editionId])
 
   function previewFeat(featDefinition: FeatDefinition) {
-    const eligibility = getEligibility(featDefinition)
+    const eligibility = resolveEligibility(featDefinition)
 
     if (!eligibility.eligible) {
       return
@@ -122,6 +210,11 @@ export function FeatPicker({
 
   function confirmSelection() {
     if (draft === null || activeDefinition === null) {
+      return
+    }
+
+    const eligibility = resolveEligibility(activeDefinition)
+    if (!eligibility.eligible) {
       return
     }
 
@@ -218,11 +311,25 @@ export function FeatPicker({
                   }}
                 />
               </label>
+              <label className="feat-picker__show-unavailable">
+                <input
+                  type="checkbox"
+                  checked={showUnavailable}
+                  onChange={(event) => {
+                    setShowUnavailable(event.target.checked)
+                  }}
+                />
+                <span>Show unavailable feats</span>
+              </label>
             </div>
 
-            {filteredFeats.length === 0 ? (
+            {filteredEntries.length === 0 ? (
               <p className="feat-picker__catalog-empty" role="status">
-                No feats match &ldquo;{normalizedSearchQuery}&rdquo;.
+                {normalizedSearchQuery.length > 0
+                  ? `No feats match “${normalizedSearchQuery}”.`
+                  : showUnavailable
+                    ? 'No feats are available for this rules edition yet.'
+                    : 'No eligible feats for this character. Enable “Show unavailable feats” to browse prerequisites.'}
               </p>
             ) : (
               <ul
@@ -231,12 +338,13 @@ export function FeatPicker({
                 role="list"
                 aria-label="Choose a feat"
               >
-                {filteredFeats.map((featDefinition) => (
+                {filteredEntries.map((entry) => (
                   <FeatCatalogCard
-                    key={featDefinition.id}
-                    featDefinition={featDefinition}
-                    isSelected={activeFeatId === featDefinition.id}
-                    eligibility={getEligibility(featDefinition)}
+                    key={entry.definition.id}
+                    featDefinition={entry.definition}
+                    isSelected={activeFeatId === entry.definition.id}
+                    eligibility={entry.eligibility}
+                    retainedInvalid={entry.retainedInvalid}
                     onSelect={previewFeat}
                   />
                 ))}
@@ -261,16 +369,31 @@ export function FeatPicker({
                   }
                 />
 
+                {activeEligibility !== null && !activeEligibility.eligible ? (
+                  <p className="feat-picker__invalid-selection" role="status">
+                    This selection is invalid: {activeEligibility.reason}. Clear
+                    or replace it to continue.
+                  </p>
+                ) : null}
+
                 {showChoicesForDetail ? (
                   <div className="feat-picker__choices">
                     {activeDefinition.choices.map((choice) => {
+                      if (choice.type !== 'single-select') {
+                        return null
+                      }
+
                       const selectedOptionId = activeChoices[choice.id] ?? ''
 
                       return (
                         <label key={choice.id} className="field">
                           <span>{choice.prompt}</span>
                           <select
-                            value={selectedOptionId}
+                            value={
+                              typeof selectedOptionId === 'string'
+                                ? selectedOptionId
+                                : ''
+                            }
                             onChange={(event) => {
                               void handleChoiceChange(
                                 choice.id,
@@ -292,7 +415,8 @@ export function FeatPicker({
                 ) : null}
 
                 <div className="feat-picker__actions">
-                  {canConfirm ? (
+                  {canConfirm &&
+                  (activeEligibility === null || activeEligibility.eligible) ? (
                     <button
                       type="button"
                       className="feat-picker__confirm"

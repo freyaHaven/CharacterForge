@@ -12,6 +12,8 @@ type FeatCatalogCardProps = {
   featDefinition: FeatDefinition
   isSelected: boolean
   eligibility: FeatEligibility
+  /** Committed selection that fails eligibility — shown with validation copy. */
+  retainedInvalid?: boolean
   onSelect: (featDefinition: FeatDefinition) => void
 }
 
@@ -19,6 +21,7 @@ export function FeatCatalogCard({
   featDefinition,
   isSelected,
   eligibility,
+  retainedInvalid = false,
   onSelect,
 }: FeatCatalogCardProps) {
   const cardNameId = `feat-card-${featDefinition.id}-name`
@@ -29,6 +32,7 @@ export function FeatCatalogCard({
     'feat-picker__card',
     isSelected ? 'feat-picker__card--selected' : null,
     isDisabled ? 'feat-picker__card--disabled' : null,
+    retainedInvalid ? 'feat-picker__card--invalid' : null,
   ]
     .filter(Boolean)
     .join(' ')
@@ -72,7 +76,9 @@ export function FeatCatalogCard({
           }
         >
           {isDisabled
-            ? eligibility.reason
+            ? retainedInvalid
+              ? `Invalid selection: ${eligibility.reason}`
+              : eligibility.reason
             : `Prerequisite: ${prerequisiteLabel}`}
         </span>
       </button>

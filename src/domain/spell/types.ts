@@ -68,11 +68,18 @@ export type SpellLevelRange = {
   min: number
   /**
    * Highest pickable spell level.
-   * - `slot-ceiling` — conventional shared slots
+   * - `slot-ceiling` — this class's own spell-slot ceiling (not multiclass shared slots)
    * - `pact-slot-level` — Pact Magic slot level for this class instance
    * - number — fixed max
    */
   max: 'slot-ceiling' | 'pact-slot-level' | number
+  /**
+   * When `max` is `slot-ceiling`, which class level supplies the ceiling.
+   * - `source-level` (default) — current class instance / source level
+   * - `count-unlock-level` — first level where a `by-source-level` count becomes > 0
+   *   (level-gated acquisitions such as Wizard spellbook additions)
+   */
+  slotCeilingAt?: 'source-level' | 'count-unlock-level'
 }
 
 /**

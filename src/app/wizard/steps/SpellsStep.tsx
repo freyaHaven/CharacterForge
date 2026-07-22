@@ -122,7 +122,6 @@ function SelectEntitlementEditor({
   onChangeSpellSourceStates,
   availableSpells,
   invalidSpellIds,
-  slotsByLevel,
 }: {
   summary: CharacterSpellcastingSummary
   group: ResolvedSpellSourceGroup
@@ -132,7 +131,6 @@ function SelectEntitlementEditor({
   onChangeSpellSourceStates: (next: SpellSourceState[]) => void
   availableSpells: SpellDefinition[]
   invalidSpellIds: ReadonlySet<string>
-  slotsByLevel: readonly number[] | null
 }) {
   const selected = new Set(entitlement.selectedSpellIds)
   const grantedIds = new Set(
@@ -159,11 +157,38 @@ function SelectEntitlementEditor({
         ? new Set(entitlement.schools.map((school) => school.toLowerCase()))
         : null
 
+    // Spellbook acquisitions: hide spells already recorded on other book
+    // entitlements in this group. Keep current selections visible so legacy
+    // duplicates remain clearable.
+    const priorSpellbookIds = new Set<string>()
+    if (entitlement.selectionKind === 'spellbook') {
+      for (const other of group.entitlements) {
+        if (
+          other.selectionKind !== 'spellbook' ||
+          other.entitlementId === entitlement.entitlementId
+        ) {
+          continue
+        }
+        for (const spellId of other.selectedSpellIds) {
+          priorSpellbookIds.add(spellId)
+        }
+        for (const grant of other.grantedSpells) {
+          priorSpellbookIds.add(grant.spellId)
+        }
+      }
+    }
+
     const eligible = availableSpells.filter((spell) => {
       if (!entitlement.accessibleLevels.includes(spell.level)) {
         return false
       }
       if (grantedIds.has(spell.id)) {
+        return false
+      }
+      if (
+        priorSpellbookIds.has(spell.id) &&
+        !entitlement.selectedSpellIds.includes(spell.id)
+      ) {
         return false
       }
       if (prepareFromBook !== null && !prepareFromBook.has(spell.id)) {
@@ -207,12 +232,15 @@ function SelectEntitlementEditor({
     availableSpells,
     entitlement.accessibleLevels,
     entitlement.castingTime,
+    entitlement.entitlementId,
     entitlement.prepareFrom,
     entitlement.ritual,
     entitlement.schools,
     entitlement.selectedSpellIds,
+    entitlement.selectionKind,
     entitlement.spellbookSpellIds,
     grantedIds,
+    group.entitlements,
   ])
 
   const countDisplay = useMemo(() => {
@@ -231,7 +259,6 @@ function SelectEntitlementEditor({
       spellLevelById,
       selectedSpellIds: entitlement.selectedSpellIds,
       countingGrantLevels,
-      slotsByLevel,
     })
   }, [
     availableSpells,
@@ -240,7 +267,6 @@ function SelectEntitlementEditor({
     entitlement.label,
     entitlement.limit,
     entitlement.selectedSpellIds,
-    slotsByLevel,
   ])
 
   const eligibilityBySpellId = useMemo(() => {
@@ -276,8 +302,8 @@ function SelectEntitlementEditor({
           (row) => row.level === spell.level,
         )
         if (
-          levelRow?.capacity !== null &&
-          levelRow !== undefined &&
+          levelRow?.limitScope === 'group' &&
+          levelRow.capacity !== null &&
           levelRow.selected >= levelRow.capacity
         ) {
           return
@@ -417,8 +443,6 @@ export function SpellsStep({
       ),
     [displayedIssues, summary.groups],
   )
-
-  const slotsByLevel = summary.sharedSlots?.slotsByLevel ?? null
 
   function formatSlotSummary(
     slots: readonly number[],
@@ -588,7 +612,6 @@ export function SpellsStep({
                   onChangeSpellSourceStates={onChangeSpellSourceStates}
                   availableSpells={availableSpells}
                   invalidSpellIds={sourceInvalidIds}
-                  slotsByLevel={slotsByLevel}
                 />
               )
             })}

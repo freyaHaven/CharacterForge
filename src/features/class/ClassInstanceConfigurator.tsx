@@ -14,6 +14,7 @@ import {
 } from '../../domain/class/abilityScoreImprovement'
 import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
 import { isFightingStyleFeatGrantChoice } from '../../domain/class/fightingStyle'
+import { isCatalogueFeatGrantChoice } from '../../domain/class/catalogueFeatGrant'
 import {
   createFeatGrantChoiceStorageKey,
   readFeatGrantChoices,
@@ -412,6 +413,7 @@ export function ClassInstanceConfigurator({
                                   ),
                                   ...crossInstanceTakenFeatIds,
                                 ]}
+                                eligibilityContext={eligibilityContext}
                                 featChoices={readFeatGrantChoices(
                                   activeChoices,
                                   linkedSingleSelect.id,
@@ -532,6 +534,68 @@ export function ClassInstanceConfigurator({
                                 }
                                 categoryFilter="fighting-style"
                                 alternateOptions={linkedSingleSelect.options}
+                                featChoices={readFeatGrantChoices(
+                                  activeChoices,
+                                  linkedSingleSelect.id,
+                                )}
+                                ownedSkillIds={ownedSkillIds}
+                                ownedToolIds={ownedToolIds}
+                                errorId={errorId}
+                                onChange={onChoiceChange}
+                                onFeatChoiceChange={(featChoiceId, value) => {
+                                  handleFeatSubChoiceChange(
+                                    linkedSingleSelect.id,
+                                    featChoiceId,
+                                    value,
+                                  )
+                                }}
+                              />
+                              {issue !== undefined && errorId !== undefined ? (
+                                <p
+                                  id={errorId}
+                                  className="class-picker__choice-error"
+                                  role="alert"
+                                >
+                                  {formatClassValidationIssue(issue)}
+                                </p>
+                              ) : null}
+                            </div>
+                          )
+                        }
+
+                        if (isCatalogueFeatGrantChoice(linkedSingleSelect)) {
+                          return (
+                            <div
+                              key={feature.id}
+                              className="class-picker__choice"
+                            >
+                              <h6>{feature.name}</h6>
+                              <p className="class-picker__feature-accordion-description">
+                                {feature.description}
+                              </p>
+                              <FeatGrantChoiceField
+                                choiceId={linkedSingleSelect.id}
+                                value={
+                                  typeof choiceValue === 'string'
+                                    ? choiceValue
+                                    : undefined
+                                }
+                                editionId={editionId}
+                                featCatalog={featCatalog}
+                                takenFeatIds={[
+                                  ...collectClassFeatGrantIds(
+                                    activeChoices,
+                                    linkedSingleSelect.id,
+                                  ),
+                                  ...crossInstanceTakenFeatIds,
+                                ]}
+                                eligibilityContext={eligibilityContext}
+                                recommendedFeatId={
+                                  linkedSingleSelect.recommendedFeatId ?? null
+                                }
+                                categoryFilter={
+                                  linkedSingleSelect.featGrantCategory
+                                }
                                 featChoices={readFeatGrantChoices(
                                   activeChoices,
                                   linkedSingleSelect.id,

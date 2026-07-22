@@ -4595,6 +4595,49 @@ html {
   background: color-mix(in srgb, var(--bg) 88%, var(--border));
 }
 
+.feat-picker__card--invalid {
+  border-color: color-mix(in srgb, var(--danger, #b42318) 55%, var(--border));
+}
+
+.feat-picker__show-unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.feat-picker__show-unavailable input {
+  margin: 0;
+}
+
+.feat-picker__invalid-selection {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--danger, #b42318) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger, #b42318) 10%, var(--bg));
+  color: var(--text-h);
+  font-size: 0.88rem;
+}
+
+.class-picker__choice-option--unavailable {
+  opacity: 0.72;
+}
+
+.class-picker__choice-option--invalid {
+  border-color: color-mix(in srgb, var(--danger, #b42318) 55%, var(--border));
+}
+
+.class-picker__choice-option-reason {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--danger, #b42318);
+}
+
 .feat-picker__card-name {
   font-size: 0.95rem;
   font-weight: 700;

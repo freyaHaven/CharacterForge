@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { EditionId } from '../../domain/types'
 import type { FeatDefinition } from '../../domain/feat/types'
@@ -15,9 +15,16 @@ import {
   type AsiMode,
 } from '../../domain/class/abilityScoreImprovement'
 import { isFeatExcludedFromAsiFeatModePicker } from '../../domain/class/epicBoon'
+import {
+  partitionFeatCatalogue,
+  type FeatEntitlementPolicy,
+} from '../../domain/feat/catalogueEligibility'
+import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { formatAbilityLabel } from './formatClassDetails'
 import type { AbilityId } from '../../domain/abilities/types'
 import { FeatSubChoicesFields } from '../feat/FeatSubChoicesFields'
+
+const ASI_FEAT_POLICY: FeatEntitlementPolicy = { kind: 'any-qualifying' }
 
 export type AsiChoiceFieldProps = {
   choiceId: string
@@ -26,6 +33,7 @@ export type AsiChoiceFieldProps = {
   featCatalog: FeatCatalog
   /** Feat ids already taken by other ASI slots / character.feat (exclude this choice). */
   takenFeatIds: readonly string[]
+  eligibilityContext: FeatEligibilityContext
   /** Nested feat sub-choices for the selected feat (companion keys). */
   featChoices?: Record<string, string | string[]>
   ownedSkillIds?: ReadonlySet<string>
@@ -40,52 +48,89 @@ export type AsiChoiceFieldProps = {
 
 function EmbeddedFeatSelect({
   selectedFeatId,
-  feats,
-  takenFeatIds,
+  entries,
   name,
+  showUnavailable,
+  onShowUnavailableChange,
   onSelect,
 }: {
   selectedFeatId: string | null
-  feats: readonly FeatDefinition[]
-  takenFeatIds: readonly string[]
+  entries: ReturnType<typeof partitionFeatCatalogue>['visible']
   name: string
+  showUnavailable: boolean
+  onShowUnavailableChange: (value: boolean) => void
   onSelect: (featId: string) => void
 }) {
   return (
-    <div
-      className="class-picker__asi-feat-options"
-      role="radiogroup"
-      aria-label="Choose a feat"
-    >
-      {feats.map((feat) => {
-        const inputId = `${name}-feat-${feat.id}`
-        const alreadyTaken = takenFeatIds.includes(feat.id)
-        const disabled = alreadyTaken && !feat.repeatable
+    <div className="class-picker__asi-feat-catalog">
+      <label className="feat-picker__show-unavailable">
+        <input
+          type="checkbox"
+          checked={showUnavailable}
+          onChange={(event) => {
+            onShowUnavailableChange(event.target.checked)
+          }}
+        />
+        <span>Show unavailable feats</span>
+      </label>
+      <div
+        className="class-picker__asi-feat-options"
+        role="radiogroup"
+        aria-label="Choose a feat"
+      >
+        {entries.map((entry) => {
+          const feat = entry.definition
+          const inputId = `${name}-feat-${feat.id}`
+          const disabled = !entry.eligibility.eligible
 
-        return (
-          <div key={feat.id} className="class-picker__choice-option">
-            <input
-              id={inputId}
-              type="radio"
-              name={name}
-              value={feat.id}
-              checked={selectedFeatId === feat.id}
-              disabled={disabled}
-              onChange={() => {
-                onSelect(feat.id)
-              }}
-            />
-            <label htmlFor={inputId}>
-              <span className="class-picker__choice-label">{feat.name}</span>
-              {feat.summary ? (
-                <span className="choice-accordion__option-description">
-                  {feat.summary}
-                </span>
-              ) : null}
-            </label>
-          </div>
-        )
-      })}
+          return (
+            <div
+              key={feat.id}
+              className={[
+                'class-picker__choice-option',
+                disabled ? 'class-picker__choice-option--unavailable' : null,
+                entry.retainedInvalid
+                  ? 'class-picker__choice-option--invalid'
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <input
+                id={inputId}
+                type="radio"
+                name={name}
+                value={feat.id}
+                checked={selectedFeatId === feat.id}
+                disabled={disabled}
+                onChange={() => {
+                  if (disabled) {
+                    return
+                  }
+                  onSelect(feat.id)
+                }}
+              />
+              <label htmlFor={inputId}>
+                <span className="class-picker__choice-label">{feat.name}</span>
+                {feat.summary ? (
+                  <span className="choice-accordion__option-description">
+                    {feat.summary}
+                  </span>
+                ) : null}
+                {disabled ? (
+                  <span className="class-picker__choice-option-reason">
+                    {!entry.eligibility.eligible
+                      ? entry.retainedInvalid
+                        ? `Invalid selection: ${entry.eligibility.reason}`
+                        : entry.eligibility.reason
+                      : null}
+                  </span>
+                ) : null}
+              </label>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -96,6 +141,7 @@ export function AsiChoiceField({
   editionId,
   featCatalog,
   takenFeatIds,
+  eligibilityContext,
   featChoices = {},
   ownedSkillIds = new Set(),
   ownedToolIds = new Set(),
@@ -107,15 +153,14 @@ export function AsiChoiceField({
   const mode = getAsiMode(value)
   const parsed = typeof value === 'string' ? parseAsiChoice(value) : null
   const [feats, setFeats] = useState<FeatDefinition[]>([])
+  const [showUnavailable, setShowUnavailable] = useState(false)
 
   useEffect(() => {
     let active = true
 
     void featCatalog.listFeats(editionId).then((list) => {
       if (active) {
-        setFeats(
-          list.filter((feat) => !isFeatExcludedFromAsiFeatModePicker(feat.id)),
-        )
+        setFeats(list)
       }
     })
 
@@ -133,6 +178,29 @@ export function AsiChoiceField({
     selectedFeatId === null
       ? null
       : (feats.find((feat) => feat.id === selectedFeatId) ?? null)
+
+  const contextWithTaken: FeatEligibilityContext = useMemo(
+    () => ({
+      ...eligibilityContext,
+      takenFeatIds,
+    }),
+    [eligibilityContext, takenFeatIds],
+  )
+
+  const featEntries = useMemo(
+    () =>
+      partitionFeatCatalogue({
+        feats,
+        context: contextWithTaken,
+        policy: ASI_FEAT_POLICY,
+        selectedFeatId,
+        showUnavailable,
+        excludeFeatIds: feats
+          .filter((feat) => isFeatExcludedFromAsiFeatModePicker(feat.id))
+          .map((feat) => feat.id),
+      }).visible,
+    [contextWithTaken, feats, selectedFeatId, showUnavailable],
+  )
 
   const handleModeChange = (nextMode: AsiMode) => {
     onChange(choiceId, selectAsiMode(nextMode))
@@ -265,9 +333,10 @@ export function AsiChoiceField({
         <div className="class-picker__asi-detail">
           <EmbeddedFeatSelect
             selectedFeatId={selectedFeatId}
-            feats={feats}
-            takenFeatIds={takenFeatIds}
+            entries={featEntries}
             name={`${choiceId}-feat-${reactId}`}
+            showUnavailable={showUnavailable}
+            onShowUnavailableChange={setShowUnavailable}
             onSelect={(featId) => {
               onChange(choiceId, selectAsiFeat(featId))
             }}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildEntitlementCountDisplay,
   formatLevelCountValue,
+  formatSpellLevelAccordionSummary,
   formatSpellLevelBandLabel,
 } from '../entitlementCountDisplay'
 
@@ -52,21 +53,90 @@ describe('buildEntitlementCountDisplay', () => {
     })
   })
 
-  it('expands a per-level table when multiple levels are available', () => {
+  it('expands entitlement-scoped level rows without slot-style /N denominators', () => {
     const display = buildEntitlementCountDisplay({
       entitlementLabel: 'Prepared Spells',
       limit: 5,
       accessibleLevels: [1, 2],
       spellLevelById,
       selectedSpellIds: ['a', 'b', 'c'],
-      slotsByLevel: [3, 2],
     })
 
     expect(display.countLabel).toBe('3/5')
     expect(display.levelRows).toEqual([
-      { level: 1, label: '1st level', selected: 2, capacity: 3 },
-      { level: 2, label: '2nd level', selected: 1, capacity: 2 },
+      {
+        level: 1,
+        label: '1st level',
+        selected: 2,
+        capacity: null,
+        limitScope: 'entitlement',
+      },
+      {
+        level: 2,
+        label: '2nd level',
+        selected: 1,
+        capacity: null,
+        limitScope: 'entitlement',
+      },
     ])
-    expect(display.levelRows.map(formatLevelCountValue)).toEqual(['2/3', '1/2'])
+    expect(display.levelRows.map(formatLevelCountValue)).toEqual([
+      '2 selected',
+      '1 selected',
+    ])
+  })
+
+  it('shows genuine per-group limits when provided', () => {
+    const display = buildEntitlementCountDisplay({
+      entitlementLabel: 'Special Picks',
+      limit: 3,
+      accessibleLevels: [1, 2],
+      spellLevelById,
+      selectedSpellIds: ['a', 'c'],
+      groupLimitsByLevel: new Map([
+        [1, 1],
+        [2, 2],
+      ]),
+    })
+
+    expect(display.levelRows.map(formatLevelCountValue)).toEqual(['1/1', '1/2'])
+    expect(display.levelRows.every((row) => row.limitScope === 'group')).toBe(
+      true,
+    )
+  })
+})
+
+describe('formatSpellLevelAccordionSummary', () => {
+  it('describes empty, selected, and exhausted partitions', () => {
+    expect(
+      formatSpellLevelAccordionSummary({
+        label: '1st level',
+        selectedNames: [],
+        eligibleCount: 4,
+      }),
+    ).toBe('Browse 1st-level spells')
+
+    expect(
+      formatSpellLevelAccordionSummary({
+        label: '2nd level',
+        selectedNames: ['Blur', 'Misty Step'],
+        eligibleCount: 2,
+      }),
+    ).toBe('Blur, Misty Step')
+
+    expect(
+      formatSpellLevelAccordionSummary({
+        label: '3rd level',
+        selectedNames: ['Fireball', 'Counterspell', 'Fly'],
+        eligibleCount: 1,
+      }),
+    ).toBe('3 selected')
+
+    expect(
+      formatSpellLevelAccordionSummary({
+        label: '1st level',
+        selectedNames: [],
+        eligibleCount: 0,
+      }),
+    ).toBe('No additional spells available')
   })
 })

@@ -15,6 +15,14 @@ import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { SpellCatalog } from '../../domain/ports/spellCatalog'
 import { spellSourceKey } from '../../domain/spell/sourceKey'
+import {
+  compareSpellSourceGroupSortKeys,
+  compareSpellSourceSortKeys,
+  isSubclassClassChoice,
+  spellSourceGroupBand,
+  type SpellSourceOriginKind,
+  type SpellSourceSortKey,
+} from '../../domain/spell/sourceOrigin'
 import type {
   CrossSourceDuplicatePolicy,
   FeatSpellcasting,
@@ -32,6 +40,10 @@ import {
   getSpeciesSpellcastingAbility,
 } from '../../domain/species/resolveSpeciesDerived'
 import { resolveSpellCount } from '../spell/resolveSpellCount'
+import {
+  highestSlotLevel,
+  slotsAtLevel,
+} from '../../domain/spell/progressions'
 import {
   collectSlotContributors,
   resolvePactMagicSlots,
@@ -99,6 +111,8 @@ export type ResolvedSpellSourceGroup = {
   saveDcLabel: string
   attackBonusLabel: string
   entitlements: ResolvedSpellEntitlement[]
+  /** Stable ordering metadata (set by resolver; not for display parsing). */
+  sortKey: SpellSourceSortKey
 }
 
 export type CharacterSpellcastingSummary = {
@@ -120,6 +134,9 @@ type ActiveEntitlement = {
   sourceLevel: number
   groupId: string
   groupLabel: string
+  /** Class spell-slot progression for class-instance sources (own slots, not shared). */
+  classSlotsByLevel?: number[][]
+  sortKey: SpellSourceSortKey
 }
 
 function castingStats(
@@ -137,6 +154,51 @@ function castingStats(
     saveDcLabel: String(saveDc),
     attackBonusLabel: formatSignedModifier(attackBonus),
   }
+}
+
+/** First class level where a by-source-level count becomes positive. */
+export function countUnlockLevel(
+  count: Extract<SpellEntitlement, { kind: 'select' }>['count'],
+): number | null {
+  if (count.kind !== 'by-source-level') {
+    return null
+  }
+  const index = count.table.findIndex((value) => value > 0)
+  return index === -1 ? null : index + 1
+}
+
+/**
+ * Resolve the class-own (or fallback shared) spell-slot ceiling for an entitlement.
+ * Multiclass shared slots never unlock higher spell levels for another class.
+ */
+export function resolveEntitlementSlotCeiling(input: {
+  entitlement: Extract<SpellEntitlement, { kind: 'select' }>
+  sourceLevel: number
+  classSlotsByLevel?: number[][]
+  sharedSlotCeiling: number
+}): number {
+  if (input.entitlement.levelRange.max !== 'slot-ceiling') {
+    return input.sharedSlotCeiling
+  }
+
+  let levelForCeiling = input.sourceLevel
+  if (input.entitlement.levelRange.slotCeilingAt === 'count-unlock-level') {
+    const unlock = countUnlockLevel(input.entitlement.count)
+    if (unlock !== null) {
+      levelForCeiling = unlock
+    }
+  }
+
+  if (
+    input.classSlotsByLevel !== undefined &&
+    input.classSlotsByLevel.length > 0
+  ) {
+    return highestSlotLevel(
+      slotsAtLevel(input.classSlotsByLevel, levelForCeiling),
+    )
+  }
+
+  return input.sharedSlotCeiling
 }
 
 function resolveAccessibleLevels(
@@ -178,6 +240,8 @@ function collectClassActiveEntitlements(
   instanceId: string,
   level: number,
   choices: Record<string, string | string[]>,
+  classInstanceIndex: number,
+  progressionCounter: { value: number },
 ): ActiveEntitlement[] {
   const spellcasting = definition.spellcasting
   if (spellcasting === undefined) {
@@ -189,7 +253,24 @@ function collectClassActiveEntitlements(
   const groupLabel = definition.name
   const ability = spellcasting.ability
 
+  const nextSortKey = (
+    originKind: SpellSourceOriginKind,
+    grantingLevel: number,
+    displayName: string,
+  ): SpellSourceSortKey => {
+    const progressionOrder = progressionCounter.value
+    progressionCounter.value += 1
+    return {
+      originKind,
+      classInstanceIndex,
+      grantingLevel,
+      progressionOrder,
+      displayName,
+    }
+  }
+
   for (const entitlement of spellcasting.entitlements) {
+    const label = entitlementLabel(entitlement, definition.name)
     active.push({
       source: {
         kind: 'class-instance',
@@ -197,11 +278,13 @@ function collectClassActiveEntitlements(
         entitlementId: entitlement.id,
       },
       entitlement,
-      label: entitlementLabel(entitlement, definition.name),
+      label,
       ability,
       sourceLevel: level,
       groupId,
       groupLabel,
+      classSlotsByLevel: spellcasting.slotsByLevel,
+      sortKey: nextSortKey('class-core', 1, label),
     })
   }
 
@@ -216,6 +299,7 @@ function collectClassActiveEntitlements(
     }
 
     const selectedIds = Array.isArray(selected) ? selected : [selected]
+    const subclassChoice = isSubclassClassChoice(choice)
 
     for (const option of choice.options) {
       if (!selectedIds.includes(option.id)) {
@@ -223,6 +307,7 @@ function collectClassActiveEntitlements(
       }
 
       for (const entitlement of option.spellEntitlements ?? []) {
+        const label = `${option.label}: ${entitlementLabel(entitlement, option.label)}`
         active.push({
           source: {
             kind: 'class-instance',
@@ -230,11 +315,17 @@ function collectClassActiveEntitlements(
             entitlementId: entitlement.id,
           },
           entitlement,
-          label: `${option.label}: ${entitlementLabel(entitlement, option.label)}`,
+          label,
           ability,
           sourceLevel: level,
           groupId,
           groupLabel,
+          classSlotsByLevel: spellcasting.slotsByLevel,
+          sortKey: nextSortKey(
+            subclassChoice ? 'subclass-feature' : 'class-choice-option',
+            choice.level,
+            label,
+          ),
         })
       }
 
@@ -244,6 +335,7 @@ function collectClassActiveEntitlements(
         }
 
         for (const entitlement of feature.spellEntitlements ?? []) {
+          const label = entitlementLabel(entitlement, feature.name)
           active.push({
             source: {
               kind: 'class-instance',
@@ -251,11 +343,17 @@ function collectClassActiveEntitlements(
               entitlementId: entitlement.id,
             },
             entitlement,
-            label: entitlementLabel(entitlement, feature.name),
+            label,
             ability,
             sourceLevel: level,
             groupId,
             groupLabel,
+            classSlotsByLevel: spellcasting.slotsByLevel,
+            sortKey: nextSortKey(
+              subclassChoice ? 'subclass-feature' : 'class-feature',
+              feature.level,
+              label,
+            ),
           })
         }
       }
@@ -264,6 +362,7 @@ function collectClassActiveEntitlements(
 
   for (const feature of getClassFeaturesUpToLevel(definition, level)) {
     for (const entitlement of feature.spellEntitlements ?? []) {
+      const label = entitlementLabel(entitlement, feature.name)
       active.push({
         source: {
           kind: 'class-instance',
@@ -271,11 +370,13 @@ function collectClassActiveEntitlements(
           entitlementId: entitlement.id,
         },
         entitlement,
-        label: entitlementLabel(entitlement, feature.name),
+        label,
         ability,
         sourceLevel: level,
         groupId,
         groupLabel,
+        classSlotsByLevel: spellcasting.slotsByLevel,
+        sortKey: nextSortKey('class-feature', feature.level, label),
       })
     }
   }
@@ -362,42 +463,63 @@ function collectFeatActiveEntitlements(
     | { kind: 'background-origin'; backgroundId: string },
   groupId: string,
   groupLabel: string,
+  originKind: Extract<
+    SpellSourceOriginKind,
+    | 'background-origin'
+    | 'character-feat'
+    | 'species-feat-grant'
+    | 'class-feat-grant'
+  >,
+  classInstanceIndex: number,
+  progressionCounter: { value: number },
 ): ActiveEntitlement[] {
   const ability =
     resolveFeatSpellcastingAbility(spellcasting, choices) ??
     spellcasting.ability ??
     'intelligence'
 
-  return spellcasting.entitlements.map((entitlement) => ({
-    source:
-      sourceBase.kind === 'feat'
-        ? sourceBase.slot === 'class-choice'
-          ? {
-              kind: 'feat' as const,
-              slot: 'class-choice' as const,
-              featId: sourceBase.featId,
-              instanceId: sourceBase.instanceId,
-              choiceId: sourceBase.choiceId,
-              entitlementId: entitlement.id,
-            }
+  return spellcasting.entitlements.map((entitlement) => {
+    const label = entitlementLabel(entitlement, groupLabel)
+    const progressionOrder = progressionCounter.value
+    progressionCounter.value += 1
+    return {
+      source:
+        sourceBase.kind === 'feat'
+          ? sourceBase.slot === 'class-choice'
+            ? {
+                kind: 'feat' as const,
+                slot: 'class-choice' as const,
+                featId: sourceBase.featId,
+                instanceId: sourceBase.instanceId,
+                choiceId: sourceBase.choiceId,
+                entitlementId: entitlement.id,
+              }
+            : {
+                kind: 'feat' as const,
+                slot: 'character-feat' as const,
+                featId: sourceBase.featId,
+                entitlementId: entitlement.id,
+              }
           : {
-              kind: 'feat' as const,
-              slot: 'character-feat' as const,
-              featId: sourceBase.featId,
+              kind: 'background-origin' as const,
+              backgroundId: sourceBase.backgroundId,
               entitlementId: entitlement.id,
-            }
-        : {
-            kind: 'background-origin' as const,
-            backgroundId: sourceBase.backgroundId,
-            entitlementId: entitlement.id,
-          },
-    entitlement,
-    label: entitlementLabel(entitlement, groupLabel),
-    ability,
-    sourceLevel: 1,
-    groupId,
-    groupLabel,
-  }))
+            },
+      entitlement,
+      label,
+      ability,
+      sourceLevel: 1,
+      groupId,
+      groupLabel,
+      sortKey: {
+        originKind,
+        classInstanceIndex,
+        grantingLevel: 1,
+        progressionOrder,
+        displayName: groupLabel,
+      },
+    }
+  })
 }
 
 function findSpellbookSpellIds(
@@ -497,9 +619,15 @@ function buildResolvedEntitlement(
   }
 
   const limit = resolveSpellCount(entitlement.count, active.sourceLevel)
+  const entitlementSlotCeiling = resolveEntitlementSlotCeiling({
+    entitlement,
+    sourceLevel: active.sourceLevel,
+    classSlotsByLevel: active.classSlotsByLevel,
+    sharedSlotCeiling: slotCeiling,
+  })
   const accessibleLevels = resolveAccessibleLevels(
     entitlement,
-    slotCeiling,
+    entitlementSlotCeiling,
     pactSlotLevel,
   )
   const grantedCounting = 0
@@ -564,24 +692,37 @@ function collectSpeciesActiveEntitlements(
   spellcasting: {
     entitlements: SpellEntitlement[]
   },
+  progressionCounter: { value: number },
 ): ActiveEntitlement[] {
   const groupId = `species-trait:${speciesId}:${traitId}`
   const groupLabel = `${speciesName}: ${traitLabel}`
 
-  return spellcasting.entitlements.map((entitlement) => ({
-    source: {
-      kind: 'species-trait' as const,
-      speciesId,
-      traitId,
-      entitlementId: entitlement.id,
-    },
-    entitlement,
-    label: entitlementLabel(entitlement, groupLabel),
-    ability,
-    sourceLevel: characterLevel,
-    groupId,
-    groupLabel,
-  }))
+  return spellcasting.entitlements.map((entitlement) => {
+    const label = entitlementLabel(entitlement, groupLabel)
+    const progressionOrder = progressionCounter.value
+    progressionCounter.value += 1
+    return {
+      source: {
+        kind: 'species-trait' as const,
+        speciesId,
+        traitId,
+        entitlementId: entitlement.id,
+      },
+      entitlement,
+      label,
+      ability,
+      sourceLevel: characterLevel,
+      groupId,
+      groupLabel,
+      sortKey: {
+        originKind: 'species-trait' as const,
+        classInstanceIndex: -1,
+        grantingLevel: 1,
+        progressionOrder,
+        displayName: groupLabel,
+      },
+    }
+  })
 }
 
 export async function resolveCharacterSpellcasting(
@@ -612,8 +753,14 @@ export async function resolveCharacterSpellcasting(
   }
 
   const activeEntitlements: ActiveEntitlement[] = []
+  const progressionCounter = { value: 0 }
+  const classInstanceIndexById = new Map<string, number>()
 
-  for (const instance of character.classes) {
+  character.classes.forEach((instance, index) => {
+    classInstanceIndexById.set(instance.instanceId, index)
+  })
+
+  for (const [classInstanceIndex, instance] of character.classes.entries()) {
     const definition = definitionsById.get(instance.classId)
     if (definition === undefined) {
       continue
@@ -625,6 +772,8 @@ export async function resolveCharacterSpellcasting(
         instance.instanceId,
         instance.level,
         instance.choices,
+        classInstanceIndex,
+        progressionCounter,
       ),
     )
   }
@@ -663,6 +812,9 @@ export async function resolveCharacterSpellcasting(
                 'Background',
                 grant.source.backgroundName,
               ),
+              'background-origin',
+              -1,
+              progressionCounter,
             ),
           )
         } else if (grant.source.kind === 'character-feat') {
@@ -677,6 +829,9 @@ export async function resolveCharacterSpellcasting(
               },
               `feat:character-feat:${feat.id}`,
               formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
+              'character-feat',
+              -1,
+              progressionCounter,
             ),
           )
         } else if (grant.source.kind === 'species-feat-grant') {
@@ -697,6 +852,9 @@ export async function resolveCharacterSpellcasting(
                 grant.source.grantLabel,
                 grant.source.speciesDisplayName,
               ),
+              'species-feat-grant',
+              -1,
+              progressionCounter,
             ),
           )
         } else {
@@ -717,6 +875,9 @@ export async function resolveCharacterSpellcasting(
                 grant.source.grantLabel,
                 grant.source.className,
               ),
+              'class-feat-grant',
+              classInstanceIndexById.get(grant.source.instanceId) ?? -1,
+              progressionCounter,
             ),
           )
         }
@@ -735,6 +896,9 @@ export async function resolveCharacterSpellcasting(
             },
             `feat:character-feat:${feat.id}`,
             formatGrantedFeatSpellcastingLabel(feat.name, 'Feat'),
+            'character-feat',
+            -1,
+            progressionCounter,
           ),
         )
       }
@@ -765,11 +929,17 @@ export async function resolveCharacterSpellcasting(
             ability,
             character.targetLevel,
             block.spellcasting,
+            progressionCounter,
           ),
         )
       }
     }
   }
+
+  // Sort by deliberate origin priority — never rely on collector insertion order.
+  activeEntitlements.sort((left, right) =>
+    compareSpellSourceSortKeys(left.sortKey, right.sortKey),
+  )
 
   const normalizedActive = activeEntitlements
 
@@ -825,8 +995,14 @@ export async function resolveCharacterSpellcasting(
         ability: active.ability,
         ...stats,
         entitlements: [],
+        sortKey: active.sortKey,
       }
       groupsById.set(active.groupId, group)
+    } else if (
+      compareSpellSourceSortKeys(active.sortKey, group.sortKey) < 0
+    ) {
+      // Keep the earliest entitlement sort key as the group key (e.g. class-core).
+      group.sortKey = active.sortKey
     }
 
     const state = findSourceState(character.spellSourceStates, active.source)
@@ -889,7 +1065,24 @@ export async function resolveCharacterSpellcasting(
     }
   }
 
-  const groups = [...groupsById.values()]
+  const groups = [...groupsById.values()].sort((left, right) =>
+    compareSpellSourceGroupSortKeys(
+      {
+        band: spellSourceGroupBand(left.sortKey.originKind),
+        classInstanceIndex: left.sortKey.classInstanceIndex,
+        grantingLevel: left.sortKey.grantingLevel,
+        progressionOrder: left.sortKey.progressionOrder,
+        displayName: left.label,
+      },
+      {
+        band: spellSourceGroupBand(right.sortKey.originKind),
+        classInstanceIndex: right.sortKey.classInstanceIndex,
+        grantingLevel: right.sortKey.grantingLevel,
+        progressionOrder: right.sortKey.progressionOrder,
+        displayName: right.label,
+      },
+    ),
+  )
   const activeSources = normalizedActive.map((entry) => entry.source)
   const hasSpellbookContent = groups.some((group) =>
     group.entitlements.some(

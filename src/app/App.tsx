@@ -269,6 +269,14 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   catalog={editor.speciesCatalog}
                   featCatalog={editor.featCatalog}
                   takenFeatIds={species.takenFeatIds}
+                  eligibilityContext={{
+                    characterLevel: character.targetLevel,
+                    abilityScores: character.abilityScores,
+                    hasSpellcasting:
+                      editor.spellcastingReview.hasSpellcastingCapability,
+                    hasFightingStyle: true,
+                    takenFeatIds: species.takenFeatIds,
+                  }}
                   onDraftChange={species.setSpeciesDraft}
                   onCommittedSelectionChange={species.commitSpeciesSelection}
                 />
@@ -370,6 +378,14 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   committedSelection={character.feat}
                   draft={feat.featDraft}
                   catalog={editor.featCatalog}
+                  eligibilityContext={{
+                    characterLevel: character.targetLevel,
+                    abilityScores: character.abilityScores,
+                    hasSpellcasting:
+                      editor.spellcastingReview.hasSpellcastingCapability,
+                    hasFightingStyle: true,
+                    takenFeatIds: [],
+                  }}
                   onDraftChange={feat.setFeatDraft}
                   onCommittedSelectionChange={feat.commitFeatSelection}
                 />

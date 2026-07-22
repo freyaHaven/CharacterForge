@@ -382,6 +382,7 @@ export function ClassProgressionSection({
                           ),
                           ...crossInstanceTakenFeatIds,
                         ]}
+                        eligibilityContext={eligibilityContext}
                         featChoices={readFeatGrantChoices(
                           activeChoices,
                           item.singleSelectChoice.id,

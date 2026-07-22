@@ -12,22 +12,39 @@ import type { FeatSelectionDraft } from '../featSelectionDraft'
 
 function FeatPickerHarness({
   getEligibility,
+  committedSelection = null,
 }: {
   getEligibility?: (definition: FeatDefinition) => FeatEligibility
+  committedSelection?: FeatSelection | null
 } = {}) {
   const [draft, setDraft] = useState<FeatSelectionDraft | null>(null)
-  const [committedSelection, setCommittedSelection] =
-    useState<FeatSelection | null>(null)
+  const [committed, setCommitted] = useState<FeatSelection | null>(
+    committedSelection,
+  )
 
   return (
     <FeatPicker
       editionId="srd-2024"
-      committedSelection={committedSelection}
+      committedSelection={committed}
       draft={draft}
       catalog={createBundledFeatCatalog()}
       onDraftChange={setDraft}
-      onCommittedSelectionChange={setCommittedSelection}
+      onCommittedSelectionChange={setCommitted}
       getEligibility={getEligibility}
+      eligibilityContext={{
+        characterLevel: 4,
+        abilityScores: {
+          strength: 10,
+          dexterity: 14,
+          constitution: 14,
+          intelligence: 10,
+          wisdom: 12,
+          charisma: 10,
+        },
+        hasSpellcasting: false,
+        hasFightingStyle: false,
+        takenFeatIds: [],
+      }}
     />
   )
 }
@@ -64,7 +81,7 @@ describe('FeatPicker', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('keeps ineligible feats visible and shows the failure reason on the card', async () => {
+  it('hides ineligible feats by default and never selects them', async () => {
     const user = userEvent.setup()
     render(
       <FeatPickerHarness
@@ -83,6 +100,12 @@ describe('FeatPicker', () => {
       expect(screen.queryByText(/loading feats/i)).not.toBeInTheDocument()
     })
 
+    expect(
+      screen.queryByRole('button', { name: /Savage Attacker/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText(/show unavailable feats/i))
+
     const savageCard = screen.getByRole('button', { name: /Savage Attacker/i })
     expect(savageCard).toBeDisabled()
     expect(
@@ -94,5 +117,33 @@ describe('FeatPicker', () => {
     expect(
       screen.getByText(/select a feat from the catalogue/i),
     ).toBeInTheDocument()
+  })
+
+  it('keeps a committed invalid feat visible with an explanation', async () => {
+    render(
+      <FeatPickerHarness
+        committedSelection={{ featId: 'srd-2024:grappler', choices: {} }}
+        getEligibility={(definition) =>
+          definition.id === 'srd-2024:grappler'
+            ? {
+                eligible: false,
+                reason: 'Requires character level 4+',
+              }
+            : { eligible: true }
+        }
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading feats/i)).not.toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByRole('button', { name: /Grappler/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Invalid selection: Requires character level 4\+/i),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /clear feat selection/i })).toBeInTheDocument()
   })
 })

@@ -210,8 +210,20 @@ describe('SpellSelectionGrid', () => {
         title="Prepared Spells"
         countLabel="3/5"
         levelRows={[
-          { level: 1, label: '1st level', selected: 2, capacity: 3 },
-          { level: 2, label: '2nd level', selected: 1, capacity: 2 },
+          {
+            level: 1,
+            label: '1st level',
+            selected: 1,
+            capacity: null,
+            limitScope: 'entitlement',
+          },
+          {
+            level: 2,
+            label: '2nd level',
+            selected: 0,
+            capacity: null,
+            limitScope: 'entitlement',
+          },
         ]}
         selectableSpells={[
           { ...light, level: 1 },
@@ -226,9 +238,10 @@ describe('SpellSelectionGrid', () => {
       screen.getByRole('heading', { name: /prepared spells/i }),
     ).toHaveTextContent('3/5')
     expect(screen.getByText('1st level')).toBeInTheDocument()
-    expect(screen.getByText('2/3')).toBeInTheDocument()
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
     expect(screen.getByText('2nd level')).toBeInTheDocument()
-    expect(screen.getByText('1/2')).toBeInTheDocument()
+    expect(screen.queryByText('2/3')).not.toBeInTheDocument()
+    expect(screen.queryByText('1/2')).not.toBeInTheDocument()
 
     // Level with selections starts expanded; empty selection level stays collapsed.
     expect(screen.getByRole('checkbox', { name: /light/i })).toBeInTheDocument()
@@ -236,21 +249,31 @@ describe('SpellSelectionGrid', () => {
       screen.getByRole('button', { name: /hide 1st level spells/i }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /show 2nd level spells/i }),
+      screen.getByRole('button', { name: /browse 2nd-level spells/i }),
     ).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /aid/i })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /show 2nd level spells/i }))
+    await user.click(
+      screen.getByRole('button', { name: /browse 2nd-level spells/i }),
+    )
     expect(screen.getByRole('checkbox', { name: /aid/i })).toBeInTheDocument()
   })
 
-  it('blocks unselected spells when the level capacity is full', () => {
+  it('blocks unselected spells only for genuine per-group capacity', () => {
     render(
       <SpellSelectionGrid
         idPrefix="prepared"
         title="Prepared Spells"
         countLabel="2/5"
-        levelRows={[{ level: 1, label: '1st level', selected: 2, capacity: 2 }]}
+        levelRows={[
+          {
+            level: 1,
+            label: '1st level',
+            selected: 2,
+            capacity: 2,
+            limitScope: 'group',
+          },
+        ]}
         selectableSpells={[
           { ...light, level: 1 },
           { ...sacredFlame, level: 1 },
@@ -272,6 +295,53 @@ describe('SpellSelectionGrid', () => {
       screen.getByRole('checkbox', { name: /sacred flame/i }),
     ).not.toBeDisabled()
     expect(screen.getByRole('checkbox', { name: /bless/i })).toBeDisabled()
+  })
+
+  it('does not treat entitlement-scoped selected counts as a per-level pick cap', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SpellSelectionGrid
+        idPrefix="spellbook"
+        title="Wizard level 3 spellbook addition"
+        countLabel="0/2"
+        levelRows={[
+          {
+            level: 1,
+            label: '1st level',
+            selected: 0,
+            capacity: null,
+            limitScope: 'entitlement',
+          },
+          {
+            level: 2,
+            label: '2nd level',
+            selected: 0,
+            capacity: null,
+            limitScope: 'entitlement',
+          },
+        ]}
+        selectableSpells={[
+          { ...light, level: 1 },
+          { ...sacredFlame, level: 2, name: 'Blur', id: 'srd-2024:blur' },
+        ]}
+        selectedSpellIds={new Set()}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(
+      screen.getByRole('heading', {
+        name: /wizard level 3 spellbook addition/i,
+      }),
+    ).toHaveTextContent('0/2')
+    expect(screen.queryByText('0/4')).not.toBeInTheDocument()
+    expect(screen.queryByText('0/3')).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /browse 1st-level spells/i }),
+    )
+    expect(screen.getByRole('checkbox', { name: /light/i })).not.toBeDisabled()
   })
 
   it('blocks additional picks when the global selection limit is reached', () => {

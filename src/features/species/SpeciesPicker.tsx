@@ -63,6 +63,8 @@ type SpeciesPickerProps = {
   catalog: SpeciesCatalog
   featCatalog: FeatCatalog
   takenFeatIds?: readonly string[]
+  /** Character-scoped eligibility for Origin feat grants. */
+  eligibilityContext?: FeatEligibilityContext
   onDraftChange: (draft: SpeciesSelectionDraft | null) => void
   onCommittedSelectionChange: (selection: SpeciesSelection | null) => void
 }
@@ -74,6 +76,7 @@ export function SpeciesPicker({
   catalog,
   featCatalog,
   takenFeatIds = [],
+  eligibilityContext = EMPTY_FEAT_ELIGIBILITY_CONTEXT,
   onDraftChange,
   onCommittedSelectionChange,
 }: SpeciesPickerProps) {
@@ -83,8 +86,6 @@ export function SpeciesPicker({
   const [featById, setFeatById] = useState<
     Map<string, import('../../domain/feat/types').FeatDefinition>
   >(() => new Map())
-
-  const eligibilityContext: FeatEligibilityContext = EMPTY_FEAT_ELIGIBILITY_CONTEXT
 
   const validationOptions = useMemo(
     () => ({

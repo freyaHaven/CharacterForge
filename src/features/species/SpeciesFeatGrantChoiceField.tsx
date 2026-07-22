@@ -2,10 +2,8 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { EditionId } from '../../domain/types'
 import type { FeatCategory, FeatDefinition } from '../../domain/feat/types'
-import {
-  evaluateFeatEligibility,
-  type FeatEligibilityContext,
-} from '../../domain/feat/eligibility'
+import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
+import { partitionFeatCatalogue } from '../../domain/feat/catalogueEligibility'
 import { formatFeatCategoryBadge } from '../feat/formatFeatDetails'
 import { FeatSubChoicesFields } from '../feat/FeatSubChoicesFields'
 
@@ -47,6 +45,7 @@ export function SpeciesFeatGrantChoiceField({
 }: SpeciesFeatGrantChoiceFieldProps) {
   const reactId = useId()
   const [feats, setFeats] = useState<FeatDefinition[]>([])
+  const [showUnavailable, setShowUnavailable] = useState(false)
   const selectedFeatId =
     typeof value === 'string' && value.length > 0 ? value : null
 
@@ -55,14 +54,14 @@ export function SpeciesFeatGrantChoiceField({
 
     void featCatalog.listFeats(editionId).then((list) => {
       if (active) {
-        setFeats(list.filter((feat) => feat.category === featCategory))
+        setFeats(list)
       }
     })
 
     return () => {
       active = false
     }
-  }, [editionId, featCatalog, featCategory])
+  }, [editionId, featCatalog])
 
   const contextWithTaken: FeatEligibilityContext = useMemo(
     () => ({
@@ -72,19 +71,34 @@ export function SpeciesFeatGrantChoiceField({
     [eligibilityContext, takenFeatIds],
   )
 
-  const sortedFeats = useMemo(() => {
-    return [...feats].sort((left, right) => {
+  const sortedEntries = useMemo(() => {
+    const partitioned = partitionFeatCatalogue({
+      feats,
+      context: contextWithTaken,
+      policy: { kind: 'category', category: featCategory },
+      selectedFeatId,
+      showUnavailable,
+    })
+
+    return [...partitioned.visible].sort((left, right) => {
       if (recommendedFeatId !== null) {
-        if (left.id === recommendedFeatId) {
+        if (left.definition.id === recommendedFeatId) {
           return -1
         }
-        if (right.id === recommendedFeatId) {
+        if (right.definition.id === recommendedFeatId) {
           return 1
         }
       }
-      return left.name.localeCompare(right.name)
+      return left.definition.name.localeCompare(right.definition.name)
     })
-  }, [feats, recommendedFeatId])
+  }, [
+    contextWithTaken,
+    featCategory,
+    feats,
+    recommendedFeatId,
+    selectedFeatId,
+    showUnavailable,
+  ])
 
   const selectedFeatDefinition =
     selectedFeatId === null
@@ -93,21 +107,40 @@ export function SpeciesFeatGrantChoiceField({
 
   return (
     <div aria-describedby={errorId}>
+      <label className="feat-picker__show-unavailable">
+        <input
+          type="checkbox"
+          checked={showUnavailable}
+          onChange={(event) => {
+            setShowUnavailable(event.target.checked)
+          }}
+        />
+        <span>Show unavailable feats</span>
+      </label>
       <div
         className="class-picker__asi-feat-options"
         role="radiogroup"
         aria-label="Choose an Origin feat"
       >
-        {sortedFeats.map((feat) => {
+        {sortedEntries.map((entry) => {
+          const feat = entry.definition
           const inputId = `${choiceId}-feat-${feat.id}-${reactId}`
-          const eligibility = evaluateFeatEligibility(feat, contextWithTaken)
-          const alreadyTaken = takenFeatIds.includes(feat.id)
-          const disabled =
-            !eligibility.eligible || (alreadyTaken && !feat.repeatable)
+          const disabled = !entry.eligibility.eligible
           const isRecommended = feat.id === recommendedFeatId
 
           return (
-            <div key={feat.id} className="class-picker__choice-option">
+            <div
+              key={feat.id}
+              className={[
+                'class-picker__choice-option',
+                disabled ? 'class-picker__choice-option--unavailable' : null,
+                entry.retainedInvalid
+                  ? 'class-picker__choice-option--invalid'
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <input
                 id={inputId}
                 type="radio"
@@ -116,6 +149,9 @@ export function SpeciesFeatGrantChoiceField({
                 checked={selectedFeatId === feat.id}
                 disabled={disabled}
                 onChange={() => {
+                  if (disabled) {
+                    return
+                  }
                   onChange(choiceId, feat.id)
                 }}
               />
@@ -132,8 +168,16 @@ export function SpeciesFeatGrantChoiceField({
                 <span className="choice-accordion__option-description">
                   {formatFeatCategoryBadge(feat.category)}
                   {feat.summary ? ` · ${feat.summary}` : ''}
-                  {!eligibility.eligible ? ` — ${eligibility.reason}` : ''}
                 </span>
+                {disabled ? (
+                  <span className="class-picker__choice-option-reason">
+                    {!entry.eligibility.eligible
+                      ? entry.retainedInvalid
+                        ? `Invalid selection: ${entry.eligibility.reason}`
+                        : entry.eligibility.reason
+                      : null}
+                  </span>
+                ) : null}
               </label>
             </div>
           )
