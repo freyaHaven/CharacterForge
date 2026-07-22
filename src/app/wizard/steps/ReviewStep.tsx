@@ -58,7 +58,6 @@ export type ReviewStepProps = {
   characterDetailsStatus: StepStatus
   equipmentEntries: readonly ResolvedInventoryEntry[]
   equipmentInventory: readonly ResolvedInventoryItem[]
-  equipmentWeightCarriedLb: number
   equipmentGoldPieces: number
   equipmentLoadout: EquipmentLoadout
   equipmentCatalog: EquipmentCatalog
@@ -111,7 +110,6 @@ export function ReviewStep({
   characterDetailsStatus,
   equipmentEntries,
   equipmentInventory,
-  equipmentWeightCarriedLb,
   equipmentGoldPieces,
   equipmentLoadout,
   equipmentCatalog,
@@ -264,7 +262,6 @@ export function ReviewStep({
           <InventoryPanel
             entries={equipmentEntries}
             loadout={equipmentLoadout}
-            weightCarriedLb={equipmentWeightCarriedLb}
             goldPieces={equipmentGoldPieces}
             abilityScores={abilityScores}
             definitionsById={equipmentDefinitions}

@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { SRD_2024_EQUIPMENT_BY_ID } from '../../../content/packs/srd-2024/equipment'
+import { DEFAULT_ABILITY_SCORES } from '../../../domain/character/defaults'
 import { EMPTY_EQUIPMENT_LOADOUT } from '../../../domain/equipment/types'
 import type { ResolvedInventoryEntry } from '../../../rules/character/resolveCharacterEquipment'
 import { InventoryPage } from '../InventoryPage'
@@ -110,7 +111,7 @@ function renderPage(
       armorItemId: 'srd-2024:chain-mail',
     },
     goldPieces: 18,
-    weightCarriedLb: 72,
+    abilityScores: DEFAULT_ABILITY_SCORES,
     definitionsById: SRD_2024_EQUIPMENT_BY_ID,
     seeded: true,
     onSetQuantity: vi.fn(async () => okResult()),
@@ -142,6 +143,31 @@ describe('InventoryPage', () => {
     expect(screen.getByText('Equipped')).toBeInTheDocument()
   })
 
+  it('shows carrying capacity summary with incomplete unknown-weight messaging', () => {
+    renderPage()
+
+    expect(screen.getByText(/At least 72 lb \/ 150 lb/i)).toBeInTheDocument()
+    expect(screen.getByText(/1 item has unknown weight/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('progressbar').getAttribute('aria-valuetext'),
+    ).toMatch(/at least 72 lb/i)
+    expect(screen.getByText(/incomplete total/i)).toBeInTheDocument()
+  })
+
+  it('shows unit and stack weight for entries, with unknown fallback', () => {
+    renderPage()
+
+    const arrowRow = screen.getByText('Arrows').closest('tr')
+    expect(arrowRow).not.toBeNull()
+    expect(within(arrowRow!).getByText('1 lb')).toBeInTheDocument()
+    expect(within(arrowRow!).getByText('0.05 lb each')).toBeInTheDocument()
+
+    const mysteryRow = screen.getByText('Mystery Orb').closest('tr')
+    expect(mysteryRow).not.toBeNull()
+    expect(within(mysteryRow!).getAllByText('—').length).toBeGreaterThan(0)
+    expect(within(mysteryRow!).getByText('Unknown weight')).toBeInTheDocument()
+  })
+
   it('shows unknown catalogue items with a fallback label', () => {
     renderPage()
     expect(screen.getByText('Mystery Orb')).toBeInTheDocument()
@@ -165,9 +191,76 @@ describe('InventoryPage', () => {
     expect(screen.getByText('Chain Mail')).toBeInTheDocument()
     expect(screen.queryByText('Arrows')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Quiver' }))
+    await user.click(screen.getByRole('tab', { name: /Quiver/i }))
     expect(screen.getByText('Arrows')).toBeInTheDocument()
     expect(screen.queryByText('Torch')).not.toBeInTheDocument()
+  })
+
+  it('updates the weight summary when entry quantities change via props', () => {
+    const { rerender } = render(
+      <InventoryPage
+        entries={sampleEntries}
+        loadout={{
+          ...EMPTY_EQUIPMENT_LOADOUT,
+          armorItemId: 'srd-2024:chain-mail',
+        }}
+        goldPieces={18}
+        abilityScores={DEFAULT_ABILITY_SCORES}
+        definitionsById={SRD_2024_EQUIPMENT_BY_ID}
+        seeded
+        onSetQuantity={vi.fn(async () => okResult())}
+        onAdjustQuantity={vi.fn(async () => okResult())}
+        onRemove={vi.fn(async () => okResult())}
+        onMove={vi.fn(async () => okResult())}
+        onSplit={vi.fn(async () => okResult())}
+        onMerge={vi.fn(async () => okResult())}
+        onSetCurrency={vi.fn(async () => okResult())}
+        onAdjustCurrency={vi.fn(async () => okResult())}
+      />,
+    )
+
+    expect(screen.getByText(/At least 72 lb \/ 150 lb/i)).toBeInTheDocument()
+
+    const heavier = sampleEntries.map((item) =>
+      item.instanceId === 'inst:chain-mail'
+        ? { ...item, quantity: 2 }
+        : item,
+    )
+    rerender(
+      <InventoryPage
+        entries={heavier}
+        loadout={{
+          ...EMPTY_EQUIPMENT_LOADOUT,
+          armorItemId: 'srd-2024:chain-mail',
+        }}
+        goldPieces={18}
+        abilityScores={DEFAULT_ABILITY_SCORES}
+        definitionsById={SRD_2024_EQUIPMENT_BY_ID}
+        seeded
+        onSetQuantity={vi.fn(async () => okResult())}
+        onAdjustQuantity={vi.fn(async () => okResult())}
+        onRemove={vi.fn(async () => okResult())}
+        onMove={vi.fn(async () => okResult())}
+        onSplit={vi.fn(async () => okResult())}
+        onMerge={vi.fn(async () => okResult())}
+        onSetCurrency={vi.fn(async () => okResult())}
+        onAdjustCurrency={vi.fn(async () => okResult())}
+      />,
+    )
+
+    // 72 - 55 + 110 = 127
+    expect(screen.getByText(/At least 127 lb \/ 150 lb/i)).toBeInTheDocument()
+  })
+
+  it('stays safe for unseeded inventory preview', () => {
+    renderPage({ seeded: false, entries: sampleEntries })
+    expect(
+      screen.getByText(/Inventory editing unlocks after starting equipment/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/At least 72 lb \/ 150 lb/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /increase arrows quantity/i }),
+    ).toBeDisabled()
   })
 
   it('exposes quantity increase and decrease', async () => {
@@ -314,7 +407,7 @@ describe('InventoryPage', () => {
 
     await user.clear(goldInput)
     await user.type(goldInput, '40')
-    props.onSetCurrency.mockResolvedValueOnce(okResult())
+    vi.mocked(props.onSetCurrency).mockResolvedValueOnce(okResult())
     await user.click(screen.getByRole('button', { name: 'Set' }))
     expect(props.onSetCurrency).toHaveBeenCalledWith(40)
   })

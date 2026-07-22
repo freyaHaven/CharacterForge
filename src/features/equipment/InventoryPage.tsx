@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react'
+import type { AbilityScores } from '../../domain/types'
 import type {
   EquipmentItemDefinition,
   EquipmentLoadout,
@@ -9,16 +10,22 @@ import {
   formatInventoryMutationError,
   type InventoryMutationResult,
 } from '../../domain/equipment/inventoryMutations'
+import {
+  calculateInventoryWeightFromEnriched,
+  formatContainerTabWeight,
+  formatEntryWeightDisplay,
+} from '../../domain/equipment/inventoryWeight'
 import { formatLocationLabel } from '../../domain/equipment/inventory'
 import { isItemEquipped } from '../../domain/equipment/equipmentLoadout'
 import type { ResolvedInventoryEntry } from '../../rules/character/resolveCharacterEquipment'
 import { formatGoldPieces } from './formatEquipment'
+import { InventoryWeightSummary } from './InventoryWeightSummary'
 
 export type InventoryPageProps = {
   entries: readonly ResolvedInventoryEntry[]
   loadout: EquipmentLoadout
   goldPieces: number
-  weightCarriedLb: number
+  abilityScores: AbilityScores
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>
   seeded: boolean
   onSetQuantity: (
@@ -60,14 +67,6 @@ type PendingRemove = {
   entry: ResolvedInventoryEntry
   isContainer: boolean
   contentCount: number
-}
-
-function formatWeight(weightLb: number | null, quantity: number): string {
-  if (weightLb === null) {
-    return '—'
-  }
-  const total = Math.round(weightLb * quantity * 10) / 10
-  return `${total} lb`
 }
 
 function formatCost(costGp: number | null, quantity: number): string {
@@ -143,7 +142,7 @@ export function InventoryPage({
   entries,
   loadout,
   goldPieces,
-  weightCarriedLb,
+  abilityScores,
   definitionsById,
   seeded,
   onSetQuantity,
@@ -183,6 +182,17 @@ export function InventoryPage({
 
   const tabs = useMemo(() => buildTabs(entries), [entries])
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]
+
+  const weightBreakdown = useMemo(
+    () => calculateInventoryWeightFromEnriched(entries, definitionsById),
+    [definitionsById, entries],
+  )
+  const weightByInstanceId = useMemo(() => {
+    const map = new Map(
+      weightBreakdown.entries.map((entry) => [entry.instanceId, entry] as const),
+    )
+    return map
+  }, [weightBreakdown.entries])
 
   const visibleEntries = useMemo(() => {
     const searched = entries.filter((entry) => matchesNameSearch(entry, search))
@@ -313,9 +323,11 @@ export function InventoryPage({
       ) : null}
 
       <div className="inventory-page__stats">
-        <p className="inventory-page__weight">
-          Weight carried: {weightCarriedLb} lb
-        </p>
+        <InventoryWeightSummary
+          entries={entries}
+          abilityScores={abilityScores}
+          definitionsById={definitionsById}
+        />
         <fieldset className="inventory-page__currency" disabled={!seeded}>
           <legend>Currency (gp)</legend>
           <div className="inventory-page__currency-controls">
@@ -394,12 +406,32 @@ export function InventoryPage({
             role="tablist"
             aria-label="Inventory locations"
           >
-            {tabs.map((tab) => (
+            {tabs.map((tab) => {
+              const containerWeight =
+                tab.kind === 'container'
+                  ? weightBreakdown.byContainer.get(tab.containerInstanceId)
+                  : undefined
+              const weightSuffix =
+                containerWeight !== undefined
+                  ? formatContainerTabWeight(
+                      containerWeight.knownContentsWeightLb,
+                      containerWeight.unknownContentsCount,
+                    )
+                  : null
+              const tabLabel =
+                weightSuffix !== null ? `${tab.label} · ${weightSuffix}` : tab.label
+
+              return (
               <button
                 key={tab.id}
                 type="button"
                 role="tab"
                 aria-selected={tab.id === activeTab?.id}
+                title={
+                  weightSuffix !== null
+                    ? `${tab.label} contents ${weightSuffix}`
+                    : tab.label
+                }
                 className={
                   tab.id === activeTab?.id
                     ? 'inventory-page__tab inventory-page__tab--active'
@@ -407,9 +439,10 @@ export function InventoryPage({
                 }
                 onClick={() => setActiveTabId(tab.id)}
               >
-                {tab.label}
+                {tabLabel}
               </button>
-            ))}
+              )
+            })}
           </div>
 
           <div className="inventory-page__table-wrap" role="tabpanel">
@@ -446,6 +479,11 @@ export function InventoryPage({
                     const destinations = containerDestinations(entry)
                     const mergeTargets = mergeTargetsFor(entry)
                     const unknownCatalogue = !definitionsById.has(entry.itemId)
+                    const weightDetail = weightByInstanceId.get(entry.instanceId)
+                    const weightDisplay =
+                      weightDetail !== undefined
+                        ? formatEntryWeightDisplay(weightDetail)
+                        : { stackLabel: '—', unitLabel: 'Unknown weight' as string | null }
 
                     return (
                       <tr
@@ -534,7 +572,16 @@ export function InventoryPage({
                           </div>
                         </td>
                         <td>{locationLabel}</td>
-                        <td>{formatWeight(entry.weightLb, entry.quantity)}</td>
+                        <td>
+                          <div className="inventory-page__weight-cell">
+                            <span>{weightDisplay.stackLabel}</span>
+                            {weightDisplay.unitLabel !== null ? (
+                              <span className="inventory-page__item-meta">
+                                {weightDisplay.unitLabel}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td>{formatCost(entry.costGp, entry.quantity)}</td>
                         <td>
                           <div className="inventory-page__actions">

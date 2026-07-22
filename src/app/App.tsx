@@ -396,7 +396,7 @@ export default function App({ randomSource = Math.random }: AppProps) {
                       ? character.equipment.inventory.currency.goldPieces
                       : editor.ownedEquipment.currency.goldPieces
                   }
-                  weightCarriedLb={editor.ownedEquipment.weightCarriedLb}
+                  abilityScores={character.abilityScores}
                   seeded={
                     character.equipment.inventory.seededFromStartingEquipment
                   }
@@ -461,9 +461,6 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   characterDetailsStatus={editor.characterDetailsStatus}
                   equipmentEntries={editor.ownedEquipment.entries}
                   equipmentInventory={editor.ownedEquipment.inventory}
-                  equipmentWeightCarriedLb={
-                    editor.ownedEquipment.weightCarriedLb
-                  }
                   equipmentGoldPieces={
                     editor.ownedEquipment.currency.goldPieces
                   }

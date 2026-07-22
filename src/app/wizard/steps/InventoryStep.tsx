@@ -1,3 +1,4 @@
+import type { AbilityScores } from '../../../domain/types'
 import type {
   EquipmentLoadout,
   InventoryLocation,
@@ -12,7 +13,7 @@ export type InventoryStepProps = {
   entries: readonly ResolvedInventoryEntry[]
   loadout: EquipmentLoadout
   goldPieces: number
-  weightCarriedLb: number
+  abilityScores: AbilityScores
   seeded: boolean
   equipmentCatalog: EquipmentCatalog
   onSetQuantity: (

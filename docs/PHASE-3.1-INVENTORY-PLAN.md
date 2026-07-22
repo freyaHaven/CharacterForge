@@ -1,6 +1,6 @@
 # P3.1 — Inventory System (Implementation Plan)
 
-**Status:** Slices A–C implemented (persisted inventory, mutation APIs, Inventory UI)  
+**Status:** Slices A–C and E implemented (persisted inventory, mutation APIs, Inventory UI, weight & carrying-capacity display)  
 **Parent roadmap:** [PHASE-3-ROADMAP.md](./PHASE-3-ROADMAP.md)  
 **Current schema:** `16` (`CURRENT_SCHEMA_VERSION` in `src/adapters/storage/storedCharacter.ts`)  
 **Audit date:** 2026-07-22
@@ -459,15 +459,17 @@ Do not block Finish on encumbrance or play inventory edits.
 
 ### Slice E — Carry weight + optional encumbrance display
 
-**Deliver:** authoritative weight from persisted inventory; optional-rule encumbrance indicator (display only); no movement penalties or combat hooks.
+**Status:** Implemented (display + calculation; no movement penalties)
+
+**Deliver:** authoritative weight from persisted inventory; SRD 2024 carrying-capacity indicator (display only); no movement penalties or combat hooks.
 
 **Acceptance:**
 
-* Weight matches Σ definition weights × qty
-* Optional flag (character or app setting — prefer character/rules flag if one exists, else simple constant/UI toggle deferred) shows Unencumbered/Encumbered vs STR×15
+* Weight matches Σ definition weights × qty (unknown weights surfaced as incomplete “at least” totals)
+* Capacity = Strength × 15; overloaded / remaining / progress shown on Inventory + Overview
 * No Finish blocking; no speed modifiers in P3.1
 
-**Likely files:** weight helper reuse, Inventory UI, optional tiny rules flag
+**Likely files:** `inventoryWeight.ts`, `InventoryWeightSummary`, Inventory UI, Overview panel
 
 ---
 

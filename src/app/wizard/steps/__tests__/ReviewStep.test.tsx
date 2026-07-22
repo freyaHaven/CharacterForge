@@ -88,7 +88,6 @@ const defaultProps = {
   },
   equipmentEntries: [],
   equipmentInventory: [],
-  equipmentWeightCarriedLb: 0,
   equipmentGoldPieces: 0,
   equipmentLoadout: EMPTY_EQUIPMENT_LOADOUT,
   equipmentCatalog: emptyEquipmentCatalog,
@@ -593,7 +592,6 @@ describe('ReviewStep', () => {
         sheetModels={armoredModels}
         equipmentEntries={entries}
         equipmentInventory={inventory}
-        equipmentWeightCarriedLb={68}
         equipmentGoldPieces={18}
         equipmentLoadout={loadout}
         equipmentCatalog={catalog}
@@ -625,7 +623,8 @@ describe('ReviewStep', () => {
     expect(
       screen.getByRole('button', { name: 'Manage Inventory' }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/weight carried: 68 lb/i)).toBeInTheDocument()
+    expect(screen.getByText(/68 lb \/ 150 lb/i)).toBeInTheDocument()
+    expect(screen.getByText(/82 lb remaining/i)).toBeInTheDocument()
     expect(screen.getByText('18 GP')).toBeInTheDocument()
     expect(screen.queryByText('Equipment Status')).not.toBeInTheDocument()
 
@@ -693,7 +692,6 @@ describe('ReviewStep', () => {
         sheetModels={unarmoredModels}
         equipmentEntries={entries}
         equipmentInventory={inventory}
-        equipmentWeightCarriedLb={68}
         equipmentGoldPieces={18}
         equipmentLoadout={unequippedLoadout}
         equipmentCatalog={catalog}

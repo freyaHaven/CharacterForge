@@ -11,15 +11,20 @@ import {
   previewUnequipItem,
   type EquipPreview,
 } from '../../domain/equipment/equipmentLoadout'
+import {
+  calculateInventoryWeightFromEnriched,
+  formatContainerTabWeight,
+  formatEntryWeightDisplay,
+} from '../../domain/equipment/inventoryWeight'
 import { formatLocationLabel } from '../../domain/equipment/inventory'
 import type { ResolvedInventoryEntry } from '../../rules/character/resolveCharacterEquipment'
 import { formatGoldPieces } from './formatEquipment'
 import { isEquippableItem } from './isEquippableItem'
+import { InventoryWeightSummary } from './InventoryWeightSummary'
 
 export type InventoryPanelProps = {
   entries: readonly ResolvedInventoryEntry[]
   loadout: EquipmentLoadout
-  weightCarriedLb: number
   goldPieces: number
   abilityScores: AbilityScores
   definitionsById: ReadonlyMap<string, EquipmentItemDefinition>
@@ -35,15 +40,6 @@ type InventoryTab =
       label: string
       containerInstanceId: string
     }
-
-function formatWeight(weightLb: number | null, quantity: number): string {
-  if (weightLb === null) {
-    return '—'
-  }
-
-  const total = Math.round(weightLb * quantity * 10) / 10
-  return `${total} lb`
-}
 
 function formatCost(costGp: number | null, quantity: number): string {
   if (costGp === null) {
@@ -130,22 +126,9 @@ function buildTabs(
   ]
 }
 
-function encumbranceLabel(
-  weightCarriedLb: number,
-  strength: number,
-): string {
-  const capacity = strength * 15
-  if (weightCarriedLb <= capacity) {
-    return 'Unencumbered'
-  }
-
-  return 'Encumbered'
-}
-
 export function InventoryPanel({
   entries,
   loadout,
-  weightCarriedLb,
   goldPieces,
   abilityScores,
   definitionsById,
@@ -170,6 +153,20 @@ export function InventoryPanel({
 
   const tabs = useMemo(() => buildTabs(entries), [entries])
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]
+
+  const weightBreakdown = useMemo(
+    () => calculateInventoryWeightFromEnriched(entries, definitionsById),
+    [definitionsById, entries],
+  )
+  const weightByInstanceId = useMemo(
+    () =>
+      new Map(
+        weightBreakdown.entries.map(
+          (entry) => [entry.instanceId, entry] as const,
+        ),
+      ),
+    [weightBreakdown.entries],
+  )
 
   const mainHandDefinition =
     loadout.mainHandItemId === null
@@ -254,12 +251,12 @@ export function InventoryPanel({
   return (
     <div className="inventory-panel">
       <div className="inventory-panel__stats">
-        <p className="inventory-panel__weight">
-          Weight carried: {weightCarriedLb} lb
-          <span className="inventory-panel__encumbrance">
-            {encumbranceLabel(weightCarriedLb, abilityScores.strength)}
-          </span>
-        </p>
+        <InventoryWeightSummary
+          entries={entries}
+          abilityScores={abilityScores}
+          definitionsById={definitionsById}
+          compact
+        />
         {goldPieces > 0 ? (
           <p className="inventory-panel__currency">{formatGoldPieces(goldPieces)}</p>
         ) : null}
@@ -282,22 +279,45 @@ export function InventoryPanel({
             role="tablist"
             aria-label="Inventory locations"
           >
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={tab.id === activeTab?.id}
-                className={
-                  tab.id === activeTab?.id
-                    ? 'inventory-panel__tab inventory-panel__tab--active'
-                    : 'inventory-panel__tab'
-                }
-                onClick={() => setActiveTabId(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map((tab) => {
+              const containerWeight =
+                tab.kind === 'container'
+                  ? weightBreakdown.byContainer.get(tab.containerInstanceId)
+                  : undefined
+              const weightSuffix =
+                containerWeight !== undefined
+                  ? formatContainerTabWeight(
+                      containerWeight.knownContentsWeightLb,
+                      containerWeight.unknownContentsCount,
+                    )
+                  : null
+              const tabLabel =
+                weightSuffix !== null
+                  ? `${tab.label} · ${weightSuffix}`
+                  : tab.label
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab.id === activeTab?.id}
+                  title={
+                    weightSuffix !== null
+                      ? `${tab.label} contents ${weightSuffix}`
+                      : tab.label
+                  }
+                  className={
+                    tab.id === activeTab?.id
+                      ? 'inventory-panel__tab inventory-panel__tab--active'
+                      : 'inventory-panel__tab'
+                  }
+                  onClick={() => setActiveTabId(tab.id)}
+                >
+                  {tabLabel}
+                </button>
+              )
+            })}
           </div>
 
           <div className="inventory-panel__table-wrap" role="tabpanel">
@@ -325,6 +345,14 @@ export function InventoryPanel({
                     const equippable = isEquippableItem(definition)
                     const equipped = isItemEquipped(loadout, entry.itemId)
                     const notes = entryNotes(entry, containerNameById)
+                    const weightDetail = weightByInstanceId.get(entry.instanceId)
+                    const weightDisplay =
+                      weightDetail !== undefined
+                        ? formatEntryWeightDisplay(weightDetail)
+                        : {
+                            stackLabel: '—',
+                            unitLabel: 'Unknown weight' as string | null,
+                          }
 
                     return (
                       <tr
@@ -360,7 +388,10 @@ export function InventoryPanel({
                             </span>
                           ) : null}
                           <span className="inventory-panel__meta">
-                            {formatWeight(entry.weightLb, entry.quantity)}
+                            {weightDisplay.stackLabel}
+                            {weightDisplay.unitLabel !== null
+                              ? ` · ${weightDisplay.unitLabel}`
+                              : ''}
                             {' · Qty '}
                             {entry.quantity}
                             {' · '}
@@ -373,7 +404,14 @@ export function InventoryPanel({
                           ) : null}
                         </td>
                         <td className="inventory-panel__col-secondary">
-                          {formatWeight(entry.weightLb, entry.quantity)}
+                          <div className="inventory-panel__weight-cell">
+                            <span>{weightDisplay.stackLabel}</span>
+                            {weightDisplay.unitLabel !== null ? (
+                              <span className="inventory-panel__meta">
+                                {weightDisplay.unitLabel}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="inventory-panel__col-secondary">
                           {entry.quantity}

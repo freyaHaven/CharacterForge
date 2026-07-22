@@ -92,7 +92,6 @@ describe('InventoryPanel', () => {
           ...EMPTY_EQUIPMENT_LOADOUT,
           armorItemId: 'srd-2024:chain-mail',
         }}
-        weightCarriedLb={62.1}
         goldPieces={18}
         abilityScores={DEFAULT_ABILITY_SCORES}
         definitionsById={SRD_2024_EQUIPMENT_BY_ID}
@@ -100,16 +99,16 @@ describe('InventoryPanel', () => {
       />,
     )
 
-    expect(screen.getByText(/weight carried: 62\.1 lb/i)).toBeInTheDocument()
-    expect(screen.getByText('Unencumbered')).toBeInTheDocument()
+    expect(screen.getByText(/72 lb \/ 150 lb/i)).toBeInTheDocument()
+    expect(screen.getByText(/78 lb remaining/i)).toBeInTheDocument()
     expect(screen.getByText('18 GP')).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
     expect(screen.getByRole('tab', { name: 'Equipment' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Backpack' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Quiver' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Backpack/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Quiver/i })).toBeInTheDocument()
     expect(
       screen.getByRole('checkbox', { name: 'Equip Chain Mail' }),
     ).toBeChecked()
@@ -117,7 +116,7 @@ describe('InventoryPanel', () => {
       screen.getByRole('checkbox', { name: 'Equip Backpack' }),
     ).toBeDisabled()
 
-    await user.click(screen.getByRole('tab', { name: 'Quiver' }))
+    await user.click(screen.getByRole('tab', { name: /Quiver/i }))
     expect(screen.getByText('Arrows')).toBeInTheDocument()
     expect(screen.queryByText('Torch')).not.toBeInTheDocument()
     expect(screen.queryByText('Chain Mail')).not.toBeInTheDocument()
@@ -141,7 +140,6 @@ describe('InventoryPanel', () => {
           ...EMPTY_EQUIPMENT_LOADOUT,
           armorItemId: 'srd-2024:chain-mail',
         }}
-        weightCarriedLb={62.1}
         goldPieces={0}
         abilityScores={DEFAULT_ABILITY_SCORES}
         definitionsById={SRD_2024_EQUIPMENT_BY_ID}
@@ -168,7 +166,6 @@ describe('InventoryPanel', () => {
       <InventoryPanel
         entries={sampleEntries}
         loadout={EMPTY_EQUIPMENT_LOADOUT}
-        weightCarriedLb={62.1}
         goldPieces={0}
         abilityScores={DEFAULT_ABILITY_SCORES}
         definitionsById={SRD_2024_EQUIPMENT_BY_ID}
