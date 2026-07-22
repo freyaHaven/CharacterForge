@@ -53,12 +53,20 @@ import type {
   EquipmentSelection,
 } from '../../domain/equipment/types'
 import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
+import { ownedItemIdsFromInventoryEntries } from '../../domain/equipment/seedInventory'
 import { reconcileEquipmentLoadout } from '../../domain/equipment/equipmentLoadout'
 import {
   formatGoldPieces,
   formatInventoryLine,
 } from '../../features/equipment/formatEquipment'
-import { isClassStartingEquipmentResolved } from '../../rules/character/resolveCharacterEquipment'
+import {
+  isClassStartingEquipmentResolved,
+  type ResolvedEquipment,
+} from '../../rules/character/resolveCharacterEquipment'
+import {
+  buildPlayResolvedEquipmentView,
+  trySeedInventoryFromResolvedEquipment,
+} from '../../rules/equipment/seedCharacterInventory'
 import { DEFAULT_WIZARD_UI_STATE } from '../wizard/steps'
 import { getCharacterOpenDestination } from '../wizard/resolveCharacterStepLanding'
 import { getAllStepStatuses, getCharacterDetailsStepStatus } from '../wizard/stepStatus'
@@ -259,6 +267,76 @@ export function useCharacterEditor({
     character,
   )
 
+  const [playResolvedEquipment, setPlayResolvedEquipment] =
+    useState<ResolvedEquipment | null>(null)
+
+  useEffect(() => {
+    setCharacter((current) => {
+      const seeded = trySeedInventoryFromResolvedEquipment(
+        current.equipment.inventory,
+        resolvedEquipment,
+      )
+
+      if (seeded === null) {
+        return current
+      }
+
+      return {
+        ...current,
+        equipment: {
+          ...current.equipment,
+          inventory: seeded,
+        },
+      }
+    })
+  }, [resolvedEquipment])
+
+  useEffect(() => {
+    if (!character.equipment.inventory.seededFromStartingEquipment) {
+      setPlayResolvedEquipment(null)
+      return
+    }
+
+    let isActive = true
+
+    void (async () => {
+      const definitions = new Map<string, EquipmentItemDefinition>()
+      await Promise.all(
+        character.equipment.inventory.entries.map(async (entry) => {
+          if (definitions.has(entry.itemId)) {
+            return
+          }
+          const definition = await equipmentCatalog.getEquipment(entry.itemId)
+          if (definition !== null) {
+            definitions.set(entry.itemId, definition)
+          }
+        }),
+      )
+
+      if (!isActive) {
+        return
+      }
+
+      setPlayResolvedEquipment(
+        buildPlayResolvedEquipmentView(
+          character.equipment.inventory,
+          definitions,
+          resolvedEquipment.sources,
+        ),
+      )
+    })()
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    character.equipment.inventory,
+    equipmentCatalog,
+    resolvedEquipment.sources,
+  ])
+
+  const ownedEquipment = playResolvedEquipment ?? resolvedEquipment
+
   const setSpellSourceStates = useCallback(
     (nextStates: SpellSourceState[]) => {
       clearSaveMessage()
@@ -328,22 +406,35 @@ export function useCharacterEditor({
     [clearSaveMessage],
   )
 
-  const inventoryOwnershipKey = resolvedEquipment.inventory
-    .map((item) => item.itemId)
-    .sort()
-    .join('|')
+  const inventoryOwnershipKey = character.equipment.inventory
+    .seededFromStartingEquipment
+    ? character.equipment.inventory.entries
+        .map((entry) => entry.itemId)
+        .sort()
+        .join('|')
+    : resolvedEquipment.inventory
+        .map((item) => item.itemId)
+        .sort()
+        .join('|')
 
   useEffect(() => {
     let isActive = true
 
     void (async () => {
+      const ownedItemIds = character.equipment.inventory
+        .seededFromStartingEquipment
+        ? ownedItemIdsFromInventoryEntries(
+            character.equipment.inventory.entries,
+          )
+        : new Set(resolvedEquipment.inventory.map((entry) => entry.itemId))
+
       const definitions = new Map<string, EquipmentItemDefinition>()
 
       await Promise.all(
-        resolvedEquipment.inventory.map(async (entry) => {
-          const definition = await equipmentCatalog.getEquipment(entry.itemId)
+        [...ownedItemIds].map(async (itemId) => {
+          const definition = await equipmentCatalog.getEquipment(itemId)
           if (definition !== null) {
-            definitions.set(entry.itemId, definition)
+            definitions.set(itemId, definition)
           }
         }),
       )
@@ -351,10 +442,6 @@ export function useCharacterEditor({
       if (!isActive) {
         return
       }
-
-      const ownedItemIds = new Set(
-        resolvedEquipment.inventory.map((entry) => entry.itemId),
-      )
 
       setCharacter((current) => {
         const currentLoadout =
@@ -388,7 +475,12 @@ export function useCharacterEditor({
     return () => {
       isActive = false
     }
-  }, [equipmentCatalog, inventoryOwnershipKey, resolvedEquipment.inventory])
+  }, [
+    character.equipment.inventory,
+    equipmentCatalog,
+    inventoryOwnershipKey,
+    resolvedEquipment.inventory,
+  ])
 
   // Prune source states when class / feat / background / species identity change.
   const ownershipKey = [
@@ -534,7 +626,7 @@ export function useCharacterEditor({
     featCatalog,
     {
       classDrafts: classEditor.classDrafts,
-      resolvedEquipment,
+      resolvedEquipment: ownedEquipment,
       equipmentCatalog,
     },
   )
@@ -564,9 +656,9 @@ export function useCharacterEditor({
   )
 
   const equipmentLines = [
-    ...resolvedEquipment.inventory.map((item) => formatInventoryLine(item)),
-    ...(resolvedEquipment.currency.goldPieces > 0
-      ? [formatGoldPieces(resolvedEquipment.currency.goldPieces)]
+    ...ownedEquipment.inventory.map((item) => formatInventoryLine(item)),
+    ...(ownedEquipment.currency.goldPieces > 0
+      ? [formatGoldPieces(ownedEquipment.currency.goldPieces)]
       : []),
   ]
 
@@ -906,6 +998,7 @@ export function useCharacterEditor({
     spellValidation,
     setSpellSourceStates,
     resolvedEquipment,
+    ownedEquipment,
     equipmentValidation,
     setEquipmentSelections,
     setEquipmentLoadout,

@@ -433,13 +433,13 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   summaries={editor.reviewSummaries}
                   characterDetailsReview={editor.characterDetailsReviewSections}
                   characterDetailsStatus={editor.characterDetailsStatus}
-                  equipmentEntries={editor.resolvedEquipment.entries}
-                  equipmentInventory={editor.resolvedEquipment.inventory}
+                  equipmentEntries={editor.ownedEquipment.entries}
+                  equipmentInventory={editor.ownedEquipment.inventory}
                   equipmentWeightCarriedLb={
-                    editor.resolvedEquipment.weightCarriedLb
+                    editor.ownedEquipment.weightCarriedLb
                   }
                   equipmentGoldPieces={
-                    editor.resolvedEquipment.currency.goldPieces
+                    editor.ownedEquipment.currency.goldPieces
                   }
                   equipmentLoadout={character.equipment.loadout}
                   equipmentCatalog={editor.equipmentCatalog}

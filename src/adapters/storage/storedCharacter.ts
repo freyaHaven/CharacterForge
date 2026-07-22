@@ -9,8 +9,16 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 15
+export const CURRENT_SCHEMA_VERSION = 16
 
+type CharacterEquipmentBeforeInventory = {
+  selections: Character['equipment']['selections']
+  loadout: Character['equipment']['loadout']
+}
+
+type CharacterBeforeInventory = Omit<Character, 'equipment'> & {
+  equipment: CharacterEquipmentBeforeInventory
+}
 
 type CharacterIdentity = {
   id: string
@@ -128,16 +136,22 @@ export type StoredCharacterV13 = {
 /** Schema v14: equipment loadout (worn / wielded slots). */
 export type StoredCharacterV14 = {
   schemaVersion: 14
-  character: Character
+  character: CharacterBeforeInventory
 }
 
 /** Schema v15: equipment selections include normalized `path` for nested trees. */
 export type StoredCharacterV15 = {
   schemaVersion: 15
+  character: CharacterBeforeInventory
+}
+
+/** Schema v16: persisted gameplay inventory + currency seed flag. */
+export type StoredCharacterV16 = {
+  schemaVersion: 16
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV15
+export type StoredCharacter = StoredCharacterV16
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -164,7 +178,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV12
   | StoredCharacterV13
   | StoredCharacterV14
-  | StoredCharacterV15 {
+  | StoredCharacterV15
+  | StoredCharacterV16 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

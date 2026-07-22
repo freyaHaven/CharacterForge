@@ -135,10 +135,10 @@ step UI correctly.
 
 ### Persistence
 
-- Versioned localStorage envelope (**schema version 15**)
-- Sequential migrations from legacy saves (v0 → v15)
+- Versioned localStorage envelope (**schema version 16**)
+- Sequential migrations from legacy saves (v0 → v16)
 - Multi-instance class model: `classes[]`, `targetLevel`, `startingClassInstanceId`
-- Background, feat, spell, equipment, and character details on the saved character
+- Background, feat, spell, equipment (including persisted inventory), and character details on the saved character
 - Draft blocking on save when species or class selections are incomplete
 - `.cforge` JSON import/export using the same envelope (see
   [`src/adapters/STORAGE.md`](src/adapters/STORAGE.md))
@@ -204,13 +204,13 @@ npm run preview  # preview production build
 
 ## Storage schema version
 
-**Current version: 14**
+**Current version: 16**
 
 Envelope shape (simplified):
 
 ```json
 {
-  "schemaVersion": 14,
+  "schemaVersion": 16,
   "character": {
     "species": null,
     "targetLevel": 1,
@@ -219,7 +219,15 @@ Envelope shape (simplified):
     "background": null,
     "feat": null,
     "spellSourceStates": [],
-    "equipment": { "selections": [], "loadout": {} },
+    "equipment": {
+      "selections": [],
+      "loadout": {},
+      "inventory": {
+        "entries": [],
+        "currency": { "goldPieces": 0 },
+        "seededFromStartingEquipment": false
+      }
+    },
     "details": {}
   }
 }
@@ -234,6 +242,7 @@ Major milestones:
 - **v9:** multiclass `classes[]`, `targetLevel`, `startingClassInstanceId`
 - **v10–v11:** feat + hit point increases
 - **v12–v15:** spell states, equipment selections, loadout, nested selection `path`
+- **v16:** persisted gameplay inventory + currency + seed flag
 
 Migrations run on load in `src/adapters/storage/migrations/`.
 

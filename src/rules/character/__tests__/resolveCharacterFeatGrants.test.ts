@@ -8,6 +8,7 @@ import { createFeatGrantChoiceStorageKey } from '../../../domain/feat/featGrantC
 import { resolveCharacterFeatGrants } from '../resolveCharacterFeatGrants'
 import type { Character } from '../../../domain/types'
 import { createDefaultCharacterDetails } from '../../../domain/character/details'
+import { EMPTY_CHARACTER_EQUIPMENT } from '../../../domain/equipment/types'
 
 function baseCharacter(overrides: Partial<Character> = {}): Character {
   return {
@@ -30,7 +31,7 @@ function baseCharacter(overrides: Partial<Character> = {}): Character {
     },
     creationMethod: 'standard-array',
     details: createDefaultCharacterDetails(),
-    equipment: { selections: [] },
+    equipment: EMPTY_CHARACTER_EQUIPMENT,
     spellSourceStates: [],
     ...overrides,
   }

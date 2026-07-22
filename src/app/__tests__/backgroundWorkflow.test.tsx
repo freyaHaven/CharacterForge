@@ -6,7 +6,10 @@ import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { createDefaultCharacter } from '../../domain/character/defaults'
-import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
+import {
+  EMPTY_CHARACTER_INVENTORY,
+  EMPTY_EQUIPMENT_LOADOUT,
+} from '../../domain/equipment/types'
 import type { Character } from '../../domain/types'
 import {
   getWizardStepButton,
@@ -97,6 +100,7 @@ function createStoredCharacter(overrides: Partial<Character> = {}): Character {
         },
       ],
       loadout: EMPTY_EQUIPMENT_LOADOUT,
+      inventory: EMPTY_CHARACTER_INVENTORY,
     },
     ...overrides,
   })
@@ -345,6 +349,7 @@ describe('Background workflow', () => {
             },
           ],
           loadout: EMPTY_EQUIPMENT_LOADOUT,
+          inventory: EMPTY_CHARACTER_INVENTORY,
         },
       }),
     )
@@ -402,6 +407,7 @@ describe('Background workflow', () => {
             },
           ],
           loadout: EMPTY_EQUIPMENT_LOADOUT,
+          inventory: EMPTY_CHARACTER_INVENTORY,
         },
       }),
     )

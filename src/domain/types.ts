@@ -89,12 +89,14 @@ export type {
 } from './background/types'
 export {
   EMPTY_CHARACTER_EQUIPMENT,
+  EMPTY_CHARACTER_INVENTORY,
   EMPTY_EQUIPMENT_LOADOUT,
   GOLD_PIECES_ITEM_ID,
   SELECTED_GAMING_SET_ITEM_ID,
 } from './equipment/types'
 export type {
   CharacterEquipment,
+  CharacterInventory,
   EquipmentEntitlement,
   EquipmentGrant,
   EquipmentHandUsage,
@@ -103,6 +105,8 @@ export type {
   EquipmentLoadout,
   EquipmentSelection,
   EquipmentSourceRef,
+  InventoryEntry,
+  InventoryLocation,
   StartingEquipmentDefinition,
 } from './equipment/types'
 export type {

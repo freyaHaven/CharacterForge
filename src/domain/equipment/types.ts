@@ -40,13 +40,27 @@ export type InventoryLocation =
 
 /**
  * One owned stack or item instance in the character's inventory.
- * Derived from starting-equipment grants for now; may become persisted later.
+ * Persisted as gameplay state once seeded from starting equipment (P3.1).
  */
 export type InventoryEntry = {
   instanceId: string
   itemId: string
   quantity: number
   location: InventoryLocation
+}
+
+/**
+ * Authoritative owned gear and purse for play.
+ * Build-time starting-equipment answers stay in `CharacterEquipment.selections`.
+ */
+export type CharacterInventory = {
+  entries: InventoryEntry[]
+  currency: { goldPieces: number }
+  /**
+   * When true, inventory was seeded from starting equipment and must not be
+   * overwritten by subsequent starting-equipment resolution.
+   */
+  seededFromStartingEquipment: boolean
 }
 
 /** How a weapon or shield occupies the character's hands. */
@@ -72,7 +86,8 @@ export type ShieldProperties = {
 
 /**
  * What the character is currently wearing / wielding.
- * Inventory ownership still comes from `selections` → resolved grants.
+ * Ownership comes from persisted `inventory` once seeded; until then from
+ * resolved starting-equipment grants.
  */
 export type EquipmentLoadout = {
   armorItemId: string | null
@@ -186,7 +201,10 @@ export type EquipmentSelection = {
 }
 
 export type CharacterEquipment = {
+  /** Build-time starting-equipment answers (immutable during play). */
   selections: EquipmentSelection[]
+  /** Mutable owned gear — authoritative after seed. */
+  inventory: CharacterInventory
   loadout: EquipmentLoadout
 }
 
@@ -238,7 +256,14 @@ export const EMPTY_EQUIPMENT_LOADOUT: EquipmentLoadout = {
   mainHandGrip: null,
 }
 
+export const EMPTY_CHARACTER_INVENTORY: CharacterInventory = {
+  entries: [],
+  currency: { goldPieces: 0 },
+  seededFromStartingEquipment: false,
+}
+
 export const EMPTY_CHARACTER_EQUIPMENT: CharacterEquipment = {
   selections: [],
+  inventory: EMPTY_CHARACTER_INVENTORY,
   loadout: EMPTY_EQUIPMENT_LOADOUT,
 }

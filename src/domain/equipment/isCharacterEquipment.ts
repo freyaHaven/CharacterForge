@@ -1,9 +1,12 @@
 import type {
   CharacterEquipment,
+  CharacterInventory,
   EquipmentItemSelection,
   EquipmentLoadout,
   EquipmentSelection,
   EquipmentSourceRef,
+  InventoryEntry,
+  InventoryLocation,
 } from './types'
 
 function isEquipmentSourceRef(value: unknown): value is EquipmentSourceRef {
@@ -90,6 +93,67 @@ export function isEquipmentLoadout(value: unknown): value is EquipmentLoadout {
   )
 }
 
+function isInventoryLocation(value: unknown): value is InventoryLocation {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+
+  if (candidate.kind === 'carried') {
+    return true
+  }
+
+  return (
+    candidate.kind === 'container' &&
+    typeof candidate.containerInstanceId === 'string'
+  )
+}
+
+export function isInventoryEntry(value: unknown): value is InventoryEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+
+  return (
+    typeof candidate.instanceId === 'string' &&
+    typeof candidate.itemId === 'string' &&
+    typeof candidate.quantity === 'number' &&
+    Number.isFinite(candidate.quantity) &&
+    candidate.quantity > 0 &&
+    isInventoryLocation(candidate.location)
+  )
+}
+
+export function isCharacterInventory(
+  value: unknown,
+): value is CharacterInventory {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+  const currency = candidate.currency
+
+  if (typeof currency !== 'object' || currency === null) {
+    return false
+  }
+
+  const goldPieces = (currency as Record<string, unknown>).goldPieces
+
+  return (
+    Array.isArray(candidate.entries) &&
+    candidate.entries.every(isInventoryEntry) &&
+    typeof goldPieces === 'number' &&
+    Number.isFinite(goldPieces) &&
+    goldPieces >= 0 &&
+    (candidate.seededFromStartingEquipment === true ||
+      candidate.seededFromStartingEquipment === false)
+  )
+}
+
 export function isCharacterEquipment(
   value: unknown,
 ): value is CharacterEquipment {
@@ -102,6 +166,7 @@ export function isCharacterEquipment(
   return (
     Array.isArray(candidate.selections) &&
     candidate.selections.every(isEquipmentSelection) &&
+    isCharacterInventory(candidate.inventory) &&
     isEquipmentLoadout(candidate.loadout)
   )
 }

@@ -24,7 +24,10 @@ import {
   PACKAGE_OPTION_ID,
   STARTING_EQUIPMENT_ENTITLEMENT_ID,
 } from '../../domain/equipment/startingEquipmentHelpers'
-import { EMPTY_EQUIPMENT_LOADOUT } from '../../domain/equipment/types'
+import {
+  EMPTY_CHARACTER_INVENTORY,
+  EMPTY_EQUIPMENT_LOADOUT,
+} from '../../domain/equipment/types'
 import { COMPLETE_DWARF_SELECTION } from '../../testing/speciesSelectionTestUtils'
 
 const { loadMock, saveMock, removeMock } = vi.hoisted(() => ({
@@ -92,6 +95,7 @@ function createCompleteStartingEquipment(
         : []),
     ],
     loadout: EMPTY_EQUIPMENT_LOADOUT,
+    inventory: EMPTY_CHARACTER_INVENTORY,
   }
 }
 

@@ -1,12 +1,12 @@
 # Storage format
 
-## Current format (schema version 11)
+## Current format (schema version 16)
 
 Characters are persisted inside a versioned envelope:
 
 ```json
 {
-  "schemaVersion": 11,
+  "schemaVersion": 16,
   "character": { }
 }
 ```
@@ -21,6 +21,9 @@ The inner character includes:
 - `background: null | { backgroundId, abilityScoreIncrease, choices }`
 - `feat: null | { featId, choices }` — one optional committed feat selection
 - `details: CharacterDetails` — roleplay-facing identity and personality fields
+- `spellSourceStates` — persisted spell source selections
+- `equipment` — starting-equipment `selections`, worn `loadout`, and persisted
+  gameplay `inventory` (entries, currency, `seededFromStartingEquipment`)
 
 Each `CharacterClassSelection` has:
 
@@ -46,18 +49,16 @@ the inner character with `isCharacter()`, and returns the domain model.
 | 8 | Restructures `details` for the roleplay-focused layout |
 | 9 | Replaces legacy `class` with `targetLevel`, `classes[]`, and `startingClassInstanceId` |
 | 10 | Adds `feat: null` |
+| 11 | Class instances include `hitPointIncreases` |
+| 12 | Persisted `spellSourceStates` |
+| 13 | Persisted `equipment.selections` |
+| 14 | Persisted `equipment.loadout` |
+| 15 | Normalize equipment selection `path` |
+| 16 | Persisted `equipment.inventory` (entries, currency, seed flag) |
 
-On load, schema 0–10 saves migrate forward to schema 11. Migration path:
-
-- `species: null` (v1→v2)
-- legacy `class: null` (v2→v3)
-- `background: null` (v3→v4)
-- background cleanup (v4→v6)
-- `details` (v6→v8)
-- replace legacy `class` with `targetLevel`, `classes[]`, and
-  `startingClassInstanceId` (v8→v9)
-- `feat: null` (v9→v10)
-- `hitPointIncreases` on each class instance (v10→v11)
+On load, schema 0–15 saves migrate forward to schema 16. Migration path includes
+the historical steps above; equipment inventory is added empty at v15→v16 and
+seeded lazily once starting equipment is complete in the editor.
 
 ## Migration rules
 
@@ -75,18 +76,9 @@ Explicit import/export uses the same versioned envelope as local storage:
 
 ```json
 {
-  "schemaVersion": 11,
+  "schemaVersion": 16,
   "character": { }
 }
 ```
 
-Files use the `.cforge` extension, UTF-8 JSON, and pretty-printed formatting for
-readability. Import parses the file, runs the migration pipeline above, validates
-with `isCharacter()`, and loads the result into the editor. This path is separate
-from browser local storage, which remains responsible for draft recovery between
-refreshes during an active editor session.
-
-## Saving
-
-All saves are written in the current envelope format so the next load skips
-migration when already up to date.
+Imported files migrate through the same registry as localStorage saves.
