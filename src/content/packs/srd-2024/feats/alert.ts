@@ -25,6 +25,7 @@ export const alertSrd2024: FeatDefinition = {
         'Immediately after you roll Initiative, you can swap your Initiative with that of one willing ally in the same combat.',
     },
   ],
+  effects: [{ kind: 'initiative-proficiency' }],
   repeatable: false,
   choices: [],
 }

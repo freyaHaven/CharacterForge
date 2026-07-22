@@ -49,6 +49,12 @@ export const rogueSrd2024: ClassDefinition = {
   catalogOrder: 20,
   hitDie: { sides: 8 },
   primaryAbilities: ['dexterity'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['dexterity'],
+    minimum: 13,
+    summary: 'Dexterity 13',
+  },
   savingThrows: ['dexterity', 'intelligence'],
   proficiencies: {
     armor: ['light'],

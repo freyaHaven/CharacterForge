@@ -38,6 +38,12 @@ export const barbarianSrd2024: ClassDefinition = {
   source: SRD_2024_SOURCE,
   hitDie: { sides: 12 },
   primaryAbilities: ['strength'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['strength'],
+    minimum: 13,
+    summary: 'Strength 13',
+  },
   savingThrows: ['strength', 'constitution'],
   proficiencies: {
     armor: ['light', 'medium', 'shield'],

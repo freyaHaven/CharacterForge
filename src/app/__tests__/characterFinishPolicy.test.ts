@@ -108,6 +108,42 @@ describe('getFinishPolicyResult', () => {
       ).canFinish,
     ).toBe(true)
   })
+
+  it('blocks finishing when requireCompleteSpells and Spells is incomplete', () => {
+    expect(
+      getFinishPolicyResult(
+        createStatuses({
+          basics: { completion: 'complete', hasValidationErrors: false },
+          species: { completion: 'complete', hasValidationErrors: false },
+          class: { completion: 'complete', hasValidationErrors: false },
+          'ability-scores': { completion: 'complete', hasValidationErrors: false },
+          spells: { completion: 'in-progress', hasValidationErrors: true },
+        }),
+        [],
+        { requireCompleteSpells: true },
+      ),
+    ).toEqual({
+      canFinish: false,
+      incompleteRequiredSteps: [{ stepId: 'spells', label: 'Spells' }],
+      unresolvedDeferredRequirements: [],
+    })
+  })
+
+  it('allows finishing when requireCompleteSpells and Spells is complete', () => {
+    expect(
+      getFinishPolicyResult(
+        createStatuses({
+          basics: { completion: 'complete', hasValidationErrors: false },
+          species: { completion: 'complete', hasValidationErrors: false },
+          class: { completion: 'complete', hasValidationErrors: false },
+          'ability-scores': { completion: 'complete', hasValidationErrors: false },
+          spells: { completion: 'complete', hasValidationErrors: false },
+        }),
+        [],
+        { requireCompleteSpells: true },
+      ).canFinish,
+    ).toBe(true)
+  })
 })
 
 describe('formatFinishBlockedMessage', () => {

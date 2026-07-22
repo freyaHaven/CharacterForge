@@ -42,8 +42,10 @@ import { useSpellsStepValidation } from '../useSpellsStepValidation'
 import { useEquipmentResolution } from '../useEquipmentResolution'
 import { useReviewSheetModels } from '../useReviewSheetModels'
 import { pruneInactiveSpellSourceStates } from '../../rules/spell/pruneInactiveSpellSourceStates'
+import { prunePreparedSpellsNotInSpellbook } from '../../rules/spell/prunePreparedSpellsNotInSpellbook'
+import { pruneSpellsNotOnEntitlementList } from '../../rules/spell/pruneSpellsNotOnEntitlementList'
 import { pruneInactiveEquipmentSelections } from '../../rules/equipment/pruneInactiveEquipmentSelections'
-import { equipmentSelectionKey } from '../../domain/equipment/sourceKey'
+import { collectActiveEquipmentSelectionKeysForDefinition } from '../../domain/equipment/equipmentChoiceTree'
 import type { SpellSourceState } from '../../domain/spell/types'
 import type {
   EquipmentItemDefinition,
@@ -137,6 +139,7 @@ export function useCharacterEditor({
     setCharacter,
     classCatalog,
     featCatalog,
+    backgroundCatalog,
     onDraftChange: clearSaveMessage,
   })
 
@@ -258,23 +261,35 @@ export function useCharacterEditor({
   const setSpellSourceStates = useCallback(
     (nextStates: SpellSourceState[]) => {
       clearSaveMessage()
-      setCharacter((current) => ({
-        ...current,
-        spellSourceStates: pruneInactiveSpellSourceStates(
+      setCharacter((current) => {
+        const prunedInactive = pruneInactiveSpellSourceStates(
           { ...current, spellSourceStates: nextStates },
           spellcastingReview.activeSources,
-        ),
-      }))
+        )
+        const prunedSpellbook = prunePreparedSpellsNotInSpellbook(
+          prunedInactive,
+          spellcastingReview,
+        )
+        return {
+          ...current,
+          spellSourceStates: pruneSpellsNotOnEntitlementList(
+            prunedSpellbook,
+            spellcastingReview,
+          ),
+        }
+      })
     },
-    [clearSaveMessage, spellcastingReview.activeSources],
+    [clearSaveMessage, spellcastingReview],
   )
 
   const setEquipmentSelections = useCallback(
     (nextSelections: EquipmentSelection[]) => {
       clearSaveMessage()
       const activeKeys = resolvedEquipment.sources.flatMap((source) =>
-        source.entitlements.map((entitlement) =>
-          equipmentSelectionKey(source.source, entitlement.entitlement.id),
+        collectActiveEquipmentSelectionKeysForDefinition(
+          source.definition,
+          source.source,
+          nextSelections,
         ),
       )
 
@@ -376,7 +391,9 @@ export function useCharacterEditor({
 
   // Prune source states when class / feat / background / species identity change.
   const ownershipKey = [
-    character.classes.map((entry) => entry.instanceId).join(','),
+    character.classes
+      .map((entry) => `${entry.instanceId}:${entry.level}`)
+      .join(','),
     character.feat?.featId ?? '',
     character.background?.backgroundId ?? '',
     character.species?.speciesId ?? '',
@@ -388,13 +405,23 @@ export function useCharacterEditor({
 
   useEffect(() => {
     setCharacter((current) => {
-      const prunedSpells = pruneInactiveSpellSourceStates(
+      const prunedInactive = pruneInactiveSpellSourceStates(
         current,
         spellcastingReview.activeSources,
       )
+      const prunedSpellbook = prunePreparedSpellsNotInSpellbook(
+        prunedInactive,
+        spellcastingReview,
+      )
+      const prunedSpells = pruneSpellsNotOnEntitlementList(
+        prunedSpellbook,
+        spellcastingReview,
+      )
       const activeEquipmentKeys = resolvedEquipment.sources.flatMap((source) =>
-        source.entitlements.map((entitlement) =>
-          equipmentSelectionKey(source.source, entitlement.entitlement.id),
+        collectActiveEquipmentSelectionKeysForDefinition(
+          source.definition,
+          source.source,
+          current.equipment.selections,
         ),
       )
       const prunedEquipment = pruneInactiveEquipmentSelections(
@@ -403,7 +430,21 @@ export function useCharacterEditor({
       )
 
       const spellsChanged =
-        prunedSpells.length !== current.spellSourceStates.length
+        prunedSpells.length !== current.spellSourceStates.length ||
+        prunedSpells.some((state, index) => {
+          const previous = current.spellSourceStates[index]
+          if (previous === undefined) {
+            return true
+          }
+          if (state.selections.length !== previous.selections.length) {
+            return true
+          }
+          return state.selections.some(
+            (selection, selectionIndex) =>
+              selection.spellId !==
+              previous.selections[selectionIndex]?.spellId,
+          )
+        })
       const equipmentChanged =
         prunedEquipment.length !== current.equipment.selections.length
 
@@ -516,6 +557,9 @@ export function useCharacterEditor({
   const finishPolicy = getFinishPolicyResult(
     stepStatuses,
     unresolvedDeferredRequirements,
+    {
+      requireCompleteSpells: spellcastingReview.hasSpellContent,
+    },
   )
 
   const equipmentLines = [

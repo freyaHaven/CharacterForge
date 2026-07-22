@@ -25,9 +25,15 @@ export function equipmentSourcesEqual(
   return equipmentSourceKey(a) === equipmentSourceKey(b)
 }
 
+/**
+ * Stable selection key including optional nested path
+ * (`path` empty → root entitlement).
+ */
 export function equipmentSelectionKey(
   source: EquipmentSourceRef,
   entitlementId: string,
+  path: readonly string[] = [],
 ): string {
-  return `${equipmentSourceKey(source)}::${entitlementId}`
+  const pathSuffix = path.length === 0 ? '' : `::${path.join('/')}`
+  return `${equipmentSourceKey(source)}::${entitlementId}${pathSuffix}`
 }

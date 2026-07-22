@@ -14,6 +14,8 @@ export type ArmorClassResult = {
   base: number
   dexterityBonus: number
   shieldBonus: number
+  /** Passive bonuses (e.g. Defense Fighting Style) already gated by caller. */
+  otherBonus: number
   armorItemId: string | null
   shieldItemId: string | null
 }
@@ -100,12 +102,15 @@ export function selectEquippedArmorAndShield(
  * - Medium: armour base + Dexterity modifier (capped)
  * - Heavy: armour base only
  * - Shield: add shield bonus only when equipped in the off hand
+ * - otherBonus: caller-supplied passive bonuses (e.g. Defense while wearing armour)
  */
 export function calculateCharacterArmorClass(input: {
   abilityScores: AbilityScores
   resolvedEquipment: ResolvedEquipment
   loadout?: EquipmentLoadout
   equipmentDefinitionsById: ReadonlyMap<string, EquipmentItemDefinition>
+  /** Pre-resolved passive AC bonuses (Defense, etc.). */
+  otherBonus?: number
 }): ArmorClassResult {
   const dexterityModifier = getAbilityModifier(input.abilityScores.dexterity)
   const equipped = selectEquippedArmorAndShield(
@@ -120,12 +125,14 @@ export function calculateCharacterArmorClass(input: {
       : equipped.armor.baseArmorClass
   const dexterityBonus = applyDexterityBonus(dexterityModifier, equipped.armor)
   const shieldBonus = equipped.shield?.armorClassBonus ?? 0
+  const otherBonus = input.otherBonus ?? 0
 
   return {
-    total: base + dexterityBonus + shieldBonus,
+    total: base + dexterityBonus + shieldBonus + otherBonus,
     base,
     dexterityBonus,
     shieldBonus,
+    otherBonus,
     armorItemId: equipped.armorItemId,
     shieldItemId: equipped.shieldItemId,
   }

@@ -10,6 +10,11 @@ import {
   getEpicBoonFeatIdFromChoiceValue,
   isEpicBoonChoiceId,
 } from '../../domain/class/epicBoon'
+import {
+  getFightingStyleFeatIdFromChoiceValue,
+  isFightingStyleFeatGrantChoiceId,
+} from '../../domain/class/fightingStyle'
+import { readFeatGrantChoices } from '../../domain/feat/featGrantChoiceStorage'
 import { getSpeciesVersatileFeatId } from '../../domain/species/resolveSpeciesDerived'
 import type { Character } from '../../domain/types'
 
@@ -42,8 +47,8 @@ export type FeatGrantSource =
 
 export type ResolvedFeatGrant = {
   featId: string
-  /** Sub-choices when persisted (e.g. legacy character.feat). */
-  choices: Record<string, string>
+  /** Sub-choices (legacy character.feat or companion keys on host maps). */
+  choices: Record<string, string | string[]>
   source: FeatGrantSource
   displayLabel: string
 }
@@ -75,6 +80,14 @@ function grantLabelForChoiceId(choiceId: string): string {
 
   if (choiceId === 'versatile') {
     return 'Versatile'
+  }
+
+  if (choiceId === 'champion-additional-fighting-style') {
+    return 'Additional Fighting Style'
+  }
+
+  if (isFightingStyleFeatGrantChoiceId(choiceId)) {
+    return 'Fighting Style'
   }
 
   return choiceId
@@ -120,6 +133,14 @@ export function collectClassFeatGrantIds(
 
     if (isEpicBoonChoiceId(choiceId)) {
       const featId = getEpicBoonFeatIdFromChoiceValue(value)
+      if (featId !== null) {
+        featIds.push(featId)
+      }
+      continue
+    }
+
+    if (isFightingStyleFeatGrantChoiceId(choiceId)) {
+      const featId = getFightingStyleFeatIdFromChoiceValue(value)
       if (featId !== null) {
         featIds.push(featId)
       }
@@ -196,7 +217,7 @@ export async function resolveCharacterFeatGrants(
         const featName = featNameById.get(featId) ?? featId
         grants.push({
           featId,
-          choices: {},
+          choices: readFeatGrantChoices(character.species.choices, choice.id),
           source,
           displayLabel: formatGrantDisplayLabel(featName, source),
         })
@@ -232,6 +253,8 @@ export async function resolveCharacterFeatGrants(
         featId = parsed?.kind === 'feat' ? parsed.featId : null
       } else if (isEpicBoonChoiceId(choiceId)) {
         featId = getEpicBoonFeatIdFromChoiceValue(value)
+      } else if (isFightingStyleFeatGrantChoiceId(choiceId)) {
+        featId = getFightingStyleFeatIdFromChoiceValue(value)
       }
 
       if (featId === null) {
@@ -250,7 +273,7 @@ export async function resolveCharacterFeatGrants(
       const featName = featNameById.get(featId) ?? featId
       grants.push({
         featId,
-        choices: {},
+        choices: readFeatGrantChoices(instance.choices, choiceId),
         source,
         displayLabel: formatGrantDisplayLabel(featName, source),
       })

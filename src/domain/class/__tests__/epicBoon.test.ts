@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   isCompleteEpicBoonChoiceValue,
+  isFeatExcludedFromAsiFeatModePicker,
   isFeatExcludedFromFeatGrantPickers,
   selectEpicBoonFeat,
 } from '../epicBoon'
@@ -18,12 +19,16 @@ describe('epicBoon', () => {
     expect(isCompleteEpicBoonChoiceValue('feat')).toBe(false)
   })
 
-  it('excludes the Ability Score Improvement feat from feat-grant pickers', () => {
+  it('excludes the ASI feat only from ASI feat-mode pickers', () => {
+    expect(
+      isFeatExcludedFromAsiFeatModePicker(ABILITY_SCORE_IMPROVEMENT_FEAT_ID),
+    ).toBe(true)
+    expect(
+      isFeatExcludedFromAsiFeatModePicker('srd-2024:boon-of-combat-prowess'),
+    ).toBe(false)
+    // Deprecated alias still matches ASI feat-mode exclusion.
     expect(
       isFeatExcludedFromFeatGrantPickers(ABILITY_SCORE_IMPROVEMENT_FEAT_ID),
     ).toBe(true)
-    expect(
-      isFeatExcludedFromFeatGrantPickers('srd-2024:boon-of-combat-prowess'),
-    ).toBe(false)
   })
 })

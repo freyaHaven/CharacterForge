@@ -12,6 +12,12 @@ const rogueFixture: ClassDefinition = {
   source: fighterSrd2024.source,
   hitDie: { sides: 8 },
   primaryAbilities: ['dexterity'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['dexterity'],
+    minimum: 13,
+    summary: 'Dexterity 13',
+  },
   savingThrows: ['dexterity', 'intelligence'],
   proficiencies: {
     armor: ['light'],
@@ -30,6 +36,7 @@ const rogueFixture: ClassDefinition = {
       description: 'Resolve the level 4 Ability Score Improvement or feat',
     },
   ],
+  startingEquipment: fighterSrd2024.startingEquipment,
 }
 
 function getDefinition(classId: string): ClassDefinition | null {

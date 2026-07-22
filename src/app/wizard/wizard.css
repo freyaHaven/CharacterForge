@@ -483,11 +483,48 @@
 
 .equipment-source-card__choice {
   margin-bottom: 0.75rem;
+  border: none;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+.equipment-source-card__choice--nested {
+  margin-top: 0.35rem;
 }
 
 .equipment-source-card__choice-title {
   margin: 0 0 0.5rem;
+  padding: 0;
   font-size: 0.95rem;
+  float: none;
+}
+
+.equipment-source-card__branch--nested,
+.equipment-source-card__nested {
+  margin: 0.5rem 0 0.75rem 0.85rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border, #d4d4d8);
+}
+
+.equipment-source-card__note {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.equipment-source-card__item-picks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.equipment-source-card__item-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
 }
 
 .equipment-source-card__items,
@@ -861,6 +898,19 @@
 
 .spells-source__meta {
   margin: 0 0 0.5rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.spells-source__note {
+  margin: 0.5rem 0 0;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.spells-slot-summary {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
   color: var(--text);
   font-size: 0.9rem;
 }

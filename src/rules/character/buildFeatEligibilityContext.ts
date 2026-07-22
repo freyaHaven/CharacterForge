@@ -2,9 +2,11 @@ import type { AbilityScores } from '../../domain/types'
 import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import type { CharacterClassSelection } from '../../domain/class/types'
 import type { ClassDefinition } from '../../domain/class/types'
+import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { resolveClassEffects } from '../class/resolveClassEffects'
 import type { ResolvedCharacterFeats } from './resolveCharacterFeatGrants'
 import { collectTakenFeatIdsForClassChoice } from './resolveCharacterFeatGrants'
+import { isFightingStyleFeatGrantChoice } from '../../domain/class/fightingStyle'
 
 export type BuildFeatEligibilityContextInput = {
   characterLevel: number
@@ -40,12 +42,21 @@ export function characterHasFightingStyle(
       continue
     }
 
+    const available = getChoicesAvailableAtLevel(
+      definition,
+      instance.level,
+      instance.choices,
+    )
+    if (available.some((choice) => isFightingStyleFeatGrantChoice(choice))) {
+      return true
+    }
+
+    // Legacy: style effects on class options (pre-P2.2 saves / fixtures)
     const effects = resolveClassEffects(definition, {
       classId: instance.classId,
       level: instance.level,
       choices: instance.choices,
     })
-
     if (effects.some((effect) => effect.kind === 'fighting-style')) {
       return true
     }

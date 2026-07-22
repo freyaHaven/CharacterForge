@@ -146,11 +146,43 @@ function SelectEntitlementEditor({
   }, [availableSpells, entitlement.grantedSpells])
 
   const selectableSpells = useMemo(() => {
-    const eligible = availableSpells.filter(
-      (spell) =>
-        entitlement.accessibleLevels.includes(spell.level) &&
-        !grantedIds.has(spell.id),
-    )
+    const prepareFromBook =
+      entitlement.prepareFrom === 'spellbook'
+        ? new Set([
+            ...(entitlement.spellbookSpellIds ?? []),
+            ...grantedIds,
+          ])
+        : null
+
+    const allowedSchools =
+      entitlement.schools !== undefined && entitlement.schools.length > 0
+        ? new Set(entitlement.schools.map((school) => school.toLowerCase()))
+        : null
+
+    const eligible = availableSpells.filter((spell) => {
+      if (!entitlement.accessibleLevels.includes(spell.level)) {
+        return false
+      }
+      if (grantedIds.has(spell.id)) {
+        return false
+      }
+      if (prepareFromBook !== null && !prepareFromBook.has(spell.id)) {
+        return false
+      }
+      if (
+        allowedSchools !== null &&
+        !allowedSchools.has(spell.school.toLowerCase())
+      ) {
+        return false
+      }
+      if (
+        entitlement.castingTime !== undefined &&
+        spell.castingTime !== entitlement.castingTime
+      ) {
+        return false
+      }
+      return true
+    })
 
     const byId = new Map(eligible.map((spell) => [spell.id, spell]))
 
@@ -171,7 +203,11 @@ function SelectEntitlementEditor({
   }, [
     availableSpells,
     entitlement.accessibleLevels,
+    entitlement.castingTime,
+    entitlement.prepareFrom,
+    entitlement.schools,
     entitlement.selectedSpellIds,
+    entitlement.spellbookSpellIds,
     grantedIds,
   ])
 
@@ -263,19 +299,28 @@ function SelectEntitlementEditor({
   const atSelectionLimit = used >= entitlement.limit
 
   return (
-    <SpellSelectionGrid
-      idPrefix={idPrefix}
-      title={entitlement.label}
-      countLabel={countDisplay.countLabel}
-      levelRows={countDisplay.levelRows}
-      selectableSpells={selectableSpells}
-      grantedSpells={grantedSpells}
-      selectedSpellIds={selected}
-      invalidSpellIds={invalidSpellIds}
-      eligibilityBySpellId={eligibilityBySpellId}
-      atSelectionLimit={atSelectionLimit}
-      onToggleSpell={toggle}
-    />
+    <>
+      {entitlement.prepareFrom === 'spellbook' ? (
+        <p className="spells-source__note">Prepared from your spellbook</p>
+      ) : null}
+      {entitlement.description !== undefined &&
+      entitlement.description.length > 0 ? (
+        <p className="spells-source__note">{entitlement.description}</p>
+      ) : null}
+      <SpellSelectionGrid
+        idPrefix={idPrefix}
+        title={entitlement.label}
+        countLabel={countDisplay.countLabel}
+        levelRows={countDisplay.levelRows}
+        selectableSpells={selectableSpells}
+        grantedSpells={grantedSpells}
+        selectedSpellIds={selected}
+        invalidSpellIds={invalidSpellIds}
+        eligibilityBySpellId={eligibilityBySpellId}
+        atSelectionLimit={atSelectionLimit}
+        onToggleSpell={toggle}
+      />
+    </>
   )
 }
 
@@ -371,6 +416,23 @@ export function SpellsStep({
 
   const slotsByLevel = summary.sharedSlots?.slotsByLevel ?? null
 
+  function formatSlotSummary(
+    slots: readonly number[],
+    label: string,
+  ): string {
+    const parts: string[] = []
+    for (let index = 0; index < slots.length; index += 1) {
+      const count = slots[index] ?? 0
+      if (count > 0) {
+        parts.push(`${count}× L${index + 1}`)
+      }
+    }
+    if (parts.length === 0) {
+      return label
+    }
+    return `${label}: ${parts.join(', ')}`
+  }
+
   return (
     <section
       aria-labelledby="wizard-step-spells-heading"
@@ -380,6 +442,29 @@ export function SpellsStep({
       <p className="wizard-step-panel__intro">
         Always prepared spells do not use your preparation limit.
       </p>
+
+      {summary.sharedSlots !== null || summary.pactSlots !== null ? (
+        <ul className="spells-slot-summary" aria-label="Spell slot summary">
+          {summary.sharedSlots !== null ? (
+            <li>
+              {formatSlotSummary(
+                summary.sharedSlots.slotsByLevel,
+                'Spell slots',
+              )}
+            </li>
+          ) : null}
+          {summary.pactSlots?.sources.map((source) => {
+            const recoveryLabel =
+              source.recovery === 'short-rest' ? 'short rest' : 'long rest'
+            return (
+              <li key={source.instanceId}>
+                Pact Magic ({source.className}): {source.slotCount}× level{' '}
+                {source.slotLevel} ({recoveryLabel})
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
 
       {unscopedIssues.length > 0 ? (
         <ul className="spells-validation" aria-label="Spell validation issues">

@@ -63,4 +63,48 @@ describe('startingEquipmentHelpers', () => {
       expect(entitlement.options[1].goldPieces).toBe(75)
     }
   })
+
+  it('nests package entitlements for class and background helpers', () => {
+    const nested = [
+      {
+        type: 'choose-items' as const,
+        id: 'artisan-tools',
+        label: "Choose artisan's tools",
+        count: 1,
+        catalogueFilter: {
+          kind: 'tags' as const,
+          tags: ['artisan-tools'],
+        },
+      },
+    ]
+
+    const classEquipment = createCompleteClassPackageOrGoldStartingEquipment({
+      items: [item('srd-2024:spear')],
+      goldPieces: 50,
+      packageEntitlements: nested,
+    })
+    const classRoot = classEquipment.entitlements[0]
+    expect(classRoot?.type).toBe('choose-option')
+    if (classRoot?.type === 'choose-option') {
+      const packageA = classRoot.options[0]
+      expect(packageA?.kind).toBe('items')
+      if (packageA?.kind === 'items') {
+        expect(packageA.entitlements).toEqual(nested)
+      }
+    }
+
+    const backgroundEquipment = createBackgroundStartingEquipment(
+      [item('srd-2024:spear')],
+      { packageEntitlements: nested },
+    )
+    const backgroundRoot = backgroundEquipment.entitlements[0]
+    expect(backgroundRoot?.type).toBe('choose-option')
+    if (backgroundRoot?.type === 'choose-option') {
+      const packageOption = backgroundRoot.options[0]
+      expect(packageOption?.kind).toBe('items')
+      if (packageOption?.kind === 'items') {
+        expect(packageOption.entitlements).toEqual(nested)
+      }
+    }
+  })
 })

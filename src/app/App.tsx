@@ -156,6 +156,30 @@ export default function App({ randomSource = Math.random }: AppProps) {
     [refreshRecentCharacters],
   )
 
+  const [backgroundSkillIds, setBackgroundSkillIds] = useState<string[]>([])
+
+  useEffect(() => {
+    let isActive = true
+    const backgroundId = editor.character.background?.backgroundId
+    if (backgroundId === undefined) {
+      setBackgroundSkillIds([])
+      return
+    }
+
+    void backgroundCatalog.getBackground(backgroundId).then((definition) => {
+      if (!isActive) {
+        return
+      }
+      setBackgroundSkillIds(
+        definition === null ? [] : [...definition.skillProficiencies],
+      )
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [editor.character.background?.backgroundId])
+
   if (editor.isLoading) {
     return <p className="status">Loading character...</p>
   }
@@ -282,10 +306,14 @@ export default function App({ randomSource = Math.random }: AppProps) {
                   draft={classEditor.classDraft}
                   abilityScores={character.abilityScores}
                   speciesSelection={character.species}
+                  backgroundSkillIds={backgroundSkillIds}
                   catalog={editor.classCatalog}
                   speciesCatalog={editor.speciesCatalog}
                   featCatalog={featCatalog}
                   characterFeatId={character.feat?.featId ?? null}
+                  multiclassValidationIssues={
+                    classEditor.multiclassValidationIssues
+                  }
                   onBuildModeChange={classEditor.setBuildMode}
                   onReturnToClassPathIntro={classEditor.returnToClassPathIntro}
                   onSwitchToMulticlass={classEditor.switchToMulticlass}
@@ -330,6 +358,8 @@ export default function App({ randomSource = Math.random }: AppProps) {
                       ? editor.equipmentValidation.issues
                       : []
                   }
+                  equipmentCatalog={editor.equipmentCatalog}
+                  editionId={character.editionId}
                 />
               ),
               feats: (

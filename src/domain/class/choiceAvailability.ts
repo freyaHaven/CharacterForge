@@ -1,24 +1,35 @@
-import type {
-  ClassChoice,
-  ClassChoiceValue,
-  ClassDefinition,
-  ClassLevel,
-} from './types'
+import { isFeatGrantChoiceStorageKey } from '../feat/featGrantChoiceStorage'
+import type { ClassChoiceValue, ClassDefinition, ClassLevel } from './types'
 
 export function getChoicesAvailableAtLevel(
   definition: ClassDefinition,
   level: ClassLevel,
-): ClassChoice[] {
-  return definition.choices.filter((choice) => choice.level <= level)
+  selectedChoices: Record<string, ClassChoiceValue> = {},
+) {
+  return definition.choices.filter((choice) => {
+    if (choice.level > level) {
+      return false
+    }
+
+    if (choice.availableWhen !== undefined) {
+      const selected = selectedChoices[choice.availableWhen.choiceId]
+      return selected === choice.availableWhen.optionId
+    }
+
+    return true
+  })
 }
 
 export function pruneClassChoicesForLevel(
   choices: Record<string, ClassChoiceValue>,
-  availableChoices: readonly ClassChoice[],
+  availableChoices: readonly { id: string }[],
 ): Record<string, ClassChoiceValue> {
   const availableIds = new Set(availableChoices.map((choice) => choice.id))
 
   return Object.fromEntries(
-    Object.entries(choices).filter(([choiceId]) => availableIds.has(choiceId)),
+    Object.entries(choices).filter(
+      ([choiceId]) =>
+        availableIds.has(choiceId) || isFeatGrantChoiceStorageKey(choiceId),
+    ),
   )
 }

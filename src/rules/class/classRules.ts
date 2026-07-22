@@ -7,20 +7,33 @@ import type {
 } from '../../domain/class/types'
 import {
   isAbilityScoreImprovementChoiceId,
+  parseAsiChoice,
   validateAsiEncodedValue,
   type AsiFeatValidationContext,
 } from '../../domain/class/abilityScoreImprovement'
 import {
   isCompleteEpicBoonChoiceValue,
   isEpicBoonChoiceId,
-  isFeatExcludedFromFeatGrantPickers,
   getEpicBoonFeatIdFromChoiceValue,
 } from '../../domain/class/epicBoon'
+import {
+  getFightingStyleFeatIdFromChoiceValue,
+  isCompleteFightingStyleChoiceValue,
+  isFightingStyleFeatGrantChoice,
+} from '../../domain/class/fightingStyle'
 import { withLevelAdjustedChoiceLimits } from '../../domain/class/weaponMastery'
 import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
 } from '../../domain/class/weaponMastery'
+import {
+  isFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
+import {
+  validateFeatDefinitionChoices,
+  type FeatChoiceValidationContext,
+} from '../../domain/feat/validateFeatChoices'
 import type { EditionId } from '../../domain/types'
 import type { FeatDefinition } from '../../domain/feat/types'
 import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
@@ -39,6 +52,7 @@ export type ClassValidationIssueCode =
   | 'duplicate-class-id'
   | 'allocation-exceeds-target'
   | 'invalid-starting-class-reference'
+  | 'multiclass-ability-prerequisite'
 
 export type ClassValidationIssue = {
   code: ClassValidationIssueCode
@@ -72,6 +86,61 @@ export type ClassValidationOptions = {
   takenFeatIds?: readonly string[]
   /** Shared eligibility context (spellcasting, level, abilities, etc.). */
   eligibilityContext?: FeatEligibilityContext
+  /** Skills already proficient from other sources (for Skilled-style feats). */
+  ownedSkillIds?: ReadonlySet<string>
+  /** Tools already proficient from other sources (for Skilled-style feats). */
+  ownedToolIds?: ReadonlySet<string>
+}
+
+function buildFeatChoiceValidationContext(
+  options?: ClassValidationOptions,
+): FeatChoiceValidationContext | undefined {
+  if (
+    options?.ownedSkillIds === undefined &&
+    options?.ownedToolIds === undefined
+  ) {
+    return undefined
+  }
+
+  return {
+    ownedSkillIds: options.ownedSkillIds,
+    ownedToolIds: options.ownedToolIds,
+  }
+}
+
+function validateNestedFeatGrantChoices(
+  grantChoiceId: string,
+  featId: string,
+  hostChoices: Record<string, ClassChoiceValue>,
+  options?: ClassValidationOptions,
+): ClassValidationIssue[] {
+  const definition = options?.featById?.get(featId)
+  if (definition === undefined || definition.choices.length === 0) {
+    return []
+  }
+
+  const nested = readFeatGrantChoices(hostChoices, grantChoiceId)
+  const choiceIssues = validateFeatDefinitionChoices(
+    definition,
+    nested,
+    buildFeatChoiceValidationContext(options),
+  )
+
+  if (
+    choiceIssues.some(
+      (issue) =>
+        issue.code === 'missing-required-choice' ||
+        issue.code === 'invalid-multi-select-count',
+    )
+  ) {
+    return [{ code: 'missing-required-choice', choiceId: grantChoiceId }]
+  }
+
+  if (choiceIssues.length > 0) {
+    return [{ code: 'invalid-choice', choiceId: grantChoiceId }]
+  }
+
+  return []
 }
 
 function buildFeatValidationContext(
@@ -136,15 +205,25 @@ function validateChoiceValue(
     )
     const result = validateAsiEncodedValue(value, featContext)
 
-    if (result.ok) {
+    if (!result.ok) {
+      if (result.reason === 'incomplete' || result.reason === 'missing') {
+        return [{ code: 'missing-required-choice', choiceId: choice.id }]
+      }
+
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const parsed = parseAsiChoice(value)
+    if (parsed?.kind !== 'feat') {
       return []
     }
 
-    if (result.reason === 'incomplete' || result.reason === 'missing') {
-      return [{ code: 'missing-required-choice', choiceId: choice.id }]
-    }
-
-    return [{ code: 'invalid-choice', choiceId: choice.id }]
+    return validateNestedFeatGrantChoices(
+      choice.id,
+      parsed.featId,
+      allChoices,
+      options,
+    )
   }
 
   if (isEpicBoonChoiceId(choice.id)) {
@@ -161,7 +240,7 @@ function validateChoiceValue(
     }
 
     const featId = getEpicBoonFeatIdFromChoiceValue(value)
-    if (featId === null || isFeatExcludedFromFeatGrantPickers(featId)) {
+    if (featId === null) {
       return [{ code: 'invalid-choice', choiceId: choice.id }]
     }
 
@@ -171,7 +250,12 @@ function validateChoiceValue(
       options,
     )
     if (featContext === undefined) {
-      return []
+      return validateNestedFeatGrantChoices(
+        choice.id,
+        featId,
+        allChoices,
+        options,
+      )
     }
 
     const definition = featContext.featById.get(featId)
@@ -190,7 +274,85 @@ function validateChoiceValue(
       return [{ code: 'invalid-choice', choiceId: choice.id }]
     }
 
-    return []
+    return validateNestedFeatGrantChoices(
+      choice.id,
+      featId,
+      allChoices,
+      options,
+    )
+  }
+
+  if (isFightingStyleFeatGrantChoice(choice)) {
+    if (value === undefined) {
+      return choice.required
+        ? [{ code: 'missing-required-choice', choiceId: choice.id }]
+        : []
+    }
+
+    if (
+      typeof value !== 'string' ||
+      !isCompleteFightingStyleChoiceValue(choice, value)
+    ) {
+      return typeof value === 'string' && value.length > 0
+        ? [{ code: 'invalid-choice', choiceId: choice.id }]
+        : [{ code: 'missing-required-choice', choiceId: choice.id }]
+    }
+
+    const featId = getFightingStyleFeatIdFromChoiceValue(value)
+    if (featId === null) {
+      // Class alternate (Blessed Warrior / Druidic Warrior)
+      return []
+    }
+
+    const featContext = buildFeatValidationContext(
+      allChoices,
+      choice.id,
+      options,
+    )
+    if (featContext === undefined) {
+      return []
+    }
+
+    const definition = featContext.featById.get(featId)
+    if (
+      definition === undefined ||
+      definition.category !== 'fighting-style'
+    ) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    // This grant is the Fighting Style feature — satisfy that prerequisite here.
+    const eligibility = evaluateFeatEligibility(definition, {
+      characterLevel: options?.eligibilityContext?.characterLevel ?? 20,
+      abilityScores: options?.eligibilityContext?.abilityScores ?? {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      hasSpellcasting: options?.eligibilityContext?.hasSpellcasting ?? true,
+      hasFightingStyle: true,
+      takenFeatIds: featContext.takenFeatIds,
+    })
+    if (!eligibility.eligible) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    const priorTakes = featContext.takenFeatIds.filter(
+      (id) => id === featId,
+    ).length
+    if (priorTakes > 0 && !definition.repeatable) {
+      return [{ code: 'invalid-choice', choiceId: choice.id }]
+    }
+
+    return validateNestedFeatGrantChoices(
+      choice.id,
+      featId,
+      allChoices,
+      options,
+    )
   }
 
   if (value === undefined) {
@@ -242,6 +404,9 @@ function formatValidationMessage(issue: ClassValidationIssue): string {
       if (issue.choiceId === 'fighting-style') {
         return 'Choose a Fighting Style.'
       }
+      if (issue.choiceId === 'champion-additional-fighting-style') {
+        return 'Choose an Additional Fighting Style.'
+      }
       if (issue.choiceId === 'skill-proficiencies') {
         return 'Choose two skill proficiencies.'
       }
@@ -281,6 +446,8 @@ function formatValidationMessage(issue: ClassValidationIssue): string {
       return 'Allocated class levels exceed the target character level.'
     case 'invalid-starting-class-reference':
       return 'The starting class reference is invalid.'
+    case 'multiclass-ability-prerequisite':
+      return 'Multiclass ability score prerequisites are not met.'
   }
 }
 
@@ -383,6 +550,9 @@ export function validateClassInstance(
   }
 
   for (const choiceId of Object.keys(instance.choices)) {
+    if (isFeatGrantChoiceStorageKey(choiceId)) {
+      continue
+    }
     if (!availableChoiceIds.has(choiceId)) {
       issues.push({ code: 'unknown-choice', choiceId })
     }

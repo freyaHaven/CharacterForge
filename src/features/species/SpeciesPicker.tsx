@@ -30,6 +30,12 @@ import { SpeciesSectionAccordion } from './SpeciesSectionAccordion'
 import { SizeStatIcon, SpeedStatIcon, TraitIcon } from './SpeciesUiIcons'
 import { resolveSpeciesHighlights } from './resolveSpeciesHighlights'
 import {
+  createFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
+import { resolveSpeciesEffects } from '../../rules/species/resolveSpeciesEffects'
+import { isSkillId } from '../../domain/skills/types'
+import {
   createSpeciesSelectionDraft,
   draftToSpeciesSelection,
   initializeSpeciesSelectionDraft,
@@ -213,6 +219,33 @@ export function SpeciesPicker({
       currentDraft,
       choiceId,
       optionId === '' ? undefined : optionId,
+    )
+
+    await commitDraft(nextDraft)
+  }
+
+  async function handleFeatSubChoiceChange(
+    grantSlotId: string,
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) {
+    const currentDraft =
+      draft ??
+      (activeSpeciesId === null
+        ? null
+        : initializeSpeciesSelectionDraft({
+            speciesId: activeSpeciesId,
+            choices: activeChoices,
+          }))
+
+    if (currentDraft === null) {
+      return
+    }
+
+    const nextDraft = updateSpeciesDraftChoice(
+      currentDraft,
+      createFeatGrantChoiceStorageKey(grantSlotId, featChoiceId),
+      value,
     )
 
     await commitDraft(nextDraft)
@@ -429,8 +462,40 @@ export function SpeciesPicker({
                             recommendedFeatId={
                               choice.recommendedFeatId ?? null
                             }
+                            featChoices={readFeatGrantChoices(
+                              activeChoices,
+                              choice.id,
+                            )}
+                            ownedSkillIds={
+                              activeDefinition === null ||
+                              activeSpeciesId === null
+                                ? new Set()
+                                : new Set(
+                                    resolveSpeciesEffects(
+                                      activeDefinition,
+                                      {
+                                        speciesId: activeSpeciesId,
+                                        choices: activeChoices,
+                                      },
+                                    )
+                                      .filter(
+                                        (effect) =>
+                                          effect.kind === 'skill-proficiency',
+                                      )
+                                      .map((effect) => effect.skillId)
+                                      .filter(isSkillId),
+                                  )
+                            }
+                            ownedToolIds={new Set()}
                             onChange={(choiceId, featId) => {
                               void handleChoiceChange(choiceId, featId)
+                            }}
+                            onFeatChoiceChange={(featChoiceId, value) => {
+                              void handleFeatSubChoiceChange(
+                                choice.id,
+                                featChoiceId,
+                                value,
+                              )
                             }}
                           />
                         </SpeciesSectionAccordion>

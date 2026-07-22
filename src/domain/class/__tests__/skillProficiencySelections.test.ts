@@ -125,4 +125,33 @@ describe('expertise selection helpers', () => {
       }),
     ).toEqual(['intimidation'])
   })
+
+  it('can use character-wide proficient skills when provided', () => {
+    expect(
+      getExcludedExpertiseOptionIds(
+        multiSkillClass,
+        'expertise',
+        {
+          'skill-proficiencies': ['athletics'],
+          expertise: [],
+        },
+        ['athletics', 'intimidation'],
+      ),
+    ).toEqual(['perception'])
+  })
+
+  it('allows expertise on a background skill outside class picks', () => {
+    expect(
+      getExcludedExpertiseOptionIds(
+        multiSkillClass,
+        'expertise',
+        {
+          'skill-proficiencies': ['athletics'],
+          expertise: [],
+        },
+        // Background granted Perception; class only picked Athletics.
+        ['athletics', 'perception'],
+      ),
+    ).toEqual(['intimidation'])
+  })
 })

@@ -181,6 +181,40 @@ export function collectAsiFeatIds(
   return featIds
 }
 
+/**
+ * Collect ability score bonuses from completed ASI choice encodings
+ * (`plus-2:…` / `plus-1-1:…`). Feat-mode ASI slots contribute nothing here.
+ */
+export function collectAsiAbilityScoreBonuses(
+  choices: Record<string, string | string[] | undefined>,
+): Partial<Record<AbilityId, number>> {
+  const bonuses: Partial<Record<AbilityId, number>> = {}
+
+  for (const [choiceId, value] of Object.entries(choices)) {
+    if (!isAbilityScoreImprovementChoiceId(choiceId) || typeof value !== 'string') {
+      continue
+    }
+
+    const parsed = parseAsiChoice(value)
+    if (parsed === null) {
+      continue
+    }
+
+    if (parsed.kind === 'plus-2') {
+      bonuses[parsed.abilityId] = (bonuses[parsed.abilityId] ?? 0) + 2
+      continue
+    }
+
+    if (parsed.kind === 'plus-1-1') {
+      for (const abilityId of parsed.abilityIds) {
+        bonuses[abilityId] = (bonuses[abilityId] ?? 0) + 1
+      }
+    }
+  }
+
+  return bonuses
+}
+
 export type AsiValidationResult =
   | { ok: true; complete: boolean }
   | { ok: false; reason: 'missing' | 'incomplete' | 'invalid' }
@@ -298,6 +332,12 @@ export const ROGUE_ASI_FEATURE_LEVELS = [4, 8, 10, 12, 16] as const
 export const RANGER_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
 
 export const CLERIC_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
+export const DRUID_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
+export const WIZARD_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
+export const BARD_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
 
 /** Deterministic complete ASI picks for tests and fixtures. */
 export function createAsiChoicesUpToLevel(

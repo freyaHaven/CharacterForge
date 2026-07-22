@@ -8,6 +8,7 @@ import {
 } from '../../../../../domain/class/featureProgression'
 import { createAsiChoicesUpToLevel } from '../../../../../domain/class/abilityScoreImprovement'
 import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
+import { selectFightingStyleFeat } from '../../../../../domain/class/fightingStyle'
 import { createFighterWeaponMasteryChoices } from '../fighter.weaponMastery'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
 import { resolveDeferredCharacterRequirements } from '../../../../../rules/class/deferredRequirements'
@@ -73,6 +74,12 @@ function createValidFighterSelection(level: number) {
 
   if (level >= 3) {
     choices['fighter-subclass'] = 'champion'
+  }
+
+  if (level >= 7) {
+    choices['champion-additional-fighting-style'] = selectFightingStyleFeat(
+      'srd-2024:archery',
+    )
   }
 
   if (level >= 19) {

@@ -4,6 +4,7 @@ import { createBundledBackgroundCatalog } from '../../../adapters/bundledBackgro
 import { createBundledFeatCatalog } from '../../../adapters/bundledFeatCatalog'
 import { selectAsiFeat } from '../../../domain/class/abilityScoreImprovement'
 import { selectEpicBoonFeat } from '../../../domain/class/epicBoon'
+import { createFeatGrantChoiceStorageKey } from '../../../domain/feat/featGrantChoiceStorage'
 import { resolveCharacterFeatGrants } from '../resolveCharacterFeatGrants'
 import type { Character } from '../../../domain/types'
 import { createDefaultCharacterDetails } from '../../../domain/character/details'
@@ -83,6 +84,44 @@ describe('resolveCharacterFeatGrants', () => {
     expect(resolved.grants[3]?.source).toMatchObject({
       kind: 'class-feat-grant',
       choiceId: 'epic-boon',
+    })
+  })
+
+  it('populates companion nested choices on class grants', async () => {
+    const storageKey = createFeatGrantChoiceStorageKey(
+      'ability-score-improvement-4',
+      'skill-or-tool-proficiencies',
+    )
+    const picks = [
+      'skill:athletics',
+      'skill:perception',
+      'tool:thieves-tools',
+    ]
+
+    const resolved = await resolveCharacterFeatGrants(
+      baseCharacter({
+        classes: [
+          {
+            instanceId: 'fighter-1',
+            classId: 'srd-2024:fighter',
+            level: 4,
+            choices: {
+              'ability-score-improvement-4': selectAsiFeat('srd-2024:skilled'),
+              [storageKey]: picks,
+            },
+          },
+        ],
+      }),
+      {
+        classCatalog: createBundledClassCatalog(),
+        backgroundCatalog: createBundledBackgroundCatalog(),
+        featCatalog: createBundledFeatCatalog(),
+      },
+    )
+
+    expect(resolved.grants).toHaveLength(1)
+    expect(resolved.grants[0]?.choices).toEqual({
+      'skill-or-tool-proficiencies': picks,
     })
   })
 })

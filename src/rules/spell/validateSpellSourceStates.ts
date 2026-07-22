@@ -18,9 +18,13 @@ export type SpellValidationIssueCode =
   | 'spell-not-found'
   | 'spell-not-on-list'
   | 'spell-level-ineligible'
+  | 'spell-school-ineligible'
+  | 'spell-casting-time-ineligible'
   | 'duplicate-selection'
   | 'granted-spell-selected'
   | 'cross-source-duplicate'
+  | 'not-in-spellbook'
+  | 'invalid-prepare-from'
 
 export type SpellValidationIssue = {
   code: SpellValidationIssueCode
@@ -58,6 +62,71 @@ function findSelectEntitlement(
   return null
 }
 
+function validatePrepareFromConfig(
+  group: ResolvedSpellSourceGroup,
+  entitlement: ResolvedSpellEntitlement,
+  sourceKey: string,
+  issues: SpellValidationIssue[],
+): boolean {
+  if (entitlement.prepareFrom !== 'spellbook') {
+    return true
+  }
+
+  // Union mode: all spellbook-kind sources on the same class group.
+  if (
+    entitlement.spellbookEntitlementId === undefined ||
+    entitlement.spellbookEntitlementId.length === 0
+  ) {
+    const hasAnySpellbook = group.entitlements.some(
+      (candidate) =>
+        candidate.kind === 'select' &&
+        candidate.selectionKind === 'spellbook',
+    )
+    if (!hasAnySpellbook) {
+      issues.push({
+        code: 'invalid-prepare-from',
+        sourceKey,
+        groupLabel: group.label,
+        entitlementId: entitlement.entitlementId,
+        message: `${group.label} — ${entitlement.label}: prepareFrom spellbook requires at least one spellbook entitlement on this source.`,
+      })
+      return false
+    }
+    return true
+  }
+
+  const book = group.entitlements.find(
+    (candidate) =>
+      candidate.kind === 'select' &&
+      candidate.selectionKind === 'spellbook' &&
+      candidate.entitlementId === entitlement.spellbookEntitlementId,
+  )
+
+  if (book === undefined) {
+    issues.push({
+      code: 'invalid-prepare-from',
+      sourceKey,
+      groupLabel: group.label,
+      entitlementId: entitlement.entitlementId,
+      message: `${group.label} — ${entitlement.label}: linked spellbook entitlement was not found.`,
+    })
+    return false
+  }
+
+  return true
+}
+
+function schoolsMatch(
+  spellSchool: string,
+  allowed: readonly string[] | undefined,
+): boolean {
+  if (allowed === undefined || allowed.length === 0) {
+    return true
+  }
+  const normalized = spellSchool.toLowerCase()
+  return allowed.some((entry) => entry.toLowerCase() === normalized)
+}
+
 /**
  * Soft-invalid validation: preserve selections, surface errors, require correction.
  * Does not mutate source states.
@@ -72,6 +141,22 @@ export async function validateSpellSourceStates(
     summary.activeSources.map((source) => spellSourceKey(source)),
   )
   const availability = collectSpellAvailability(summary)
+
+  // Spell ids already recorded on other spellbook entitlements in the same group.
+  const spellbookIdsByGroup = new Map<string, Map<string, Set<string>>>()
+  for (const group of summary.groups) {
+    const byEntitlement = new Map<string, Set<string>>()
+    for (const entitlement of group.entitlements) {
+      if (entitlement.selectionKind !== 'spellbook') {
+        continue
+      }
+      byEntitlement.set(
+        entitlement.entitlementId,
+        new Set(entitlement.selectedSpellIds),
+      )
+    }
+    spellbookIdsByGroup.set(group.groupId, byEntitlement)
+  }
 
   for (const state of spellSourceStates) {
     const key = spellSourceKey(state.source)
@@ -98,9 +183,18 @@ export async function validateSpellSourceStates(
     }
 
     const { group, entitlement } = match
+    validatePrepareFromConfig(group, entitlement, key, issues)
+
     const grantedIds = new Set(
       entitlement.grantedSpells.map((grant) => grant.spellId),
     )
+    const spellbookEligible =
+      entitlement.prepareFrom === 'spellbook'
+        ? new Set([
+            ...(entitlement.spellbookSpellIds ?? []),
+            ...grantedIds,
+          ])
+        : null
     const seen = new Set<string>()
 
     for (const selection of state.selections) {
@@ -125,6 +219,20 @@ export async function validateSpellSourceStates(
           entitlementId: entitlement.entitlementId,
           spellId: selection.spellId,
           message: `${selection.spellId} is already granted and should not be selected.`,
+        })
+      }
+
+      if (
+        spellbookEligible !== null &&
+        !spellbookEligible.has(selection.spellId)
+      ) {
+        issues.push({
+          code: 'not-in-spellbook',
+          sourceKey: key,
+          groupLabel: group.label,
+          entitlementId: entitlement.entitlementId,
+          spellId: selection.spellId,
+          message: `${selection.spellId} is not in the linked spellbook.`,
         })
       }
 
@@ -174,6 +282,53 @@ export async function validateSpellSourceStates(
           spellId: selection.spellId,
           message: `${spell.name} is not an eligible spell level for this source.`,
         })
+      }
+
+      if (!schoolsMatch(spell.school, entitlement.schools)) {
+        issues.push({
+          code: 'spell-school-ineligible',
+          sourceKey: key,
+          groupLabel: group.label,
+          entitlementId: entitlement.entitlementId,
+          spellId: selection.spellId,
+          message: `${spell.name} is not an eligible school for this source.`,
+        })
+      }
+
+      if (
+        entitlement.castingTime !== undefined &&
+        spell.castingTime !== entitlement.castingTime
+      ) {
+        issues.push({
+          code: 'spell-casting-time-ineligible',
+          sourceKey: key,
+          groupLabel: group.label,
+          entitlementId: entitlement.entitlementId,
+          spellId: selection.spellId,
+          message: `${spell.name} does not match the required casting time (${entitlement.castingTime}).`,
+        })
+      }
+
+      if (entitlement.selectionKind === 'spellbook') {
+        const booksInGroup = spellbookIdsByGroup.get(group.groupId)
+        if (booksInGroup !== undefined) {
+          for (const [otherId, otherSpells] of booksInGroup) {
+            if (otherId === entitlement.entitlementId) {
+              continue
+            }
+            if (otherSpells.has(selection.spellId)) {
+              issues.push({
+                code: 'cross-source-duplicate',
+                sourceKey: key,
+                groupLabel: group.label,
+                entitlementId: entitlement.entitlementId,
+                spellId: selection.spellId,
+                message: `${spell.name} is already recorded in another spellbook acquisition source.`,
+              })
+              break
+            }
+          }
+        }
       }
 
       if (entitlement.listId !== undefined) {

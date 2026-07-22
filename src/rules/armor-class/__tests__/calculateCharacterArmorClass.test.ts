@@ -49,6 +49,7 @@ describe('calculateCharacterArmorClass', () => {
       base: 10,
       dexterityBonus: 3,
       shieldBonus: 0,
+      otherBonus: 0,
       armorItemId: null,
       shieldItemId: null,
     })
@@ -125,5 +126,21 @@ describe('calculateCharacterArmorClass', () => {
 
     expect(result.total).toBe(16)
     expect(result.dexterityBonus).toBe(0)
+  })
+
+  it('adds otherBonus (e.g. Defense Fighting Style) to the total', () => {
+    const result = calculateCharacterArmorClass({
+      abilityScores: { ...BASE_SCORES, dexterity: 14 },
+      resolvedEquipment: inventory('srd-2024:chain-mail'),
+      loadout: {
+        ...EMPTY_EQUIPMENT_LOADOUT,
+        armorItemId: 'srd-2024:chain-mail',
+      },
+      equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
+      otherBonus: 1,
+    })
+
+    expect(result.total).toBe(17)
+    expect(result.otherBonus).toBe(1)
   })
 })

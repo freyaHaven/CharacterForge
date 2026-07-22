@@ -24,6 +24,12 @@ function createStubClass(
     source: EMPTY_SOURCE,
     hitDie: { sides: 8 },
     primaryAbilities: ['strength'],
+    multiclassPrerequisite: {
+      kind: 'all-of',
+      abilities: ['strength'],
+      minimum: 13,
+      summary: 'Strength 13',
+    },
     savingThrows: ['strength'],
     proficiencies: {
       armor: [],
@@ -34,6 +40,10 @@ function createStubClass(
     featureProgression: [],
     choices: [],
     deferredRequirements: [],
+    startingEquipment: {
+      completeness: 'complete',
+      entitlements: [],
+    },
     ...(catalogOrder === undefined ? {} : { catalogOrder }),
   }
 }

@@ -67,20 +67,25 @@ export function collectSkillExpertiseSelections(
 /**
  * Option ids to hide on an Expertise multi-select: skills without proficiency,
  * plus skills already given Expertise on another choice.
+ *
+ * When `ownedProficientSkillIds` is provided (character-wide proficient skills),
+ * use that set instead of only this class instance's skill-proficiency choices.
  */
 export function getExcludedExpertiseOptionIds(
   definition: ClassDefinition,
   choiceId: string,
   choices: Record<string, ClassChoiceValue>,
+  ownedProficientSkillIds?: ReadonlySet<string> | readonly string[],
 ): string[] {
   const choice = definition.choices.find((entry) => entry.id === choiceId)
   if (choice === undefined || !choiceGrantsSkillExpertise(choice)) {
     return []
   }
 
-  const proficient = new Set(
-    collectSkillProficiencySelections(definition, choices),
-  )
+  const proficient =
+    ownedProficientSkillIds !== undefined
+      ? new Set(ownedProficientSkillIds)
+      : new Set(collectSkillProficiencySelections(definition, choices))
   const otherExpertise = new Set(
     collectSkillExpertiseSelections(definition, choices, choiceId),
   )

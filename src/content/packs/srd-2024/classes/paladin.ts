@@ -1,6 +1,7 @@
 import type { ClassDefinition } from '../../../../domain/class/types'
 import { createAsiChoiceDefinition } from '../../../../domain/class/abilityScoreImprovement'
 import { createEpicBoonChoiceDefinition } from '../../../../domain/class/epicBoon'
+import { createFightingStyleChoiceDefinition } from '../../../../domain/class/fightingStyle'
 import { subclassToChoiceOption } from '../../../../domain/class/subclassDefinition'
 import type { SkillId } from '../../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../../domain/skills/types'
@@ -43,6 +44,12 @@ export const paladinSrd2024: ClassDefinition = {
   catalogOrder: 16,
   hitDie: { sides: 10 },
   primaryAbilities: ['strength', 'charisma'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['strength', 'charisma'],
+    minimum: 13,
+    summary: 'Strength and Charisma 13',
+  },
   savingThrows: ['wisdom', 'charisma'],
   spellcasting: paladinSpellcastingSrd2024,
   proficiencies: {
@@ -309,48 +316,19 @@ export const paladinSrd2024: ClassDefinition = {
       max: 2,
       options: WEAPON_MASTERY_OPTIONS,
     },
-    {
-      id: 'fighting-style',
+    createFightingStyleChoiceDefinition({
       level: 2,
-      prompt: 'Choose a Fighting Style',
-      type: 'single-select',
-      required: true,
-      options: [
-        {
-          id: 'defense',
-          label: 'Defense',
-          description:
-            'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
-          effects: [{ kind: 'fighting-style', styleId: 'defense' }],
-        },
-        {
-          id: 'great-weapon-fighting',
-          label: 'Great Weapon Fighting',
-          description:
-            'When you roll a 1 or 2 on a damage die for an attack with a two-handed or versatile Melee weapon, you can reroll the die.',
-          effects: [
-            { kind: 'fighting-style', styleId: 'great-weapon-fighting' },
-          ],
-        },
-        {
-          id: 'two-weapon-fighting',
-          label: 'Two-Weapon Fighting',
-          description:
-            'When you make an extra attack as a result of using a Light weapon, you can add your ability modifier to the damage of that attack if you are not already adding it to the damage.',
-          effects: [
-            { kind: 'fighting-style', styleId: 'two-weapon-fighting' },
-          ],
-        },
+      recommendedFeatId: 'srd-2024:defense',
+      alternateOptions: [
         {
           id: 'blessed-warrior',
           label: 'Blessed Warrior',
           description:
             'You learn two Cleric cantrips of your choice. Guidance and Sacred Flame are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.',
-          effects: [{ kind: 'fighting-style', styleId: 'blessed-warrior' }],
           spellEntitlements: [blessedWarriorCantripsEntitlement],
         },
       ],
-    },
+    }),
     {
       id: 'paladin-subclass',
       level: 3,

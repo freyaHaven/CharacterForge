@@ -146,7 +146,9 @@ describe('Review wizard integration', () => {
       expect(
         screen.getByRole('heading', { name: 'Features', level: 3 }),
       ).toBeInTheDocument()
-      expect(screen.getByText('Defense')).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: /Feats · Defense/ }),
+      ).toBeInTheDocument()
     })
     expect(
       screen.queryByRole('heading', { name: 'Basics', level: 3 }),
@@ -165,7 +167,9 @@ describe('Review wizard integration', () => {
     expect(
       screen.getByRole('heading', { name: 'Features', level: 3 }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Defense')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Feats · Defense/ }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Weapon Mastery')).toBeInTheDocument()
   })
 
@@ -173,7 +177,7 @@ describe('Review wizard integration', () => {
     const { user } = await renderApp(createStoredCharacter())
     await openReviewStep(user)
 
-    await user.click(screen.getByRole('button', { name: 'Edit class' }))
+    await user.click(screen.getAllByRole('button', { name: 'Edit class' })[0]!)
 
     expect(getWizardStepButton(screen, 'Class')).toHaveAttribute(
       'aria-current',

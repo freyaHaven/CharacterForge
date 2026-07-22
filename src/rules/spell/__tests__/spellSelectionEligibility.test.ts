@@ -11,6 +11,7 @@ function makeSummary(): CharacterSpellcastingSummary {
     hasSpellContent: true,
     spellLines: [],
     sharedSlots: { slotsByLevel: [2], highestSlotLevel: 1 },
+    pactSlots: null,
     activeSources: [],
     groups: [
       {

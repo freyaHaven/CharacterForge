@@ -139,7 +139,7 @@ describe('createLocalStorageCharacterRepository', () => {
     await repository.save(character)
 
     expect(JSON.parse(localStorage.getItem('characterforge:character:char-1')!)).toEqual({
-      schemaVersion: 14,
+      schemaVersion: 15,
       character,
     })
   })

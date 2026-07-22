@@ -20,6 +20,7 @@ import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
 } from '../domain/class/weaponMastery'
+import { isFightingStyleFeatGrantChoice } from '../domain/class/fightingStyle'
 import type {
   ClassReviewChoiceLine,
   ClassReviewDisplay,
@@ -37,15 +38,6 @@ const EMPTY_DISPLAY: ClassReviewDisplay = {
 
 function isSubclassChoiceId(choiceId: string): boolean {
   return choiceId.endsWith('-subclass')
-}
-
-function isFightingStyleChoice(choice: ClassChoice): boolean {
-  return (
-    choice.id === 'fighting-style' ||
-    choice.options.some((option) =>
-      option.effects?.some((effect) => effect.kind === 'fighting-style'),
-    )
-  )
 }
 
 function isWeaponMasteryChoice(choice: ClassChoice): boolean {
@@ -85,6 +77,23 @@ function collectChoiceLines(
     }
 
     if (choice.type === 'single-select' && typeof selectedValue === 'string') {
+      // Fighting Style feat grants appear under Feats with source attribution.
+      // Class-only alternates (Blessed / Druidic Warrior) stay here.
+      if (isFightingStyleFeatGrantChoice(choice)) {
+        const alternate = choice.options.find(
+          (candidate) => candidate.id === selectedValue,
+        )
+        if (alternate !== undefined) {
+          choiceLines.push({
+            prompt: choice.prompt,
+            summary: alternate.label,
+            heading: alternate.label,
+            description: alternate.description,
+          })
+        }
+        continue
+      }
+
       const option = choice.options.find(
         (candidate) => candidate.id === selectedValue,
       )
@@ -108,16 +117,6 @@ function collectChoiceLines(
             label: feature.name,
             description: feature.description,
           })),
-        })
-        continue
-      }
-
-      if (isFightingStyleChoice(choice)) {
-        choiceLines.push({
-          prompt: choice.prompt,
-          summary: option.label,
-          heading: option.label,
-          description: option.description,
         })
         continue
       }
@@ -185,7 +184,11 @@ export function useReviewClassDisplay(
         }
 
         const choiceLines = collectChoiceLines(
-          getChoicesAvailableAtLevel(definition, instance.level),
+          getChoicesAvailableAtLevel(
+            definition,
+            instance.level,
+            instance.choices,
+          ),
           instance.choices,
           instance.level,
         )

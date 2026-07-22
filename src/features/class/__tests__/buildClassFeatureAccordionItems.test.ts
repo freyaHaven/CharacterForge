@@ -97,7 +97,7 @@ describe('buildClassFeatureAccordionItems', () => {
     })
 
     expect(items.find((item) => item.title === 'Fighting Style')).toMatchObject({
-      summaryLabel: 'Defense',
+      summaryLabel: 'Fighting Style: Defense',
       choiceCountLabel: '1 choice',
       levelLabel: '1st level',
       completion: 'complete',
@@ -143,7 +143,11 @@ describe('buildClassFeatureAccordionItems', () => {
     )
     expect(additionalFightingStyle).toMatchObject({
       description: 'You gain another Fighting Style feat of your choice.',
-      completion: 'granted',
+      completion: 'incomplete',
+      choiceCountLabel: '1 choice',
     })
+    expect(additionalFightingStyle?.singleSelectChoice?.id).toBe(
+      'champion-additional-fighting-style',
+    )
   })
 })

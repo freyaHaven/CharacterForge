@@ -1,5 +1,8 @@
 import type { SpellDefinition } from '../../../../domain/spell/types'
 import { defineSrd2024Spell } from './defineSpell'
+import { SRD_2024_BARD_EXCLUSIVE_SPELLS } from './bard-exclusive'
+import { SRD_2024_DRUID_EXCLUSIVE_SPELLS } from './druid-exclusive'
+import { SRD_2024_WIZARD_HIGHER_LEVEL_SPELLS } from './wizard-higher-levels'
 
 /**
  * SRD 2024 spells referenced by class lists, grants, and Magic Initiate.
@@ -2200,4 +2203,7 @@ export const SRD_2024_SPELLS: SpellDefinition[] = [
     description:
       'You gain the ability to enter a tree and move from inside it to inside another tree of the same kind within 500 feet. You must use 5 feet of movement to enter a tree, and each transport is instantaneous.',
   }),
+  ...SRD_2024_WIZARD_HIGHER_LEVEL_SPELLS,
+  ...SRD_2024_DRUID_EXCLUSIVE_SPELLS,
+  ...SRD_2024_BARD_EXCLUSIVE_SPELLS,
 ]

@@ -1,6 +1,7 @@
 import type { ClassDefinition } from '../../../../domain/class/types'
 import { createAsiChoiceDefinition } from '../../../../domain/class/abilityScoreImprovement'
 import { createEpicBoonChoiceDefinition } from '../../../../domain/class/epicBoon'
+import { createFightingStyleChoiceDefinition } from '../../../../domain/class/fightingStyle'
 import { subclassToChoiceOption } from '../../../../domain/class/subclassDefinition'
 import type { SkillId } from '../../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../../domain/skills/types'
@@ -45,6 +46,12 @@ export const fighterSrd2024: ClassDefinition = {
   catalogOrder: 10,
   hitDie: { sides: 10 },
   primaryAbilities: ['strength', 'dexterity'],
+  multiclassPrerequisite: {
+    kind: 'any-of',
+    abilities: ['strength', 'dexterity'],
+    minimum: 13,
+    summary: 'Strength or Dexterity 13',
+  },
   savingThrows: ['strength', 'constitution'],
   proficiencies: {
     armor: ['light', 'medium', 'heavy', 'shield'],
@@ -347,47 +354,10 @@ export const fighterSrd2024: ClassDefinition = {
     },
   ],
   choices: [
-    {
-      id: 'fighting-style',
+    createFightingStyleChoiceDefinition({
       level: 1,
-      prompt: 'Choose a Fighting Style',
-      type: 'single-select',
-      required: true,
-      options: [
-        {
-          id: 'archery',
-          label: 'Archery',
-          description:
-            'You gain a +2 bonus to attack rolls you make with Ranged weapons.',
-          effects: [{ kind: 'fighting-style', styleId: 'archery' }],
-        },
-        {
-          id: 'defense',
-          label: 'Defense',
-          description:
-            'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
-          effects: [{ kind: 'fighting-style', styleId: 'defense' }],
-        },
-        {
-          id: 'great-weapon-fighting',
-          label: 'Great Weapon Fighting',
-          description:
-            'When you roll a 1 or 2 on a damage die for an attack with a two-handed or versatile Melee weapon, you can reroll the die.',
-          effects: [
-            { kind: 'fighting-style', styleId: 'great-weapon-fighting' },
-          ],
-        },
-        {
-          id: 'two-weapon-fighting',
-          label: 'Two-Weapon Fighting',
-          description:
-            'When you make an extra attack as a result of using a Light weapon, you can add your ability modifier to the damage of that attack if you are not already adding it to the damage.',
-          effects: [
-            { kind: 'fighting-style', styleId: 'two-weapon-fighting' },
-          ],
-        },
-      ],
-    },
+      recommendedFeatId: 'srd-2024:defense',
+    }),
     {
       id: 'skill-proficiencies',
       level: 1,
@@ -450,6 +420,16 @@ export const fighterSrd2024: ClassDefinition = {
       required: true,
       options: [subclassToChoiceOption(championSrd2024)],
     },
+    createFightingStyleChoiceDefinition({
+      id: 'champion-additional-fighting-style',
+      level: 7,
+      prompt: 'Additional Fighting Style',
+      recommendedFeatId: 'srd-2024:defense',
+      availableWhen: {
+        choiceId: 'fighter-subclass',
+        optionId: 'champion',
+      },
+    }),
     createAsiChoiceDefinition('ability-score-improvement-4', 4),
     createAsiChoiceDefinition('ability-score-improvement-6', 6),
     createAsiChoiceDefinition('ability-score-improvement-8', 8),

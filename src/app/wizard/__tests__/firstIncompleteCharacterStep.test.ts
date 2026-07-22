@@ -121,15 +121,31 @@ function createCompleteStartingEquipment(
       {
         source: { kind: 'class-instance', instanceId: classInstanceId },
         entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+        path: [],
         optionId: classOptionId,
         choices: [],
       },
       {
         source: { kind: 'background', backgroundId },
         entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+        path: [],
         optionId: PACKAGE_OPTION_ID,
         choices: [],
       },
+      ...(backgroundId === 'srd-2024:soldier'
+        ? [
+            {
+              source: {
+                kind: 'background' as const,
+                backgroundId,
+              },
+              entitlementId: 'gaming-set',
+              path: [PACKAGE_OPTION_ID],
+              optionId: null,
+              choices: [{ itemId: 'srd-2024:dice-set', quantity: 1 }],
+            },
+          ]
+        : []),
     ],
     loadout: EMPTY_EQUIPMENT_LOADOUT,
   }

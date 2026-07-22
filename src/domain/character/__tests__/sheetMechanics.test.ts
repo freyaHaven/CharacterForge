@@ -23,6 +23,14 @@ describe('sheetMechanics', () => {
     expect(getSkillModifier(16, 2, 'none')).toBe(3)
     expect(getSkillModifier(16, 2, 'proficient')).toBe(5)
     expect(getSkillModifier(16, 2, 'expertise')).toBe(7)
+    expect(getSkillModifier(16, 2, 'none', { jackOfAllTrades: true })).toBe(4)
+    expect(getSkillModifier(16, 3, 'none', { jackOfAllTrades: true })).toBe(4)
+    expect(
+      getSkillModifier(16, 2, 'proficient', { jackOfAllTrades: true }),
+    ).toBe(5)
+    expect(
+      getSkillModifier(16, 2, 'expertise', { jackOfAllTrades: true }),
+    ).toBe(7)
 
     expect(getSavingThrowModifier(14, 2, false)).toBe(2)
     expect(getSavingThrowModifier(14, 2, true)).toBe(4)

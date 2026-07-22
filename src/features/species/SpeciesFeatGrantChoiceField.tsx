@@ -6,8 +6,8 @@ import {
   evaluateFeatEligibility,
   type FeatEligibilityContext,
 } from '../../domain/feat/eligibility'
-import { isFeatExcludedFromFeatGrantPickers } from '../../domain/class/epicBoon'
 import { formatFeatCategoryBadge } from '../feat/formatFeatDetails'
+import { FeatSubChoicesFields } from '../feat/FeatSubChoicesFields'
 
 export type SpeciesFeatGrantChoiceFieldProps = {
   choiceId: string
@@ -18,8 +18,15 @@ export type SpeciesFeatGrantChoiceFieldProps = {
   takenFeatIds: readonly string[]
   eligibilityContext: FeatEligibilityContext
   recommendedFeatId?: string | null
+  featChoices?: Record<string, string | string[]>
+  ownedSkillIds?: ReadonlySet<string>
+  ownedToolIds?: ReadonlySet<string>
   errorId?: string
   onChange: (choiceId: string, value: string) => void
+  onFeatChoiceChange?: (
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) => void
 }
 
 export function SpeciesFeatGrantChoiceField({
@@ -31,8 +38,12 @@ export function SpeciesFeatGrantChoiceField({
   takenFeatIds,
   eligibilityContext,
   recommendedFeatId = null,
+  featChoices = {},
+  ownedSkillIds = new Set(),
+  ownedToolIds = new Set(),
   errorId,
   onChange,
+  onFeatChoiceChange,
 }: SpeciesFeatGrantChoiceFieldProps) {
   const reactId = useId()
   const [feats, setFeats] = useState<FeatDefinition[]>([])
@@ -44,13 +55,7 @@ export function SpeciesFeatGrantChoiceField({
 
     void featCatalog.listFeats(editionId).then((list) => {
       if (active) {
-        setFeats(
-          list.filter(
-            (feat) =>
-              feat.category === featCategory &&
-              !isFeatExcludedFromFeatGrantPickers(feat.id),
-          ),
-        )
+        setFeats(list.filter((feat) => feat.category === featCategory))
       }
     })
 
@@ -81,53 +86,71 @@ export function SpeciesFeatGrantChoiceField({
     })
   }, [feats, recommendedFeatId])
 
-  return (
-    <div
-      className="class-picker__asi-feat-options"
-      role="radiogroup"
-      aria-label="Choose an Origin feat"
-      aria-describedby={errorId}
-    >
-      {sortedFeats.map((feat) => {
-        const inputId = `${choiceId}-feat-${feat.id}-${reactId}`
-        const eligibility = evaluateFeatEligibility(feat, contextWithTaken)
-        const alreadyTaken = takenFeatIds.includes(feat.id)
-        const disabled =
-          !eligibility.eligible || (alreadyTaken && !feat.repeatable)
-        const isRecommended = feat.id === recommendedFeatId
+  const selectedFeatDefinition =
+    selectedFeatId === null
+      ? null
+      : (feats.find((feat) => feat.id === selectedFeatId) ?? null)
 
-        return (
-          <div key={feat.id} className="class-picker__choice-option">
-            <input
-              id={inputId}
-              type="radio"
-              name={`${choiceId}-feat-${reactId}`}
-              value={feat.id}
-              checked={selectedFeatId === feat.id}
-              disabled={disabled}
-              onChange={() => {
-                onChange(choiceId, feat.id)
-              }}
-            />
-            <label htmlFor={inputId}>
-              <span className="class-picker__choice-label">
-                {feat.name}
-                {isRecommended ? (
-                  <span className="class-picker__feat-recommended">
-                    {' '}
-                    Recommended
-                  </span>
-                ) : null}
-              </span>
-              <span className="choice-accordion__option-description">
-                {formatFeatCategoryBadge(feat.category)}
-                {feat.summary ? ` · ${feat.summary}` : ''}
-                {!eligibility.eligible ? ` — ${eligibility.reason}` : ''}
-              </span>
-            </label>
-          </div>
-        )
-      })}
+  return (
+    <div aria-describedby={errorId}>
+      <div
+        className="class-picker__asi-feat-options"
+        role="radiogroup"
+        aria-label="Choose an Origin feat"
+      >
+        {sortedFeats.map((feat) => {
+          const inputId = `${choiceId}-feat-${feat.id}-${reactId}`
+          const eligibility = evaluateFeatEligibility(feat, contextWithTaken)
+          const alreadyTaken = takenFeatIds.includes(feat.id)
+          const disabled =
+            !eligibility.eligible || (alreadyTaken && !feat.repeatable)
+          const isRecommended = feat.id === recommendedFeatId
+
+          return (
+            <div key={feat.id} className="class-picker__choice-option">
+              <input
+                id={inputId}
+                type="radio"
+                name={`${choiceId}-feat-${reactId}`}
+                value={feat.id}
+                checked={selectedFeatId === feat.id}
+                disabled={disabled}
+                onChange={() => {
+                  onChange(choiceId, feat.id)
+                }}
+              />
+              <label htmlFor={inputId}>
+                <span className="class-picker__choice-label">
+                  {feat.name}
+                  {isRecommended ? (
+                    <span className="class-picker__feat-recommended">
+                      {' '}
+                      Recommended
+                    </span>
+                  ) : null}
+                </span>
+                <span className="choice-accordion__option-description">
+                  {formatFeatCategoryBadge(feat.category)}
+                  {feat.summary ? ` · ${feat.summary}` : ''}
+                  {!eligibility.eligible ? ` — ${eligibility.reason}` : ''}
+                </span>
+              </label>
+            </div>
+          )
+        })}
+      </div>
+
+      {selectedFeatDefinition !== null &&
+      selectedFeatDefinition.choices.length > 0 &&
+      onFeatChoiceChange !== undefined ? (
+        <FeatSubChoicesFields
+          definition={selectedFeatDefinition}
+          choices={featChoices}
+          ownedSkillIds={ownedSkillIds}
+          ownedToolIds={ownedToolIds}
+          onChange={onFeatChoiceChange}
+        />
+      ) : null}
     </div>
   )
 }

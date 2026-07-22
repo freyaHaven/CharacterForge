@@ -14,6 +14,10 @@ import {
   isCompleteEpicBoonChoiceValue,
   isEpicBoonChoiceId,
 } from '../../domain/class/epicBoon'
+import {
+  isCompleteFightingStyleChoiceValue,
+  isFightingStyleFeatGrantChoice,
+} from '../../domain/class/fightingStyle'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { withLevelAdjustedChoiceLimits } from '../../domain/class/weaponMastery'
@@ -93,6 +97,10 @@ function isChoiceComplete(
 
   if (isEpicBoonChoiceId(choice.id)) {
     return typeof value === 'string' && isCompleteEpicBoonChoiceValue(value)
+  }
+
+  if (isFightingStyleFeatGrantChoice(choice)) {
+    return isCompleteFightingStyleChoiceValue(choice, typeof value === 'string' ? value : undefined)
   }
 
   if (choice.type === 'single-select') {
@@ -205,9 +213,11 @@ export function buildClassFeatureAccordionItems(
   choices: Record<string, ClassChoiceValue>,
   featNameById?: ReadonlyMap<string, string>,
 ): ClassFeatureAccordionItem[] {
-  const availableChoices = getChoicesAvailableAtLevel(definition, level).map(
-    (choice) => withLevelAdjustedChoiceLimits(choice, level),
-  )
+  const availableChoices = getChoicesAvailableAtLevel(
+    definition,
+    level,
+    choices,
+  ).map((choice) => withLevelAdjustedChoiceLimits(choice, level))
   const featureProgression = getClassFeatureProgressionUpToLevel(
     definition,
     level,
@@ -215,7 +225,7 @@ export function buildClassFeatureAccordionItems(
   const featureIds = featureProgression.flatMap((entry) =>
     entry.features.map((feature) => feature.id),
   )
-  const setupChoices = getOverviewSetupChoices(definition, level).map(
+  const setupChoices = getOverviewSetupChoices(definition, level, choices).map(
     (choice) => withLevelAdjustedChoiceLimits(choice, level),
   ) as Extract<ClassChoice, { type: 'multi-select' }>[]
   const items: ClassFeatureAccordionItem[] = []
@@ -250,10 +260,30 @@ export function buildClassFeatureAccordionItems(
 
   for (const levelEntry of featureProgression) {
     for (const feature of levelEntry.features) {
-      const linkedSingleSelect = findSingleSelectChoiceForFeature(
+      const subclassFeaturesAtLevel = isSubclassPlaceholderFeature(feature.id)
+        ? getSubclassFeaturesAtLevel(selectedSubclass, levelEntry.level)
+        : []
+
+      let linkedSingleSelect = findSingleSelectChoiceForFeature(
         feature.id,
         availableChoices,
       )
+      if (linkedSingleSelect === null) {
+        for (const subclassFeature of subclassFeaturesAtLevel) {
+          const match = availableChoices.find(
+            (
+              candidate,
+            ): candidate is Extract<ClassChoice, { type: 'single-select' }> =>
+              candidate.type === 'single-select' &&
+              candidate.id === subclassFeature.id,
+          )
+          if (match !== undefined) {
+            linkedSingleSelect = match
+            break
+          }
+        }
+      }
+
       const linkedMultiSelect = findMultiSelectChoiceForFeature(
         feature.id,
         availableChoices,

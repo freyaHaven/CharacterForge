@@ -1,0 +1,115 @@
+Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell’s effective level by 1.Sorcerer Spell List 
+
+This section presents the Sorcerer spell list. The spells are organized by spell level and then alphabetized, and each spell’s school of magic is listed. In the Special column, C means the spell requires Concentration, R means it’s a Ritual, and M means it requires a specific Material component.Cantrips (Level 0 Sorcerer Spells) Spell School Special Acid Splash Evocation — Chill Touch Necromancy — Dancing Lights Illusion C Elementalism Transmutation — Fire Bolt Evocation — Light Evocation — Mage Hand Conjuration — Mending Transmutation — Message Transmutation — Minor Illusion Illusion — Poison Spray Necromancy — Prestidigitation Transmutation — Ray of Frost Evocation — Shocking Grasp Evocation — Sorcerous Burst Evocation — True Strike Divination —
+
+| Level 1 Sorcerer Spells | | | | | | | | | | | Spell | | School | | | Special | | |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Spell | | | | | | School | | | Special | | Hold Person | | Enchantment | | | | C | |
+| Burning Hands | | | | | | Evocation | | | | — | Invisibility | | Illusion | | | | C | |
+| Charm Person | | | | | | Enchantment | | | | — | Knock | | Transmutation | | | | — | |
+| Chromatic Orb | | | | | | Evocation | | | | M | Levitate | | Transmutation | | | | C | |
+| Color Spray | | | | | | Illusion | | | | — | Magic Weapon | | Transmutation | | | | — | |
+| Comprehend Languages | | | | | | Divination | | | | R | Mirror Image | | Illusion | | | | — | |
+| Detect Magic | | | | | | Divination | | | C, R | | Misty Step | | Conjuration | | | | — | |
+| Disguise Self | | | | | | Illusion | | | | — | Scorching Ray | | Evocation | | | | — | |
+| Expeditious Retreat | | | | | | Transmutation | | | | C | See Invisibility | | Divination | | | | — | |
+| False Life | | | | | | Necromancy | | | | – | Shatter | | Evocation | | | | — | |
+| Feather Fall | | | | | | Transmutation | | | | — | Spider Climb | | Transmutation | | | | C | |
+| Fog Cloud | | | | | | Conjuration | | | | C | Suggestion | | Enchantment | | | | C | |
+| Grease | | | | | | Conjuration | | | | — | Web | | Conjuration | | | | C | |
+| Ice Knife | | | | | | Conjuration | | | | — | | | | | | | | |
+| Jump | | | | | | Transmutation | | | | — | Level 3 Sorcerer Spells | | | | | | | |
+| Mage Armor | | | | | | Abjuration | | | | — | Spell | | School | | | Special | | |
+| Magic Missile | | | | | | Evocation | | | | — | Blink | | Transmutation | | | | — | |
+| Ray of Sickness | | | | | | Necromancy | | | | — | Clairvoyance | | Divination | | | | C, M | |
+| Shield | | | | | | Abjuration | | | | — | Counterspell | | Abjuration | | | | — | |
+| Silent Image | | | | | | Illusion | | | | C | Daylight | | Evocation | | | | — | |
+| Sleep | | | | | | Enchantment | | | | C | Dispel Magic | | Abjuration | | | | — | |
+| Thunderwave | | | | | | Evocation | | | | — | Fear | | Illusion | | | | C | |
+| | | | | | | | | | | | Fireball | | Evocation | | | | — | |
+| Level 2 Sorcerer Spells | | | | | | | | | | | | | | | | | | |
+| | | | | | | | | | | | Fly | | Transmutation | | | | C | |
+| Spell | | | | | | School | | | Special | | Gaseous Form | | Transmutation | | | | C | |
+| Alter Self | | | | | | Transmutation | | | | C | Haste | | Transmutation | | | | C | |
+| Blindness/Deafness | | | | | | Transmutation | | | | — | Hypnotic Pattern | | Illusion | | | | C | |
+| Blur | | | | | | Illusion | | | | C | Lightning Bolt | | Evocation | | | | — | |
+| Darkness | | | | | | Evocation | | | | C | Major Image | | Illusion | | | | C | |
+| Darkvision | | | | | | Transmutation | | | | — | Protection from Energy | | Abjuration | | | | C | |
+| Detect Thoughts | | | | | | Divination | | | | C | Sleet Storm | | Conjuration | | | | C | |
+| Dragon’s Breath | | | | | | Transmutation | | | | C | Slow | | Transmutation | | | | C | |
+| Enhance Ability | | | | | | Transmutation | | | | C | Stinking Cloud | | Conjuration | | | | C | |
+| Enlarge/Reduce | | | | | | Transmutation | | | | C | Tongues | | Divination | | | | — | |
+| Flame Blade | | | | | | Evocation | | | | C | Vampiric Touch | | Necromancy | | | | C | |
+| Flaming Sphere | | | | | | Evocation | | | | C | Water Breathing | | Transmutation | | | | R | |
+| Gust of Wind | | | | | | Evocation | | | | C | Water Walk | | Transmutation | | | | R | |
+
+| Level 4 Sorcerer Spells | | | | | | | | | | | Level 7 Sorcerer Spells | | | | | | | | |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Spell | | | | | School | | | Special | | | Spell | | | | School | | Special | | |
+| Banishment | | | | | Abjuration | | | | C | | Delayed Blast Fireball | | | | Evocation | | | C | |
+| Blight | | | | | Necromancy | | | | — | | Etherealness | | | | Conjuration | | | — | |
+| Charm Monster | | | | | Enchantment | | | | — | | Finger of Death | | | | Necromancy | | | — | |
+| Confusion | | | | | Enchantment | | | | C | | Fire Storm | | | | Evocation | | | — | |
+| Dimension Door | | | | | Conjuration | | | | — | | Plane Shift | | | | Conjuration | | | M | |
+| Dominate Beast | | | | | Enchantment | | | | C | | Prismatic Spray | | | | Evocation | | | — | |
+| Fire Shield | | | | | Evocation | | | | — | | Reverse Gravity | | | | Transmutation | | | C | |
+| Greater Invisibility | | | | | Illusion | | | | C | | Teleport | | | | Conjuration | | | — | |
+| Ice Storm | | | | | Evocation | | | | — | | | | | | | | | | |
+| | | | | | | | | | | | Level 8 Sorcerer Spells | | | | | | | | |
+| Polymorph | | | | | Transmutation | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Spell | | | | School | | Special | | |
+| Stoneskin | | | | | Transmutation | | | | C, M | | | | | | | | | | |
+| | | | | | | | | | | | Demiplane | | | | Conjuration | | | — | |
+| Vitriolic Sphere | | | | | Evocation | | | | — | | | | | | | | | | |
+| | | | | | | | | | | | Dominate Monster | | | | Enchantment | | | C | |
+| Wall of Fire | | | | | Evocation | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Earthquake | | | | Transmutation | | | C | |
+| Level 5 Sorcerer Spells | | | | | | | | | | | Incendiary Cloud | | | | Conjuration | | | C | |
+| Spell | | | | | School | | | Special | | | Power Word Stun | | | | Enchantment | | | — | |
+| Animate Objects | | | | | Transmutation | | | | C | | Sunburst | | | | Evocation | | | — | |
+| Arcane Hand | | | | | Evocation | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Level 9 Sorcerer Spells | | | | | | | | |
+| Cloudkill | | | | | Conjuration | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Spell | | | | School | | Special | | |
+| Cone of Cold | | | | | Evocation | | | | — | | | | | | | | | | |
+| | | | | | | | | | | | Gate | | | | Conjuration | | | C, M | |
+| Creation | | | | | Illusion | | | | — | | | | | | | | | | |
+| | | | | | | | | | | | Meteor Swarm | | | | Evocation | | | — | |
+| Dominate Person | | | | | Enchantment | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Power Word Kill | | | | Enchantment | | | — | |
+| Hold Monster | | | | | Enchantment | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Time Stop | | | | Transmutation | | | — | |
+| Insect Plague | | | | | Conjuration | | | | C | | | | | | | | | | |
+| | | | | | | | | | | | Wish | | | | Conjuration | | | — | |
+| Seeming | | | | | Illusion | | | | — | | | | | | | | | | |
+| Telekinesis | | | | | Transmutation | | | | C | | Sorcerer Subclass: Draconic | | | | | | | | |
+| Teleportation Circle | | | | | Conjuration | | | | M | | Sorcery | | | | | | | | |
+| Wall of Stone | | | | | Evocation | | | | C | | Breathe the Magic of Dragons | | | | | | | | |
+
+Your innate magic comes from the gift of a dragon. Perhaps an ancient dragon facing death bequeathed some of its magical power to you or your ancestor. You might have absorbed magic from a site infused with dragons’ power. Or perhaps you handled a treasure taken from a dragon’s hoard that was steeped in draconic power. Or you might have a dragon for an ancestor.Level 3: Draconic Resilience
+
+Level 6 Sorcerer Spells Spell School Special Chain Lightning Evocation — Circle of Death Necromancy M Disintegrate Transmutation — Eyebite Necromancy C Flesh to Stone Transmutation C Freezing Sphere Evocation — Globe of Invulnerability Abjuration C Mass Suggestion Enchantment — Move Earth Transmutation C Sunbeam Evocation C True Seeing Divination M
+
+The magic in your body manifests physical traits of your draconic gift. Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level.Parts of you are also covered by dragon-like scales. While you aren’t wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.
+
+Level 3: Draconic Spells
+
+When you reach a Sorcerer level specified in the Draconic Spells table, you thereafter always have the listed spells prepared.Draconic Spells 
+Sorcerer 
+Level Spells 
+3 Alter Self, Chromatic Orb, Command, 
+Dragon’s Breath 
+5 Fear, Fly 
+7 Arcane Eye, Charm Monster 
+9 Legend Lore, Summon Dragon 
+
+Level 6: Elemental Affinity
+
+Your draconic magic has an affinity with a damage type associated with dragons. Choose one of those types: Acid, Cold, Fire, Lightning, or Poison.You have Resistance to that damage type, and when you cast a spell that deals damage of that type, you can add your Charisma modifier to one damage roll of that spell.Level 14: Dragon Wings
+
+As a Bonus Action, you can cause draconic wings to appear on your back. The wings last for 1 hour or until you dismiss them (no action required). For the duration, you have a Fly Speed of 60 feet.Once you use this feature, you can’t use it again until you finish a Long Rest unless you spend 3 Sorcery Points (no action required) to restore your use of it.Level 18: Dragon Companion
+
+You can cast
+
+Summon Dragon without a Material component. You can also cast it once without a spell slot, and you regain the ability to cast it in this way when you finish a Long Rest.Whenever you start casting the spell, you can modify it so that it doesn’t require Concentration. If you do so, the spell’s duration becomes 1 minute for that casting.
+

@@ -7,10 +7,13 @@ import { getChoicesNotLinkedToFeatures } from '../choices/linkFeatureToChoice'
 export function getOverviewSetupChoices(
   definition: ClassDefinition,
   level: number,
+  selectedChoices: Record<string, string | string[]> = {},
 ): Extract<ClassChoice, { type: 'multi-select' }>[] {
-  const availableChoices = getChoicesAvailableAtLevel(definition, level).map(
-    (choice) => withLevelAdjustedChoiceLimits(choice, level),
-  )
+  const availableChoices = getChoicesAvailableAtLevel(
+    definition,
+    level,
+    selectedChoices,
+  ).map((choice) => withLevelAdjustedChoiceLimits(choice, level))
   const featureIds = getClassFeatureProgressionUpToLevel(definition, level).flatMap(
     (entry) => entry.features.map((feature) => feature.id),
   )

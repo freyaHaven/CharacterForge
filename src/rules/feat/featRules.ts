@@ -1,4 +1,9 @@
 import type { FeatDefinition, FeatSelection } from '../../domain/feat/types'
+import {
+  validateFeatDefinitionChoices,
+  type FeatChoiceValidationContext,
+  type FeatChoiceValidationIssue,
+} from '../../domain/feat/validateFeatChoices'
 import type { EditionId } from '../../domain/types'
 
 export type FeatValidationIssueCode =
@@ -6,6 +11,9 @@ export type FeatValidationIssueCode =
   | 'wrong-edition'
   | 'missing-required-choice'
   | 'invalid-choice'
+  | 'invalid-multi-select-count'
+  | 'duplicate-selection'
+  | 'already-proficient'
   | 'unknown-choice'
 
 export type FeatValidationIssue = {
@@ -17,10 +25,20 @@ export type FeatValidationResult =
   | { ok: true }
   | { ok: false; issues: FeatValidationIssue[] }
 
+function mapChoiceIssue(
+  issue: FeatChoiceValidationIssue,
+): FeatValidationIssue {
+  return {
+    code: issue.code,
+    choiceId: issue.choiceId,
+  }
+}
+
 export function validateFeatSelection(
   selection: FeatSelection,
   editionId: EditionId,
   definition: FeatDefinition | null,
+  context?: FeatChoiceValidationContext,
 ): FeatValidationResult {
   if (definition === null) {
     return { ok: false, issues: [{ code: 'feat-not-found' }] }
@@ -30,41 +48,14 @@ export function validateFeatSelection(
     return { ok: false, issues: [{ code: 'wrong-edition' }] }
   }
 
-  const issues: FeatValidationIssue[] = []
+  const choiceIssues = validateFeatDefinitionChoices(
+    definition,
+    selection.choices,
+    context,
+  )
 
-  for (const choice of definition.choices) {
-    const selectedOptionId = selection.choices[choice.id]
-
-    if (choice.required && selectedOptionId === undefined) {
-      issues.push({ code: 'missing-required-choice', choiceId: choice.id })
-      continue
-    }
-
-    if (selectedOptionId === undefined) {
-      continue
-    }
-
-    const isValidOption = choice.options.some(
-      (option) => option.id === selectedOptionId,
-    )
-
-    if (!isValidOption) {
-      issues.push({ code: 'invalid-choice', choiceId: choice.id })
-    }
-  }
-
-  for (const choiceId of Object.keys(selection.choices)) {
-    const isKnownChoice = definition.choices.some(
-      (choice) => choice.id === choiceId,
-    )
-
-    if (!isKnownChoice) {
-      issues.push({ code: 'unknown-choice', choiceId })
-    }
-  }
-
-  if (issues.length > 0) {
-    return { ok: false, issues }
+  if (choiceIssues.length > 0) {
+    return { ok: false, issues: choiceIssues.map(mapChoiceIssue) }
   }
 
   return { ok: true }

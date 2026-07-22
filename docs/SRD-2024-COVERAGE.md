@@ -2,7 +2,7 @@
 
 Authoritative audit of CharacterForge against **SRD 5.2.1** (`srd-2024` content pack,
 manifest version `5.2.1`). Last audited against repository state with storage schema
-**v14**.
+**v15**.
 
 This document evaluates **implementation depth**, not file presence alone. Each area is
 scored across seven dimensions:
@@ -35,24 +35,24 @@ scored across seven dimensions:
 |------|---------|-------|
 | Species & ancestry | 🟡 | 9/9 SRD species; creator-time effects largely wired; play-time traits descriptive |
 | Backgrounds | 🟡 | 4 bundled backgrounds; no custom background builder |
-| Classes & subclasses | 🟡 | 7/12 SRD classes; 1 subclass each |
+| Classes & subclasses | 🟡 | 10/12 SRD classes; 1 subclass each |
 | Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon pickable at L19; some subclass extras missing |
 | Deferred class requirements | 🟡 | Starting equipment only; Epic Boon is a class choice (not deferred) |
-| Feats & acquisition | 🟡 | Origin + epic boons + Grappler/Skilled/ASI feat; no standalone Feats step |
-| Fighting styles | 🟡 | Fighter/Ranger/Paladin L1–2; Champion L7 second style missing |
+| Feats & acquisition | 🟡 | Origin + epic boons + Fighting Style + Grappler/Skilled/ASI feat (nested sub-choices ✅); no standalone Feats step |
+| Fighting styles | ✅ | Feat defs + shared grant pipeline; Champion L7 Additional FS; Defense AC ✅ |
 | Weapon mastery | 🟡 | Slot schedules + UI; gear sub-choices deferred |
 | Ability scores & ASIs | ✅ | All three methods + class ASI choices including feat option |
-| Spell catalogue & lists | 🟡 | ~100 need-based spells; partial Druid/Wizard list stubs |
-| Spellcasting | 🟡 | Cleric/Paladin/Ranger; no Pact Magic or spellbooks |
-| Starting equipment | 🟡 | Package-vs-gold for all bundled classes/backgrounds |
-| Full equipment catalogue | ⏸ | ~61 items for starting packages only |
+| Spell catalogue & lists | 🟡 | ~360 need-based spells; full Wizard + Druid + Bard lists; Magical Secrets / Discoveries unions |
+| Spellcasting | 🟡 | Cleric/Paladin/Ranger/Druid/Wizard/Bard; **P2.5 spellbook + Pact Magic architecture**; Warlock content pending |
+| Starting equipment | ✅ | Nested trees for bundled classes/backgrounds (Monk tools, Soldier gaming set) |
+| Full equipment catalogue | ⏸ | Starting-package scope (+ artisan tools / gaming sets); shop deferred |
 | Inventory, currency, loadout | 🟡 | Resolved inventory + Overview loadout; no shop |
 | Proficiencies & languages | 🟡 | Class/background on sheet; species/feat gaps |
-| Derived combat stats | 🟡 | HP/AC strong; initiative/speed feat & lineage gaps |
-| Multiclass | 🟡 | UI + validation + shared slots; no ability prerequisites |
+| Derived combat stats | 🟡 | HP/AC strong; Alert initiative ✅; Defense FS AC ✅; WM combat still open |
+| Multiclass | 🟡 | UI + validation + shared slots; **ability prerequisites ✅ (P2.1)** |
 | Higher-level creation | 🟡 | Levels 1–20 supported; L19 Epic Boon pickable on Class step |
 | Wizard visibility & routing | 🟡 | 10-step catalog; Details/Feats hidden (legacy); no URL routing |
-| Import/export & migrations | ✅ | `.cforge` + localStorage v0→v14 |
+| Import/export & migrations | ✅ | `.cforge` + localStorage v0→v15 |
 | Overview & in-play management | 🟡 | Rich creation-time sheet; no rest/level-up/play mode |
 
 ---
@@ -89,9 +89,9 @@ scored across seven dimensions:
 | Sheet | ✅ | Background card + proficiencies on Overview |
 | Tests | ✅ | `backgroundWorkflow`, `backgroundRules`, draft tests |
 
-**Gaps:** No custom / build-your-own background flow. SRD includes additional
-backgrounds beyond the bundled four. Soldier gaming-set choice is wired; other
-tool-choice backgrounds N/A until more content ships.
+**Gaps:** No custom / build-your-own background flow (future homebrew tooling — not an
+SRD catalogue gap; SRD 5.2.1 names exactly these four). Soldier gaming-set choice is
+wired; other tool-choice backgrounds N/A until more content ships.
 
 ---
 
@@ -99,18 +99,29 @@ tool-choice backgrounds N/A until more content ships.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | **7/12** SRD classes; **1 subclass each** |
+| Content | 🟡 | **10/12** SRD classes; **1 subclass each** |
 | UI | ✅ | `ClassStep` — single-class and multiclass workflows |
 | Persistence | ✅ | `classes[]`, `targetLevel`, `startingClassInstanceId`; schema v9+ |
 | Validation | ✅ | `validateCharacterClasses.ts`, `classRules.ts` |
-| Derived | 🟡 | Class effects → proficiencies, spellcasting, HP dice |
+| Derived | 🟡 | Class effects → proficiencies, spellcasting, HP dice; Jack of All Trades on skills |
 | Sheet | ✅ | Class feature cards on Overview |
 | Tests | ✅ | Per-class content + progression tests; `classWorkflow` |
 
-**Bundled:** Fighter (Champion), Barbarian (Berserker), Rogue (Thief), Monk (Open Hand),
-Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain).
+**Bundled:** Fighter (Champion), Barbarian (Berserker), Bard (College of Lore), Rogue (Thief),
+Monk (Open Hand), Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain),
+Druid (Circle of the Land), Wizard (Evoker).
 
-**Missing classes:** Bard, Druid, Sorcerer, Warlock, Wizard.
+**Missing classes:** Sorcerer, Warlock.
+
+**Bardic Inspiration (Phase 2 boundary):** Feature text + die progression metadata only.
+No play-time use tracking or spending.
+
+**Wild Shape (Phase 2 boundary):** Known Forms are creator-time multi-select only.
+No play-time transformation of sheet stats.
+
+**Magical Secrets:** From Bard level 10, prepared picks may come from Bard ∪ Cleric ∪
+Druid ∪ Wizard via entitlement `expandedListId` / `expandedFromLevel` (same prepared
+budget — not a separate known pool). Off-list picks prune when level drops below 10.
 
 ---
 
@@ -118,7 +129,7 @@ Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain).
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Skill proficiencies, subclasses, fighting styles, weapon mastery, ASIs, Epic Boon, Divine Order, expertise, HP increases |
+| Content | 🟡 | Skill proficiencies, subclasses, fighting styles, weapon mastery, ASIs, Epic Boon, Divine Order, Primal Order, Elemental Fury, Circle land, Wild Shape Known Forms, expertise, HP increases |
 | UI | ✅ | `ClassProgressionSection`, `ClassMultiSelectChoiceField`, `AsiChoiceField`, `FeatGrantChoiceField` |
 | Persistence | ✅ | `ClassInstance.choices`, `hitPointIncreases` |
 | Validation | ✅ | `classRules.ts` including ASI/Epic Boon encoding and weapon-mastery dedup |
@@ -149,23 +160,24 @@ deferred requirement.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Origin feats + 7 epic boons + ASI feat, Grappler, Skilled; fighting-style feats deferred |
-| UI | 🟡 | Grants via Background / ASI (`AsiChoiceField`) / Epic Boon (`FeatGrantChoiceField`); **Feats wizard step stays hidden** |
+| Content | ✅ | Origin feats + 7 epic boons + 4 Fighting Style feats + ASI feat, Grappler, Skilled |
+| UI | 🟡 | Grants via Background / ASI / Epic Boon / Fighting Style / Versatile; **Feats wizard step stays hidden** |
 | Persistence | 🟡 | Class choices + background origin; `character.feat` is **legacy-only** (new UI must not write it) |
-| Validation | ✅ | Unified eligibility + duplicate detection in `classRules` / `evaluateFeatEligibility` |
-| Derived | 🟡 | Magic Initiate spell entitlements; Alert/Savage Attacker benefits still display-only |
-| Sheet | 🟡 | Overview lists grants with source labels (Background / ASI / Epic Boon / Legacy) |
-| Tests | 🟡 | `resolveCharacterFeatGrants`, `epicBoon`, eligibility, progression tests |
+| Validation | ✅ | Unified eligibility + duplicate detection + nested feat sub-choices (`feat-choices:{slot}:…`) |
+| Derived | 🟡 | Magic Initiate spell entitlements; **Alert initiative ✅**; **Defense AC ✅**; Skilled skill/tool + ASI-feat score picks ✅; Savage Attacker / GWF / TWF / Archery combat still display-only |
+| Sheet | 🟡 | Overview lists grants with source labels + choice summaries; feat skills/tools on proficiencies |
+| Tests | 🟡 | `resolveCharacterFeatGrants`, Skilled/ASI nested choice tests, eligibility, progression tests |
 
 **Acquisition paths:** Background origin feat; class ASI feat mode; class Epic Boon
 feat-only grant. Shared pipeline: `resolveCharacterFeatGrants` → eligibility, dedup,
-spell resolution, Overview labels.
+spell resolution, Overview labels. Nested feat sub-choices (Skilled multi-select,
+ASI-feat +2/+1+1) persist as companion keys on the host choice map — never
+`character.feat`.
 
-**Temporary limitation (option 3):** The general **Ability Score Improvement** feat is
-present in the catalogue but **excluded from feat-grant pickers** (Epic Boon and ASI
-“Choose a Feat”). Class choice values only store `feat:{id}` and cannot yet encode the
-ASI feat’s nested +2 / +1+1 configuration. Players use dedicated ASI slot modes for
-stat increases. Nested ASI-feat configuration from Epic Boon is deferred.
+**Cycle guards:** The Ability Score Improvement feat is excluded from ASI
+“Choose a Feat” lists (`isFeatExcludedFromAsiFeatModePicker`) to avoid nesting
+ASI inside ASI. Epic Boon **may** select the ASI feat; nested score config uses
+companion keys under `epic-boon`.
 
 ---
 
@@ -173,15 +185,15 @@ stat increases. Nested ASI-feat configuration from Epic Boon is deferred.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Styles as class choice effects, not standalone feat defs |
-| UI | ✅ | Single-select on Class step (Fighter L1; Ranger/Paladin L2) |
-| Persistence | ✅ | Encoded in class instance choices |
-| Validation | ✅ | `classRules.ts` |
-| Derived | 🟡 | `fighting-style` effect kind exists; **combat modifiers not applied** to AC/attacks |
-| Sheet | 🟡 | Listed in class features; no mechanical AC/DPR impact |
-| Tests | ✅ | Fighter/Paladin/Ranger content + `resolveClassEffects.test.ts` |
+| Content | ✅ | Archery, Defense, Great Weapon Fighting, Two-Weapon Fighting as `category: 'fighting-style'` feats |
+| UI | ✅ | `FeatGrantChoiceField` with `categoryFilter: 'fighting-style'`; Blessed Warrior / Druidic Warrior as alternates |
+| Persistence | ✅ | `feat:{id}` (legacy bare option ids still resolve); Champion L7 `champion-additional-fighting-style` |
+| Validation | ✅ | Feat eligibility + non-repeatable dedup across grant slots; prunes when subclass/level drops |
+| Derived | 🟡 | **Defense +1 AC while wearing armour ✅**; Archery / GWF / TWF combat application deferred |
+| Sheet | ✅ | Overview feat grants with source labels; AC includes Defense when armoured |
+| Tests | ✅ | `fightingStyleFeats`, AC / sheet Defense tests, Fighter/Paladin/Ranger content tests |
 
-**Gap:** Champion **Additional Fighting Style** (L7) — feature text only.
+**Acquisition:** Class Fighting Style feature → shared feat-grant pipeline (same as Epic Boon). No parallel class-specific style model.
 
 ---
 
@@ -222,7 +234,7 @@ stat increases. Nested ASI-feat configuration from Epic Boon is deferred.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | **~100** spell definitions; lists for Cleric, Paladin, Ranger (+ Druid/Wizard stubs) |
+| Content | 🟡 | **~360** spell definitions; lists for Cleric, Paladin, Ranger, Druid, Wizard, Bard (+ Magical Secrets / Magical Discoveries unions) |
 | UI | ➖ | Catalogue consumed by Spells step and ASI feat picker |
 | Persistence | ➖ | Definitions only |
 | Validation | ➖ | — |
@@ -231,8 +243,8 @@ stat increases. Nested ASI-feat configuration from Epic Boon is deferred.
 | Tests | 🟡 | Spellcasting resolution tests; no full catalogue completeness test vs SRD |
 
 **Scope:** Spells are included **on demand** (class lists, grants, Magic Initiate), not
-as a full SRD spell compendium. Druid and Wizard lists cover cantrips + 1st level only
-(stubs for Magic Initiate / Druidic Warrior).
+as a full SRD spell compendium. Wizard, Druid, and Bard lists are complete through 9th
+level. Magical Secrets / Magical Discoveries are authored union lists.
 
 ---
 
@@ -240,19 +252,42 @@ as a full SRD spell compendium. Druid and Wizard lists cover cantrips + 1st leve
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Full/half casters: Cleric, Paladin, Ranger; domain granted spells (Life) |
-| UI | ✅ | `SpellsStep` → `SpellSelectionGrid` (conditional visibility) |
-| Persistence | ✅ | `spellSourceStates`; schema v12+ |
-| Validation | ✅ | `useSpellsStepValidation`, `spellSelectionEligibility` |
-| Derived | 🟡 | Shared multiclass slots, prepared/known/cantrip kinds, granted spells |
+| Content | 🟡 | Full/half casters: Cleric, Paladin, Ranger, **Druid**, **Wizard**, **Bard** (prepared CHA); domain/circle/lore grants. **Warlock class content not shipped yet** |
+| UI | ✅ | `SpellsStep` → `SpellSelectionGrid` (conditional visibility); spellbook labels + prepare-from-book filter; mastery/signature sections; Pact Magic slot summary |
+| Persistence | ✅ | `spellSourceStates`; schema v12+ (optional P2.5 fields; **no migration**, stay v15) |
+| Validation | ✅ | `useSpellsStepValidation`, `spellSelectionEligibility`; union spellbook + schools/castingTime; cross-spellbook dups |
+| Derived | ✅ | Shared multiclass slots (`full`/`half` only); **Pact Magic `pactSlots` separate**; multi-entitlement spellbook union; `countsAgainstLimit: false` for mastery/signature |
 | Sheet | ✅ | Spell groups on Overview when content exists |
-| Tests | 🟡 | `resolveCharacterSpellcasting*.test.ts`, component tests; **no Spells-step wizard E2E** |
+| Tests | 🟡 | `resolveCharacterSpellcasting*.test.ts`, `spellbookAndPactMagic.test.ts`, `wizardSpellbookAttribution.test.ts`; **no Spells-step wizard E2E** |
 
-**Missing:** Pact Magic (Warlock), Wizard spellbook / prepared-from-book, Sorcerer
-known-spells, Bard full caster, Druid full caster. Species lineage spells not wired.
+**P2.5–P2.6 architecture:** Spellbook entries live on `selectionKind: 'spellbook'`
+select entitlements (Wizard uses **distinct** `spellbook-1`…`spellbook-20` for
+attribution). Prepared-from-book uses `prepareFrom: 'spellbook'`; when
+`spellbookEntitlementId` is omitted, all spellbook-kind sources on the same class
+instance are unioned. Pact Magic uses `slotContributor: 'pact'` →
+`resolvePactMagicSlots` / `summary.pactSlots` (never merged into conventional
+shared slots). Fixtures: `createTestSpellbookCasterClass` /
+`createTestPactCasterClass` (tests only).
 
-**Note:** Spells step is **optional for finish** — incomplete spell picks do not block
-Overview finish if required steps and deferred reqs are satisfied.
+**Still pending:** Warlock class content (P2.10),
+play-time Arcane Recovery / Memorize Spell / Overchannel / Potent Cantrip / Sculpt Spells /
+Empowered Evocation execution tracking.
+Sorcerer known-spells. Species lineage spells wired for
+bundled species. Play-time slot expenditure / rest recovery deferred.
+
+**P2.6 Wizard (done):** Full Wizard class + Evoker; distinct spellbook acquisitions;
+Scholar expertise; Spell Mastery + Signature Spells (`countsAgainstLimit: false`);
+Ritual Adept descriptive; Wizard spell list through 9th level (~222 list entries).
+
+**P2.8 Bard (done):** Full Bard class + College of Lore; CHA prepared full caster;
+Magical Secrets prepared-list expansion at L10+; Magical Discoveries (2 always-prepared
+from Cleric∪Druid∪Wizard); Words of Creation grants; Jack of All Trades (skills only,
+not initiative); Bardic Inspiration descriptive + die metadata only; full Bard spell list.
+
+**Finish policy:** Spells step remains `required: false` in the catalog, but when
+`hasSpellContent` is true, incomplete/invalid active spell choices
+(`under-limit`, `not-in-spellbook`, etc.) block Finish via
+`requireCompleteSpells` on `getFinishPolicyResult`.
 
 ---
 
@@ -260,17 +295,22 @@ Overview finish if required steps and deferred reqs are satisfied.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | All 7 classes: Package A (+ Package B for Fighter) vs gold; 4 backgrounds: package vs 50 GP |
-| UI | ✅ | `EquipmentStep` → `EquipmentSourceSection` |
-| Persistence | ✅ | `equipment.selections`; schema v13+ |
-| Validation | ✅ | Entitlement option validation |
-| Derived | ✅ | `resolveCharacterEquipment` materializes inventory + GP |
+| Content | ✅ | All 10 classes: Package A (+ Package B for Fighter) vs gold; Bard package A + 90 GP with nested instrument; Wizard package A + 55 GP; 4 backgrounds: package vs 50 GP; **nested** Monk artisan tools + Soldier gaming set + Bard musical instrument |
+| UI | ✅ | `EquipmentStep` → `EquipmentSourceSection` with nested choose-option / choose-items |
+| Persistence | ✅ | `equipment.selections` with `path[]`; schema v15 |
+| Validation | ✅ | Required nested incompleteness blocks Finish via deferred starting-equipment |
+| Derived | ✅ | `resolveCharacterEquipment` walks active nodes and materializes inventory + GP |
 | Sheet | 🟡 | Inventory appears on Overview after resolution |
-| Tests | ✅ | `classStartingEquipment.test.ts`, `resolveCharacterEquipment.test.ts`, `EquipmentStep.test.tsx` |
+| Tests | ✅ | Choice-tree, prune, Monk/Soldier nested resolve, migration v14→v15, package content tests |
 
-**Gaps:** No multi-branch SRD equipment trees (e.g. Cleric weapon/armor sub-choices).
-`choose-items` entitlements show “not available yet”. Monk `artisans-tools` is a generic
-grant without sub-choice.
+**Architecture:** Content-driven nested trees (`choose-option` → option.entitlements →
+`choose-items`). Future classes/backgrounds reuse the same resolver/UI — no class-specific
+branches. Gold alternatives complete the root without nested package choices. Optional
+entitlements (`required: false`) do not block.
+
+**Still open (not incomplete defs):** Cleric/Fighter-style multi-branch SRD trees for classes
+that are not yet authored beyond package-vs-gold; play-time shop / encumbrance enforcement /
+attunement / inventory actions remain deferred.
 
 ---
 
@@ -278,13 +318,13 @@ grant without sub-choice.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | ⏸ | **~61 items** in `equipment/index.ts` — starting-package scope only |
+| Content | ⏸ | Starting-package items + full artisan-tool and gaming-set defs (tagged); not a full SRD shop catalogue |
 | UI | ❌ | No browse/search compendium or shop |
 | Persistence | ➖ | — |
 | Validation | ➖ | — |
 | Derived | 🟡 | Items used by resolver and loadout |
 | Sheet | 🟡 | Owned items on Overview inventory |
-| Tests | 🟡 | Materialization tests; no SRD-wide catalogue audit |
+| Tests | 🟡 | Materialization / nested filter tests; no SRD-wide catalogue audit |
 
 ---
 
@@ -312,7 +352,7 @@ grant without sub-choice.
 | UI | ✅ | Skill choices on Class step; languages via species |
 | Persistence | ✅ | Class choices + background + species selections |
 | Validation | ✅ | Skill choice counts enforced |
-| Derived | 🟡 | Class + background skills on sheet; **species skills (Elf, Human) missing** |
+| Derived | 🟡 | Class + background skills on sheet; species skills (Phase 1); **Alert initiative ✅** |
 | Sheet | 🟡 | Skills, saves, proficiencies panels on Overview |
 | Tests | ✅ | `buildReviewSheetModels.test.ts` |
 
@@ -329,12 +369,12 @@ proficiencies beyond background tool line not surfaced.
 | UI | 🟡 | HP choices on Class step; combat strip on Overview |
 | Persistence | ✅ | HP increases on class instances |
 | Validation | ✅ | HP choice validation per level |
-| Derived | 🟡 | **HP ✅, AC ✅** (loadout-driven); **Initiative** = DEX only; **Speed** = base species speed |
+| Derived | 🟡 | **HP ✅, AC ✅** (loadout-driven + Defense FS); **Initiative** = DEX + Alert PB when granted; **Speed** = species walk (Phase 1) |
 | Sheet | ✅ | Combat stat summary on Overview |
-| Tests | ✅ | `calculateCharacterHitPoints`, `calculateCharacterArmorClass`, `buildReviewSheetModels` |
+| Tests | ✅ | `calculateCharacterHitPoints`, `calculateCharacterArmorClass`, `buildReviewSheetModels`, `resolveFeatEffects` |
 
-**Gaps:** Alert (+proficiency to initiative) not applied. Wood Elf / Goliath speed bonuses
-not computed. Passive scores use class/background skills only.
+**Gaps:** Weapon mastery combat tags not applied yet. Archery / GWF / TWF attack and
+damage automation stays play-phase. Alert Initiative Swap remains descriptive.
 
 ---
 
@@ -342,13 +382,17 @@ not computed. Passive scores use class/background skills only.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | All bundled classes support multiclass instances |
-| UI | ✅ | Multiclass path, level allocation, starting class |
+| Content | ✅ | `multiclassPrerequisite` on all bundled classes (SRD 13+ primary abilities) |
+| UI | ✅ | Multiclass path, level allocation, starting class; prereq failures surfaced |
 | Persistence | ✅ | `classes[]`, editor workflow in session storage |
-| Validation | 🟡 | Duplicate class blocked; allocation vs `targetLevel`; **no ability score prerequisites** |
+| Validation | ✅ | Duplicate class blocked; allocation vs `targetLevel`; **ability score prerequisites** via resolved scores (base + background ASI + class ASI) |
 | Derived | ✅ | Shared spell slots, per-class HP, combined level for proficiency |
 | Sheet | ✅ | Multi-class header and feature cards |
-| Tests | ✅ | `ClassPicker.test.tsx`, `classWorkflow.test.tsx`, `validateCharacterClasses.test.ts` |
+| Tests | ✅ | `multiclassPrerequisites.test.ts`, `validateCharacterClasses`, class workflows |
+
+**Behaviour:** Single-class builds skip prerequisites. Multiclass characters must meet
+each class’s prerequisite; failures mark Class incomplete and block Finish without
+mutating saved selections.
 
 ---
 
@@ -401,13 +445,13 @@ the Background page below background selection — not a separate wizard step.
 |-----------|--------|----------|
 | Content | ➖ | — |
 | UI | ✅ | Home + editor import; export download |
-| Persistence | ✅ | localStorage `characterforge:character:{id}`; schema **v14** |
+| Persistence | ✅ | localStorage `characterforge:character:{id}`; schema **v15** |
 | Validation | ✅ | `parseStoredCharacter`, `isCharacter` |
 | Derived | ➖ | — |
 | Sheet | ➖ | — |
-| Tests | ✅ | Per-migration tests (v0→v14), `characterFile.test.ts`, `appEntryFlow.test.tsx` |
+| Tests | ✅ | Per-migration tests (v0→v15), `characterFile.test.ts`, `appEntryFlow.test.tsx` |
 
-**Migration chain:** v0→v14 in `adapters/storage/migrations/`. See
+**Migration chain:** v0→v15 in `adapters/storage/migrations/`. See
 [`src/adapters/STORAGE.md`](../src/adapters/STORAGE.md) — note that file may lag the
 code (documents through v11 at time of audit).
 
@@ -434,23 +478,36 @@ code (documents through v11 at time of audit).
 
 ### 1. Required for a complete SRD 2024 character creator
 
-- [ ] **Remaining 5 classes:** Bard, Druid, Sorcerer, Warlock, Wizard (with subclasses)
+- [x] **Druid (P2.7)** — full class, Circle of the Land, Primal Order, Wild Shape Known Forms (creator-time only), full Druid spell list through 9th
+- [x] **Bard (P2.8)** — full class, College of Lore, Magical Secrets list expansion, Magical Discoveries, Words of Creation, Jack of All Trades, full Bard spell list; Bardic Inspiration Phase 2 descriptive only
+- [ ] **Remaining 2 classes:** Sorcerer, Warlock (P2.10)
+  - **P2.5 done:** spellbook + Pact Magic architecture (fixtures/resolvers/validation/UI hooks)
+  - Warlock class content still deferred to P2.10
 - [ ] **Species play-time features:** Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration
-- [ ] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 configuration (currently excluded from grant pickers)
+- [x] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 via companion keys; ASI feat excluded from ASI feat-mode pickers only (cycle guard)
+- [x] **Skilled sub-choices** — multi-select skill/tool companion keys under feat grants
 - [ ] **Additional SRD backgrounds** beyond the bundled four
-- [ ] **Multiclass ability score prerequisites**
-- [ ] **Champion Additional Fighting Style** (L7)
-- [ ] **Species lineage spell entitlements** (Elf, Gnome, Tiefling, etc.)
+  - **Correction:** SRD 5.2.1 names exactly four backgrounds (all bundled). Custom
+    background builder is future homebrew tooling, not an SRD catalogue gap.
+- [x] **Multiclass ability score prerequisites**
+- [x] **Champion Additional Fighting Style** (L7)
+- [x] **Species lineage spell entitlements** (Elf, Gnome, Tiefling, etc.)
 - [ ] **Magic Initiate / Alert / Savage Attacker derived mechanics** where rules affect sheet stats
-- [ ] **Full class starting-equipment branch trees** where SRD offers nested choices
+  - Alert initiative proficiency: done (P2.1)
+  - Defense Fighting Style AC: done (P2.2)
+- [x] **Creation-time nested starting-equipment trees** for bundled classes/backgrounds (Monk artisan tools, Soldier gaming set); future classes reuse the same architecture
+- [ ] **Additional class starting-equipment branch trees** where SRD offers more nested choices (e.g. remaining package sub-picks) — defs not yet authored, not a resolver gap
 - [ ] **Expand spell catalogue** as new casters ship (full lists per class, not stubs)
+  - Wizard + Druid + Bard lists complete through 9th level; Magical Secrets / Discoveries unions; Sorcerer/Warlock lists still pending
 
 ### 2. Required for a usable character sheet during play
 
-- [ ] **Apply feat modifiers** (Alert initiative proficiency, etc.)
+- [x] **Apply feat modifiers** (Alert initiative proficiency, etc.) — Alert done; Defense AC done; other feats TBD
 - [ ] **Apply fighting style / weapon mastery** combat effects (or clearly mark as reference-only)
-- [ ] **Correct speed** from species choices (Wood Elf, Goliath)
+  - Defense AC while wearing armour: done (P2.2)
+- [x] **Correct speed** from species choices (Wood Elf, Goliath) — Phase 1
 - [ ] **Spell slot tracking** — expended vs remaining, multiclass slot table on sheet
+  - Creation-time Pact Magic / shared slot resolution done (P2.5); play-time expenditure & rest recovery deferred
 - [ ] **HP tracking** — current vs max, hit dice remaining
 - [ ] **Rest workflow** — short/long rest resource recovery (class features, spell slots, HP)
 - [ ] **Concentration / condition tracking** (minimal)
@@ -460,8 +517,9 @@ code (documents through v11 at time of audit).
 ### 3. Optional SRD compendium or campaign-management features
 
 - [ ] Full SRD equipment compendium and shop/purchase workflow
+- [ ] Encumbrance enforcement, attunement, and play-time inventory actions
 - [ ] Full SRD spell compendium browser
-- [ ] Full SRD feat compendium (remaining origin/general feats; fighting-style feat defs)
+- [ ] Full SRD feat compendium (remaining origin/general feats)
 - [ ] Custom background builder
 - [ ] Campaign roster / party management
 - [ ] Cloud sync or shared character links
@@ -485,9 +543,17 @@ code (documents through v11 at time of audit).
 **Method:** File inspection, test grep, and spot-checks of resolver and wizard paths.
 Comments and README claims were verified against code.
 
-**Counts verified in repo:** 9 species, 7 classes, 7 subclasses, 4 backgrounds, 14 feats
-(4 origin + 7 epic boons + ASI + Grappler + Skilled), ~100 spells, ~61 equipment items,
-storage schema v14.
+**Counts verified in repo:** 9 species, 9 classes, 9 subclasses, 4 backgrounds, 18 feats
+(4 origin + 4 fighting style + 7 epic boons + ASI + Grappler + Skilled), ~350 spells,
+equipment catalogue for starting packages + artisan tools + gaming sets, storage schema v15.
+
+**Distinguish gaps carefully:**
+
+- **Incomplete authored defs** — a bundled class/background still missing a nested SRD
+  sub-choice that the architecture already supports.
+- **Not-yet-implemented classes** — Sorcerer/Warlock (and their gear trees).
+  Wild Shape play-time transformation is out of Phase 2 (Known Forms only today).
+- **Play-time gaps** — shop, encumbrance enforcement, attunement, rest/level-up inventory.
 
 **Uncertain without manual SRD crosswalk:**
 
@@ -498,4 +564,4 @@ storage schema v14.
   was the audit focus).
 
 **Documentation lag:** `README.md` and `src/adapters/STORAGE.md` previously cited schema
-v9/v11; code is at **v14** as of this audit.
+v9/v11; code is at **v15** as of this audit.

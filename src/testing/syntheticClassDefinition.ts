@@ -24,6 +24,12 @@ export function createSyntheticClassDefinition(
     source: SYNTHETIC_SOURCE,
     hitDie: { sides: 8 },
     primaryAbilities: ['strength'],
+    multiclassPrerequisite: {
+      kind: 'all-of',
+      abilities: ['strength'],
+      minimum: 13,
+      summary: 'Strength 13',
+    },
     savingThrows: ['strength', 'constitution'],
     proficiencies: {
       armor: ['light'],
@@ -103,6 +109,10 @@ export function createSyntheticClassDefinition(
       },
     ],
     deferredRequirements: [],
+    startingEquipment: {
+      completeness: 'complete',
+      entitlements: [],
+    },
     ...overrides,
   }
 }

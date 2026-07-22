@@ -14,6 +14,9 @@ describe('createBundledClassCatalog', () => {
       'srd-2024:ranger',
       'srd-2024:paladin',
       'srd-2024:cleric',
+      'srd-2024:druid',
+      'srd-2024:wizard',
+      'srd-2024:bard',
     ])
   })
 

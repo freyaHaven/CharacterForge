@@ -130,14 +130,17 @@ export type {
 export type {
   ClassSpellcasting,
   CrossSourceDuplicatePolicy,
+  PactMagicSlotProgression,
   SpellCountSpec,
   SpellDefinition,
   SpellEntitlement,
   SpellLevelRange,
   SpellListDefinition,
+  SpellPrepareFrom,
   SpellSelection,
   SpellSelectionKind,
   SpellSlotContributor,
+  SpellSlotRecovery,
   SpellSourceRef,
   SpellSourceState,
 } from './spell/types'

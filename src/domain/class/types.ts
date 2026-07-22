@@ -1,6 +1,7 @@
 import type { AbilityId } from '../abilities/types'
 import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
+import type { FeatCategory } from '../feat/types'
 import type { SkillId } from '../skills/types'
 import type { StartingEquipmentDefinition } from '../equipment/types'
 import type {
@@ -40,6 +41,8 @@ export type ClassFeature = {
   description: string
   /** Spell entitlements unlocked with this feature at its progression level. */
   spellEntitlements?: SpellEntitlement[]
+  /** Persistent creator-time effects (languages, tools, etc.). */
+  effects?: ClassChoiceEffect[]
 }
 
 export type ClassLevelFeatures = {
@@ -74,6 +77,12 @@ export type ClassChoiceEffect =
   | { kind: 'fighting-style'; styleId: string }
   | { kind: 'skill-proficiency'; skillId: SkillId }
   | { kind: 'skill-expertise'; skillId: SkillId }
+  | { kind: 'armor-proficiency'; category: ArmorProficiency }
+  | { kind: 'weapon-proficiency'; category: WeaponProficiency }
+  | { kind: 'language'; languageId: string; label: string }
+  | { kind: 'tool-proficiency'; toolId: string; label: string }
+  /** Half proficiency (floor) on skill checks lacking proficiency. */
+  | { kind: 'jack-of-all-trades' }
 
 /** Feature granted by selecting a subclass (or similar) choice option. */
 export type ClassOptionFeature = {
@@ -109,6 +118,16 @@ export type ClassChoice =
        * Display-only — does not restrict selection.
        */
       recommendedFeatId?: string
+      /**
+       * When set, the UI loads feats from this category via the shared feat-grant
+       * pipeline (`feat:{id}`). `options` may still list class-only alternates.
+       */
+      featGrantCategory?: FeatCategory
+      /**
+       * Choice is available only when another choice has the given option id
+       * selected (e.g. Champion Additional Fighting Style).
+       */
+      availableWhen?: { choiceId: string; optionId: string }
     }
   | {
       id: string
@@ -119,6 +138,11 @@ export type ClassChoice =
       min: number
       max: number
       options: ClassChoiceOption[]
+      /**
+       * Choice is available only when another choice has the given option id
+       * selected (e.g. College of Lore bonus proficiencies).
+       */
+      availableWhen?: { choiceId: string; optionId: string }
     }
 
 export type ClassCatalogStatus = 'available' | 'preview'
@@ -140,6 +164,26 @@ export type SubclassDefinition = {
   features: ClassOptionFeature[]
 }
 
+/**
+ * Ability score prerequisites checked when the character has levels in more
+ * than one class (SRD 5.2.1 Multiclassing). Not applied to single-class builds.
+ */
+export type MulticlassPrerequisite =
+  | {
+      kind: 'all-of'
+      abilities: AbilityId[]
+      minimum: number
+      /** Short label for UI (e.g. "Strength 13"). */
+      summary: string
+    }
+  | {
+      kind: 'any-of'
+      abilities: AbilityId[]
+      minimum: number
+      /** Short label for UI (e.g. "Strength or Dexterity 13"). */
+      summary: string
+    }
+
 export type ClassDefinition = {
   id: string
   editionId: EditionId
@@ -148,6 +192,11 @@ export type ClassDefinition = {
   source: ContentSource
   hitDie: HitDie
   primaryAbilities: AbilityId[]
+  /**
+   * Required when multiclassing into or retaining levels in this class.
+   * Evaluated against resolved ability scores for every class on a multiclass character.
+   */
+  multiclassPrerequisite: MulticlassPrerequisite
   savingThrows: AbilityId[]
   proficiencies: ClassProficiencies
   featureProgression: ClassLevelFeatures[]

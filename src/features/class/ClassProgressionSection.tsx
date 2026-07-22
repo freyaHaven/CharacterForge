@@ -10,6 +10,11 @@ import {
   isAbilityScoreImprovementChoiceId,
 } from '../../domain/class/abilityScoreImprovement'
 import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
+import { isFightingStyleFeatGrantChoice } from '../../domain/class/fightingStyle'
+import {
+  createFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
 import { collectClassFeatGrantIds } from '../../rules/character/resolveCharacterFeatGrants'
 import {
   characterHasFightingStyle,
@@ -41,11 +46,15 @@ import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
 } from '../../domain/class/weaponMastery'
+import { classInstanceToSelection } from '../../domain/character/characterClassSelection'
+import { resolveClassEffects } from '../../rules/class/resolveClassEffects'
+import { isSkillId } from '../../domain/skills/types'
 
 function getExcludedMultiSelectOptionIds(
   definition: ClassDefinition,
   choiceId: string,
   choices: Record<string, ClassChoiceValue>,
+  ownedProficientSkillIds?: ReadonlySet<string> | readonly string[],
 ): string[] {
   if (isWeaponMasteryChoiceId(choiceId)) {
     return collectWeaponMasterySelections(choices, choiceId)
@@ -57,7 +66,12 @@ function getExcludedMultiSelectOptionIds(
   }
 
   if (choiceGrantsSkillExpertise(choice)) {
-    return getExcludedExpertiseOptionIds(definition, choiceId, choices)
+    return getExcludedExpertiseOptionIds(
+      definition,
+      choiceId,
+      choices,
+      ownedProficientSkillIds,
+    )
   }
 
   if (choiceGrantsSkillProficiency(choice)) {
@@ -84,6 +98,7 @@ export type ClassProgressionSectionProps = {
   /** Effective class instances for eligibility (committed + draft overlay). */
   eligibilityClasses: readonly CharacterClassSelection[]
   classDefinitionsById: ReadonlyMap<string, ClassDefinition>
+  ownedProficientSkillIds?: ReadonlySet<string> | readonly string[]
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
   onHitPointIncreaseChange: (
     classLevel: number,
@@ -107,6 +122,7 @@ export function ClassProgressionSection({
   characterLevel,
   eligibilityClasses,
   classDefinitionsById,
+  ownedProficientSkillIds,
   onChoiceChange,
   onHitPointIncreaseChange,
 }: ClassProgressionSectionProps) {
@@ -170,6 +186,37 @@ export function ClassProgressionSection({
     return ids
   }, [activeInstanceId, characterFeatId, eligibilityClasses])
 
+  const ownedSkillIds = useMemo(() => {
+    const skills = new Set<string>()
+    for (const instance of eligibilityClasses) {
+      const definition = classDefinitionsById.get(instance.classId)
+      if (definition === undefined) {
+        continue
+      }
+      for (const effect of resolveClassEffects(
+        definition,
+        classInstanceToSelection(instance),
+      )) {
+        if (effect.kind === 'skill-proficiency' && isSkillId(effect.skillId)) {
+          skills.add(effect.skillId)
+        }
+      }
+    }
+    return skills
+  }, [classDefinitionsById, eligibilityClasses])
+
+  const ownedToolIds = useMemo(() => new Set<string>(), [])
+
+  function handleFeatSubChoiceChange(
+    grantSlotId: string,
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) {
+    onChoiceChange(
+      createFeatGrantChoiceStorageKey(grantSlotId, featChoiceId),
+      value,
+    )
+  }
   const draftValidation =
     draft === null
       ? null
@@ -281,6 +328,9 @@ export function ClassProgressionSection({
               const isEpicBoonChoice =
                 item.singleSelectChoice !== null &&
                 isEpicBoonChoiceId(item.singleSelectChoice.id)
+              const isFightingStyleChoice =
+                item.singleSelectChoice !== null &&
+                isFightingStyleFeatGrantChoice(item.singleSelectChoice)
 
               return (
                 <ClassFeatureAccordion
@@ -293,7 +343,8 @@ export function ClassProgressionSection({
                 >
                   {item.description.trim().length > 0 &&
                   !isAsiChoice &&
-                  !isEpicBoonChoice ? (
+                  !isEpicBoonChoice &&
+                  !isFightingStyleChoice ? (
                     <p className="class-picker__feature-accordion-description">
                       {item.description}
                     </p>
@@ -324,8 +375,21 @@ export function ClassProgressionSection({
                           ),
                           ...crossInstanceTakenFeatIds,
                         ]}
+                        featChoices={readFeatGrantChoices(
+                          activeChoices,
+                          item.singleSelectChoice.id,
+                        )}
+                        ownedSkillIds={ownedSkillIds}
+                        ownedToolIds={ownedToolIds}
                         errorId={errorId}
                         onChange={onChoiceChange}
+                        onFeatChoiceChange={(featChoiceId, value) => {
+                          handleFeatSubChoiceChange(
+                            item.singleSelectChoice!.id,
+                            featChoiceId,
+                            value,
+                          )
+                        }}
                       />
                     </div>
                   ) : null}
@@ -358,15 +422,78 @@ export function ClassProgressionSection({
                         recommendedFeatId={
                           item.singleSelectChoice.recommendedFeatId ?? null
                         }
+                        featChoices={readFeatGrantChoices(
+                          activeChoices,
+                          item.singleSelectChoice.id,
+                        )}
+                        ownedSkillIds={ownedSkillIds}
+                        ownedToolIds={ownedToolIds}
                         errorId={errorId}
                         onChange={onChoiceChange}
+                        onFeatChoiceChange={(featChoiceId, value) => {
+                          handleFeatSubChoiceChange(
+                            item.singleSelectChoice!.id,
+                            featChoiceId,
+                            value,
+                          )
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                  {isFightingStyleChoice && item.singleSelectChoice !== null ? (
+                    <div className="class-picker__feature-accordion-choices">
+                      {item.description.trim().length > 0 ? (
+                        <p className="class-picker__feature-accordion-description">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      <FeatGrantChoiceField
+                        choiceId={item.singleSelectChoice.id}
+                        value={
+                          typeof activeChoices[item.singleSelectChoice.id] ===
+                          'string'
+                            ? (activeChoices[item.singleSelectChoice.id] as string)
+                            : undefined
+                        }
+                        editionId={editionId}
+                        featCatalog={featCatalog}
+                        takenFeatIds={[
+                          ...collectClassFeatGrantIds(
+                            activeChoices,
+                            item.singleSelectChoice.id,
+                          ),
+                          ...crossInstanceTakenFeatIds,
+                        ]}
+                        eligibilityContext={eligibilityContext}
+                        recommendedFeatId={
+                          item.singleSelectChoice.recommendedFeatId ?? null
+                        }
+                        categoryFilter="fighting-style"
+                        alternateOptions={item.singleSelectChoice.options}
+                        featChoices={readFeatGrantChoices(
+                          activeChoices,
+                          item.singleSelectChoice.id,
+                        )}
+                        ownedSkillIds={ownedSkillIds}
+                        ownedToolIds={ownedToolIds}
+                        errorId={errorId}
+                        onChange={onChoiceChange}
+                        onFeatChoiceChange={(featChoiceId, value) => {
+                          handleFeatSubChoiceChange(
+                            item.singleSelectChoice!.id,
+                            featChoiceId,
+                            value,
+                          )
+                        }}
                       />
                     </div>
                   ) : null}
 
                   {item.singleSelectChoice !== null &&
                   !isAsiChoice &&
-                  !isEpicBoonChoice ? (
+                  !isEpicBoonChoice &&
+                  !isFightingStyleChoice ? (
                     <div
                       className="class-picker__feature-accordion-choices"
                       role="radiogroup"
@@ -406,6 +533,7 @@ export function ClassProgressionSection({
                           activeDefinition,
                           item.multiSelectChoice.id,
                           activeChoices,
+                          ownedProficientSkillIds,
                         )}
                         onChange={onChoiceChange}
                       />

@@ -7,7 +7,10 @@ import {
 
 export const EPIC_BOON_CHOICE_ID = 'epic-boon' as const
 
-/** General ASI feat — excluded from feat-grant pickers until nested ASI config ships. */
+/** Nested ASI feat score-choice id (`feat-choices:{slot}:ability-score-increase`). */
+export const ASI_FEAT_SCORE_CHOICE_ID = 'ability-score-increase' as const
+
+/** General Ability Score Improvement feat (nested score picks via companion keys). */
 export const ABILITY_SCORE_IMPROVEMENT_FEAT_ID =
   'srd-2024:ability-score-improvement' as const
 
@@ -20,13 +23,21 @@ export function isAbilityScoreImprovementFeatId(featId: string): boolean {
 }
 
 /**
- * Temporary limitation: the ASI feat needs +2 / +1+1 sub-configuration that
- * class `feat:{id}` encoding cannot represent yet. Exclude from feat-only
- * grant pickers (Epic Boon, ASI "Choose a Feat" list) so players use the
- * dedicated ASI slot modes instead.
+ * Cycle guard for ASI class choice "Choose a Feat" mode: the Ability Score
+ * Improvement feat must not appear there (players already have +2 / +1+1 modes).
+ * Epic Boon and other feat-only grant pickers may offer the ASI feat — nested
+ * score picks live in companion keys (`feat-choices:{slot}:…`).
+ */
+export function isFeatExcludedFromAsiFeatModePicker(featId: string): boolean {
+  return isAbilityScoreImprovementFeatId(featId)
+}
+
+/**
+ * @deprecated Prefer {@link isFeatExcludedFromAsiFeatModePicker}. Kept as an
+ * alias for ASI feat-mode exclusion only (not Epic Boon / species grants).
  */
 export function isFeatExcludedFromFeatGrantPickers(featId: string): boolean {
-  return isAbilityScoreImprovementFeatId(featId)
+  return isFeatExcludedFromAsiFeatModePicker(featId)
 }
 
 export function isCompleteEpicBoonChoiceValue(

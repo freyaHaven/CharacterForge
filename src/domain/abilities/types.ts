@@ -11,6 +11,15 @@ export const ABILITY_IDS = [
   'charisma',
 ] as const satisfies readonly AbilityId[]
 
+export const ABILITY_LABELS: Record<AbilityId, string> = {
+  strength: 'Strength',
+  dexterity: 'Dexterity',
+  constitution: 'Constitution',
+  intelligence: 'Intelligence',
+  wisdom: 'Wisdom',
+  charisma: 'Charisma',
+}
+
 export function isAbilityId(value: unknown): value is AbilityId {
   return (
     typeof value === 'string' &&

@@ -13,6 +13,9 @@ describe('ContentRegistry (bundled)', () => {
     expect(registry.getClass('srd-2024:ranger')?.name).toBe('Ranger')
     expect(registry.getClass('srd-2024:paladin')?.name).toBe('Paladin')
     expect(registry.getClass('srd-2024:cleric')?.name).toBe('Cleric')
+    expect(registry.getClass('srd-2024:druid')?.name).toBe('Druid')
+    expect(registry.getClass('srd-2024:wizard')?.name).toBe('Wizard')
+    expect(registry.getClass('srd-2024:bard')?.name).toBe('Bard')
     expect(registry.listClasses('srd-2024').map((entry) => entry.id)).toEqual([
       'srd-2024:fighter',
       'srd-2024:barbarian',
@@ -21,6 +24,9 @@ describe('ContentRegistry (bundled)', () => {
       'srd-2024:ranger',
       'srd-2024:paladin',
       'srd-2024:cleric',
+      'srd-2024:druid',
+      'srd-2024:wizard',
+      'srd-2024:bard',
     ])
     expect(registry.listClasses('srd-2014')).toEqual([])
   })
@@ -67,6 +73,21 @@ describe('ContentRegistry (bundled)', () => {
       classId: 'srd-2024:cleric',
       name: 'Life Domain',
     })
+    expect(registry.getSubclass('srd-2024:circle-of-the-land')).toMatchObject({
+      choiceOptionId: 'circle-of-the-land',
+      classId: 'srd-2024:druid',
+      name: 'Circle of the Land',
+    })
+    expect(registry.getSubclass('srd-2024:evoker')).toMatchObject({
+      choiceOptionId: 'evoker',
+      classId: 'srd-2024:wizard',
+      name: 'Evoker',
+    })
+    expect(registry.getSubclass('srd-2024:college-of-lore')).toMatchObject({
+      choiceOptionId: 'college-of-lore',
+      classId: 'srd-2024:bard',
+      name: 'College of Lore',
+    })
     expect(
       registry.listSubclasses('srd-2024:fighter').map((entry) => entry.id),
     ).toEqual(['srd-2024:champion'])
@@ -85,6 +106,15 @@ describe('ContentRegistry (bundled)', () => {
     expect(
       registry.listSubclasses('srd-2024:cleric').map((entry) => entry.id),
     ).toEqual(['srd-2024:life-domain'])
+    expect(
+      registry.listSubclasses('srd-2024:druid').map((entry) => entry.id),
+    ).toEqual(['srd-2024:circle-of-the-land'])
+    expect(
+      registry.listSubclasses('srd-2024:wizard').map((entry) => entry.id),
+    ).toEqual(['srd-2024:evoker'])
+    expect(
+      registry.listSubclasses('srd-2024:bard').map((entry) => entry.id),
+    ).toEqual(['srd-2024:college-of-lore'])
   })
 
   it('keeps subclass choice option ids stable for persistence', () => {
@@ -127,6 +157,7 @@ describe('ContentRegistry (bundled)', () => {
     expect(registry.listFeats('srd-2024').map((feat) => feat.id)).toEqual([
       'srd-2024:ability-score-improvement',
       'srd-2024:alert',
+      'srd-2024:archery',
       'srd-2024:boon-of-combat-prowess',
       'srd-2024:boon-of-dimensional-travel',
       'srd-2024:boon-of-fate',
@@ -134,11 +165,14 @@ describe('ContentRegistry (bundled)', () => {
       'srd-2024:boon-of-spell-recall',
       'srd-2024:boon-of-the-night-spirit',
       'srd-2024:boon-of-truesight',
+      'srd-2024:defense',
       'srd-2024:grappler',
+      'srd-2024:great-weapon-fighting',
       'srd-2024:magic-initiate-cleric',
       'srd-2024:magic-initiate-wizard',
       'srd-2024:savage-attacker',
       'srd-2024:skilled',
+      'srd-2024:two-weapon-fighting',
     ])
     expect(registry.listFeats('srd-2014')).toEqual([])
     expect(registry.getFeat('srd-2024:alert')?.name).toBe('Alert')

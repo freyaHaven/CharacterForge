@@ -13,9 +13,18 @@ export type FinishPolicyResult = {
   unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[]
 }
 
+export type FinishPolicyOptions = {
+  /**
+   * When the character has active spell content, incomplete/invalid Spells
+   * selections block Finish even though the Spells step is not statically required.
+   */
+  requireCompleteSpells?: boolean
+}
+
 export function getFinishPolicyResult(
   stepStatuses: Record<WizardStepId, StepStatus>,
   unresolvedDeferredRequirements: ResolvedDeferredCharacterRequirement[] = [],
+  options: FinishPolicyOptions = {},
 ): FinishPolicyResult {
   const incompleteRequiredSteps = WIZARD_STEPS.filter(
     (step) => step.required && step.id !== 'review',
@@ -25,6 +34,22 @@ export function getFinishPolicyResult(
       stepId: step.id,
       label: step.label,
     }))
+
+  if (
+    options.requireCompleteSpells === true &&
+    stepStatuses.spells.completion !== 'complete'
+  ) {
+    const alreadyListed = incompleteRequiredSteps.some(
+      (step) => step.stepId === 'spells',
+    )
+    if (!alreadyListed) {
+      incompleteRequiredSteps.push({
+        stepId: 'spells',
+        label:
+          WIZARD_STEPS.find((step) => step.id === 'spells')?.label ?? 'Spells',
+      })
+    }
+  }
 
   if (incompleteRequiredSteps.length > 0) {
     return {

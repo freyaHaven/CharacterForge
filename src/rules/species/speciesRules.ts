@@ -1,4 +1,12 @@
 import type { FeatDefinition } from '../../domain/feat/types'
+import {
+  isFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
+import {
+  validateFeatDefinitionChoices,
+  type FeatChoiceValidationContext,
+} from '../../domain/feat/validateFeatChoices'
 import type {
   SpeciesDefinition,
   SpeciesEffect,
@@ -33,6 +41,8 @@ export type SpeciesValidationOptions = {
   /** Feat ids already granted outside this species selection (background, class, legacy). */
   takenFeatIds?: readonly string[]
   eligibilityContext?: FeatEligibilityContext
+  ownedSkillIds?: ReadonlySet<string>
+  ownedToolIds?: ReadonlySet<string>
 }
 
 function getSelectedIds(
@@ -53,6 +63,57 @@ function isKnownChoiceId(
     definition.choices.some((choice) => choice.id === choiceId) ||
     definition.languages.choices.some((choice) => choice.id === choiceId)
   )
+}
+
+function buildFeatChoiceValidationContext(
+  options?: SpeciesValidationOptions,
+): FeatChoiceValidationContext | undefined {
+  if (
+    options?.ownedSkillIds === undefined &&
+    options?.ownedToolIds === undefined
+  ) {
+    return undefined
+  }
+
+  return {
+    ownedSkillIds: options.ownedSkillIds,
+    ownedToolIds: options.ownedToolIds,
+  }
+}
+
+function validateNestedFeatGrantChoices(
+  grantChoiceId: string,
+  featId: string,
+  hostChoices: Record<string, SpeciesSelectionChoiceValue>,
+  options?: SpeciesValidationOptions,
+): SpeciesValidationIssue[] {
+  const definition = options?.featById?.get(featId)
+  if (definition === undefined || definition.choices.length === 0) {
+    return []
+  }
+
+  const nested = readFeatGrantChoices(hostChoices, grantChoiceId)
+  const choiceIssues = validateFeatDefinitionChoices(
+    definition,
+    nested,
+    buildFeatChoiceValidationContext(options),
+  )
+
+  if (
+    choiceIssues.some(
+      (issue) =>
+        issue.code === 'missing-required-choice' ||
+        issue.code === 'invalid-multi-select-count',
+    )
+  ) {
+    return [{ code: 'missing-required-choice', choiceId: grantChoiceId }]
+  }
+
+  if (choiceIssues.length > 0) {
+    return [{ code: 'invalid-choice', choiceId: grantChoiceId }]
+  }
+
+  return []
 }
 
 export function validateSpeciesSelection(
@@ -115,8 +176,18 @@ export function validateSpeciesSelection(
         })
         if (!eligibility.eligible) {
           issues.push({ code: 'invalid-choice', choiceId: choice.id })
+          continue
         }
       }
+
+      issues.push(
+        ...validateNestedFeatGrantChoices(
+          choice.id,
+          feat.id,
+          selection.choices,
+          options,
+        ),
+      )
 
       continue
     }
@@ -162,6 +233,9 @@ export function validateSpeciesSelection(
   }
 
   for (const choiceId of Object.keys(selection.choices)) {
+    if (isFeatGrantChoiceStorageKey(choiceId)) {
+      continue
+    }
     if (!isKnownChoiceId(definition, choiceId)) {
       issues.push({ code: 'unknown-choice', choiceId })
     }

@@ -1,5 +1,4 @@
 import type { EquipmentGrant } from '../../../../domain/equipment/types'
-import { SELECTED_GAMING_SET_ITEM_ID } from '../../../../domain/equipment/types'
 import { gold, item } from '../../../../domain/equipment/grants'
 
 const id = (slug: string) => `srd-2024:${slug}`
@@ -40,10 +39,21 @@ export const CLERIC_PACKAGE_A: EquipmentGrant[] = [
   gold(7),
 ]
 
+/** Druid Package A (SRD 5.2.1): quarterstaff as Druidic Focus. */
+export const DRUID_PACKAGE_A: EquipmentGrant[] = [
+  item(id('leather-armor')),
+  item(id('shield')),
+  item(id('sickle')),
+  item(id('quarterstaff')),
+  item(id('explorers-pack')),
+  item(id('herbalism-kit')),
+  gold(9),
+]
+
+/** Monk Package A fixed grants (artisan tools chosen via nested entitlement). */
 export const MONK_PACKAGE_A: EquipmentGrant[] = [
   item(id('spear')),
   item(id('dagger'), 5),
-  item(id('artisans-tools')),
   item(id('explorers-pack')),
   gold(11),
 ]
@@ -82,6 +92,24 @@ export const ROGUE_PACKAGE_A: EquipmentGrant[] = [
   gold(8),
 ]
 
+/** Bard Package A fixed grants (musical instrument chosen via nested entitlement). */
+export const BARD_PACKAGE_A: EquipmentGrant[] = [
+  item(id('leather-armor')),
+  item(id('dagger'), 2),
+  item(id('entertainers-pack')),
+  gold(19),
+]
+
+/** Wizard Package A (SRD 5.2.1): quarterstaff as Arcane Focus. */
+export const WIZARD_PACKAGE_A: EquipmentGrant[] = [
+  item(id('dagger'), 2),
+  item(id('quarterstaff')),
+  item(id('robe')),
+  item(id('spellbook')),
+  item(id('scholars-pack')),
+  gold(5),
+]
+
 export const ACOLYTE_PACKAGE: EquipmentGrant[] = [
   item(id('calligraphers-supplies')),
   item(id('book-prayers')),
@@ -109,11 +137,11 @@ export const SAGE_PACKAGE: EquipmentGrant[] = [
   gold(8),
 ]
 
+/** Soldier package fixed grants (gaming set chosen via nested entitlement). */
 export const SOLDIER_PACKAGE: EquipmentGrant[] = [
   item(id('spear')),
   item(id('shortbow')),
   item(id('arrows'), 20),
-  item(SELECTED_GAMING_SET_ITEM_ID),
   item(id('healers-kit')),
   item(id('quiver')),
   item(id('travelers-clothes')),

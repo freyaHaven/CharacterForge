@@ -54,7 +54,7 @@ describe('rangerSrd2024', () => {
     ).toBe(true)
   })
 
-  it('requires fighting style at level 2 including Druidic Warrior', () => {
+  it('requires fighting style at level 2 including Druidic Warrior alternate', () => {
     const fightingStyle = rangerSrd2024.choices.find(
       (choice) => choice.id === 'fighting-style',
     )
@@ -63,14 +63,14 @@ describe('rangerSrd2024', () => {
     expect(fightingStyle?.type).toBe('single-select')
     expect(
       fightingStyle?.type === 'single-select'
+        ? fightingStyle.featGrantCategory
+        : undefined,
+    ).toBe('fighting-style')
+    expect(
+      fightingStyle?.type === 'single-select'
         ? fightingStyle.options.map((option) => option.id)
         : [],
-    ).toEqual([
-      'archery',
-      'defense',
-      'two-weapon-fighting',
-      'druidic-warrior',
-    ])
+    ).toEqual(['druidic-warrior'])
   })
 
   it('requires weapon mastery for simple and martial weapons', () => {

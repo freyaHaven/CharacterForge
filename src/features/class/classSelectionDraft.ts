@@ -6,10 +6,20 @@ import type {
   CharacterClassSelection,
 } from '../../domain/class/types'
 import {
+  isAbilityScoreImprovementChoiceId,
+  parseAsiChoice,
+} from '../../domain/class/abilityScoreImprovement'
+import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
+import {
+  getFightingStyleFeatIdFromChoiceValue,
+  isFightingStyleFeatGrantChoiceId,
+} from '../../domain/class/fightingStyle'
+import {
   syncHitPointIncreases,
   type HitPointIncrease,
 } from '../../domain/class/hitPointIncreases'
 import { pruneClassInstanceChoicesForLevel } from '../../domain/class/pruneClassInstanceChoices'
+import { clearFeatGrantChoices } from '../../domain/feat/featGrantChoiceStorage'
 import type { EditionId } from '../../domain/types'
 import {
   validateClassInstance,
@@ -17,6 +27,58 @@ import {
   type ClassValidationOptions,
   type ClassValidationResult,
 } from '../../rules/class/classRules'
+
+function getFeatGrantFeatIdFromChoiceValue(
+  choiceId: string,
+  value: ClassChoiceValue | undefined,
+): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  if (isAbilityScoreImprovementChoiceId(choiceId) || isEpicBoonChoiceId(choiceId)) {
+    const parsed = parseAsiChoice(value)
+    return parsed?.kind === 'feat' ? parsed.featId : null
+  }
+
+  if (isFightingStyleFeatGrantChoiceId(choiceId)) {
+    return getFightingStyleFeatIdFromChoiceValue(value)
+  }
+
+  return null
+}
+
+function isFeatGrantHostChoiceId(choiceId: string): boolean {
+  return (
+    isAbilityScoreImprovementChoiceId(choiceId) ||
+    isEpicBoonChoiceId(choiceId) ||
+    isFightingStyleFeatGrantChoiceId(choiceId)
+  )
+}
+
+/**
+ * When an ASI / Epic Boon / Fighting Style grant value leaves feat mode or
+ * switches to a different feat, drop nested companion keys for that slot.
+ */
+function withClearedFeatGrantChoicesIfNeeded(
+  choices: Record<string, ClassChoiceValue>,
+  choiceId: string,
+  previousValue: ClassChoiceValue | undefined,
+  nextValue: ClassChoiceValue | undefined,
+): Record<string, ClassChoiceValue> {
+  if (!isFeatGrantHostChoiceId(choiceId)) {
+    return choices
+  }
+
+  const previousFeatId = getFeatGrantFeatIdFromChoiceValue(choiceId, previousValue)
+  const nextFeatId = getFeatGrantFeatIdFromChoiceValue(choiceId, nextValue)
+
+  if (previousFeatId === nextFeatId) {
+    return choices
+  }
+
+  return clearFeatGrantChoices(choices, choiceId) as Record<string, ClassChoiceValue>
+}
 
 /** Legacy single-class draft payload used by the current ClassPicker UI. */
 export type ClassSelectionDraft = {
@@ -199,7 +261,12 @@ export function updateClassInstanceDraftChoice(
   choiceId: string,
   value: ClassChoiceValue | undefined,
 ): CharacterClassSelectionDraft {
-  const nextChoices = { ...draft.choices }
+  let nextChoices = withClearedFeatGrantChoicesIfNeeded(
+    { ...draft.choices },
+    choiceId,
+    draft.choices[choiceId],
+    value,
+  )
 
   if (value === undefined) {
     delete nextChoices[choiceId]
@@ -217,8 +284,14 @@ export function updateClassDraftChoice(
   draft: ClassSelectionDraft,
   choiceId: string,
   value: ClassChoiceValue | undefined,
+  definition?: ClassDefinition,
 ): ClassSelectionDraft {
-  const nextChoices = { ...draft.choices }
+  let nextChoices = withClearedFeatGrantChoicesIfNeeded(
+    { ...draft.choices },
+    choiceId,
+    draft.choices[choiceId],
+    value,
+  )
 
   if (value === undefined) {
     delete nextChoices[choiceId]
@@ -226,9 +299,28 @@ export function updateClassDraftChoice(
     nextChoices[choiceId] = value
   }
 
+  if (definition === undefined) {
+    return {
+      ...draft,
+      choices: nextChoices,
+    }
+  }
+
+  const pruned = pruneClassInstanceChoicesForLevel(
+    {
+      instanceId: '__draft__',
+      classId: draft.classId,
+      level: draft.level,
+      choices: nextChoices,
+      hitPointIncreases: draft.hitPointIncreases,
+    },
+    definition,
+    draft.level,
+  )
+
   return {
     ...draft,
-    choices: nextChoices,
+    choices: pruned.choices,
   }
 }
 

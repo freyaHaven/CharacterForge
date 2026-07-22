@@ -16,6 +16,7 @@ const EMPTY_SPELLCASTING: CharacterSpellcastingSummary = {
   spellLines: [],
   groups: [],
   sharedSlots: null,
+  pactSlots: null,
   activeSources: [],
 }
 

@@ -46,6 +46,11 @@ export const COMPLETE_HUMAN_SELECTION = {
     size: 'medium',
     skillful: 'perception',
     versatile: 'srd-2024:skilled',
+    'feat-choices:versatile:skill-or-tool-proficiencies': [
+      'skill:athletics',
+      'skill:insight',
+      'tool:thieves-tools',
+    ],
     'standard-languages': ['dwarvish', 'elvish'],
   },
 } as const

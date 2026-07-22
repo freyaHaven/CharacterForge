@@ -1,4 +1,5 @@
 import type { ClassChoice, ClassChoiceValue } from './types'
+import { withWildShapeFormsChoiceLimits } from './beastForms'
 
 export type WeaponMasterySlotThreshold = {
   level: number
@@ -104,10 +105,10 @@ export function createWeaponMasteryChoices(
   return result
 }
 
-/** @deprecated Limits are fixed per choice; kept for call-site compatibility. */
+/** Adjust choice limits that scale with class level (e.g. Wild Shape forms). */
 export function withLevelAdjustedChoiceLimits(
   choice: ClassChoice,
-  _level: number,
+  level: number,
 ): ClassChoice {
-  return choice
+  return withWildShapeFormsChoiceLimits(choice, level)
 }

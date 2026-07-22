@@ -62,7 +62,10 @@ function isEquipmentSelection(value: unknown): value is EquipmentSelection {
     typeof candidate.entitlementId === 'string' &&
     (candidate.optionId === null || typeof candidate.optionId === 'string') &&
     Array.isArray(candidate.choices) &&
-    candidate.choices.every(isEquipmentItemSelection)
+    candidate.choices.every(isEquipmentItemSelection) &&
+    (candidate.path === undefined ||
+      (Array.isArray(candidate.path) &&
+        candidate.path.every((entry) => typeof entry === 'string')))
   )
 }
 

@@ -162,6 +162,164 @@ describe('buildReviewSheetModels', () => {
     expect(models.armorClassBreakdown.armorItemId).toBeNull()
   })
 
+  it('adds proficiency bonus to initiative when Alert is granted', async () => {
+    const { character } = await createChampionSoldierCharacter()
+    const featCatalog = createBundledFeatCatalog()
+    const alertDefinition = await featCatalog.getFeat('srd-2024:alert')
+    const classCatalog = createBundledClassCatalog()
+    const fighterDefinition = await classCatalog.getClass('srd-2024:fighter')
+    const classDefinitions = new Map()
+    if (fighterDefinition !== null) {
+      classDefinitions.set(fighterDefinition.id, fighterDefinition)
+    }
+
+    const models = buildReviewSheetModels({
+      character: {
+        ...character,
+        feat: null,
+        abilityScores: {
+          ...character.abilityScores,
+          dexterity: 14,
+        },
+        targetLevel: 5,
+      },
+      speciesDefinition: null,
+      backgroundDefinition: null,
+      featDefinition: null,
+      featGrants: [
+        {
+          featId: 'srd-2024:alert',
+          choices: {},
+          source: {
+            kind: 'background-origin',
+            backgroundId: 'srd-2024:criminal',
+            backgroundName: 'Criminal',
+          },
+          displayLabel: 'Background',
+        },
+      ],
+      featDefinitionsById: new Map(
+        alertDefinition !== null ? [[alertDefinition.id, alertDefinition]] : [],
+      ),
+      classDefinitions,
+    })
+
+    // DEX 14 → +2, PB at level 5 → +3, Alert → +5
+    expect(models.proficiencyBonusLabel).toBe('+3')
+    expect(models.initiativeLabel).toBe('+5')
+  })
+
+  it('adds Defense Fighting Style +1 AC only while wearing armour', async () => {
+    const { character } = await createChampionSoldierCharacter()
+    const featCatalog = createBundledFeatCatalog()
+    const defenseDefinition = await featCatalog.getFeat('srd-2024:defense')
+    const classCatalog = createBundledClassCatalog()
+    const fighterDefinition = await classCatalog.getClass('srd-2024:fighter')
+    const classDefinitions = new Map()
+    if (fighterDefinition !== null) {
+      classDefinitions.set(fighterDefinition.id, fighterDefinition)
+    }
+
+    const { SRD_2024_EQUIPMENT_BY_ID } = await import(
+      '../../content/packs/srd-2024/equipment'
+    )
+
+    const grants = [
+      {
+        featId: 'srd-2024:defense',
+        choices: {},
+        source: {
+          kind: 'class-feat-grant' as const,
+          instanceId: character.classes[0]!.instanceId,
+          classId: 'srd-2024:fighter',
+          className: 'Fighter',
+          classLevel: 3,
+          choiceId: 'fighting-style',
+          grantLabel: 'Fighting Style',
+        },
+        displayLabel: 'Defense (Fighting Style · Fighter 3)',
+      },
+    ]
+
+    const unarmored = buildReviewSheetModels({
+      character: {
+        ...character,
+        abilityScores: {
+          ...character.abilityScores,
+          dexterity: 14,
+        },
+      },
+      speciesDefinition: null,
+      backgroundDefinition: null,
+      featDefinition: null,
+      featGrants: grants,
+      featDefinitionsById: new Map(
+        defenseDefinition !== null
+          ? [[defenseDefinition.id, defenseDefinition]]
+          : [],
+      ),
+      classDefinitions,
+    })
+    expect(unarmored.armorClassLabel).toBe('12')
+    expect(unarmored.armorClassBreakdown.otherBonus).toBe(0)
+
+    const armored = buildReviewSheetModels({
+      character: {
+        ...character,
+        abilityScores: {
+          ...character.abilityScores,
+          dexterity: 14,
+        },
+        equipment: {
+          ...character.equipment,
+          loadout: {
+            armorItemId: 'srd-2024:chain-mail',
+            mainHandItemId: null,
+            offHandItemId: null,
+            mainHandGrip: null,
+          },
+        },
+      },
+      speciesDefinition: null,
+      backgroundDefinition: null,
+      featDefinition: null,
+      featGrants: grants,
+      featDefinitionsById: new Map(
+        defenseDefinition !== null
+          ? [[defenseDefinition.id, defenseDefinition]]
+          : [],
+      ),
+      classDefinitions,
+      resolvedEquipment: {
+        sources: [],
+        entries: [],
+        inventory: [
+          {
+            itemId: 'srd-2024:chain-mail',
+            name: 'Chain Mail',
+            quantity: 1,
+            category: 'armor',
+          },
+        ],
+        mergedInventory: [
+          {
+            itemId: 'srd-2024:chain-mail',
+            name: 'Chain Mail',
+            quantity: 1,
+            category: 'armor',
+          },
+        ],
+        currency: { goldPieces: 0 },
+        weightCarriedLb: 0,
+      },
+      equipmentDefinitionsById: SRD_2024_EQUIPMENT_BY_ID,
+    })
+
+    // Chain mail 16 + Defense 1 (DEX ignored for heavy)
+    expect(armored.armorClassLabel).toBe('17')
+    expect(armored.armorClassBreakdown.otherBonus).toBe(1)
+  })
+
   it('derives Armour Class from resolved starting armour and shield', async () => {
     const { character, models: baseModels } = await createChampionSoldierCharacter()
     const speciesCatalog = createBundledSpeciesCatalog()

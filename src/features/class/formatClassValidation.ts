@@ -13,6 +13,8 @@ const MESSAGE_BY_CODE: Record<
   'missing-required-choice': (issue) =>
     issue.choiceId === 'fighting-style'
       ? 'Choose a Fighting Style.'
+      : issue.choiceId === 'champion-additional-fighting-style'
+        ? 'Choose an Additional Fighting Style.'
       : issue.choiceId === 'skill-proficiencies'
         ? 'Choose two skill proficiencies.'
         : issue.choiceId?.startsWith('weapon-mastery')
@@ -42,6 +44,8 @@ const MESSAGE_BY_CODE: Record<
     'Allocated class levels exceed the target character level.',
   'invalid-starting-class-reference': () =>
     'The starting class reference is invalid.',
+  'multiclass-ability-prerequisite': () =>
+    'Multiclass ability score prerequisites are not met. Raise the required scores on the Abilities step or adjust your class mix.',
 }
 
 export function formatClassValidationIssue(

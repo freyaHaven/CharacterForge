@@ -213,7 +213,7 @@ describe('Class workflow in App', () => {
               classId: 'srd-2024:fighter',
               level: 1,
               choices: {
-                'fighting-style': 'great-weapon-fighting',
+                'fighting-style': 'feat:srd-2024:great-weapon-fighting',
                 'skill-proficiencies': ['history', 'insight'],
                 'weapon-mastery': ['longsword', 'shortbow', 'battleaxe'],
               },

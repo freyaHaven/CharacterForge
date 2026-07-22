@@ -1,0 +1,155 @@
+import type { SpellDefinition } from '../../../../domain/spell/types'
+import { defineSrd2024Spell } from './defineSpell'
+
+/** Bard-exclusive (and shared-missing) SRD spells not already in the catalogue. */
+export const SRD_2024_BARD_EXCLUSIVE_SPELLS: SpellDefinition[] = [
+  defineSrd2024Spell({
+    slug: 'vicious-mockery',
+    name: 'Vicious Mockery',
+    level: 0,
+    school: 'Enchantment',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V',
+    duration: 'Instantaneous',
+    description:
+      'You unleash a string of insults laced with subtle enchantments at one creature you can see within range. The target must succeed on a Wisdom saving throw or take Psychic damage and have Disadvantage on the next attack roll it makes before the end of its next turn.',
+  }),
+  defineSrd2024Spell({
+    slug: 'dissonant-whispers',
+    name: 'Dissonant Whispers',
+    level: 1,
+    school: 'Enchantment',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V',
+    duration: 'Instantaneous',
+    description:
+      'One creature you can see within range must make a Wisdom saving throw. On a failed save, it takes Psychic damage and must immediately use its Reaction, if available, to move as far away from you as its Speed allows. On a successful save, the target takes half as much damage and doesn\'t have to move.',
+  }),
+  defineSrd2024Spell({
+    slug: 'cloud-of-daggers',
+    name: 'Cloud of Daggers',
+    level: 2,
+    school: 'Conjuration',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V, S, M',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'You fill the air with spinning daggers in a Cube 5 feet on each side, centered on a point you choose within range. A creature takes Slashing damage when it enters the spell\'s area for the first time on a turn or starts its turn there.',
+    concentration: true,
+  }),
+  defineSrd2024Spell({
+    slug: 'crown-of-madness',
+    name: 'Crown of Madness',
+    level: 2,
+    school: 'Enchantment',
+    castingTime: 'Action',
+    range: '120 feet',
+    components: 'V, S',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'One humanoid you can see within range must succeed on a Wisdom saving throw or have the Charmed condition for the duration. While Charmed, a twisted crown of jagged iron appears on its head, and a madness glows in its eyes. The Charmed target must use its action before moving on each of its turns to make a melee attack against a creature other than itself that you mentally choose.',
+    concentration: true,
+  }),
+  defineSrd2024Spell({
+    slug: 'enthrall',
+    name: 'Enthrall',
+    level: 2,
+    school: 'Enchantment',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V, S',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'You weave a distracting string of words, causing creatures of your choice that you can see within range and that can hear you to make a Wisdom saving throw. Any creature that can\'t be Charmed succeeds on this saving throw automatically. On a failed save, the target has a −10 penalty to Wisdom (Perception) checks and Passive Perception until the spell ends.',
+    concentration: true,
+  }),
+  defineSrd2024Spell({
+    slug: 'compulsion',
+    name: 'Compulsion',
+    level: 4,
+    school: 'Enchantment',
+    castingTime: 'Action',
+    range: '30 feet',
+    components: 'V, S',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'Creatures of your choice that you can see within range and that can hear you must make a Wisdom saving throw. A target automatically succeeds if it can\'t be Charmed. On a failed save, a target is affected by this spell. Until the spell ends, you can use a Bonus Action on each of your turns to designate a direction that is horizontal to you. Each affected target must use as much of its movement as possible to move in that direction on its next turn.',
+    concentration: true,
+  }),
+  defineSrd2024Spell({
+    slug: 'synaptic-static',
+    name: 'Synaptic Static',
+    level: 5,
+    school: 'Enchantment',
+    castingTime: 'Action',
+    range: '120 feet',
+    components: 'V, S',
+    duration: 'Instantaneous',
+    description:
+      'You choose a point within range and cause psychic energy to explode there. Each creature in a 20-foot-radius Sphere centered on that point must make an Intelligence saving throw. A creature takes Psychic damage on a failed save, or half as much damage on a successful one. A target that fails the save has muddled thoughts for 1 minute; it subtracts 1d6 from attack rolls, ability checks, and Constitution saving throws to maintain Concentration.',
+  }),
+  defineSrd2024Spell({
+    slug: 'yolandes-regal-presence',
+    name: "Yolande's Regal Presence",
+    level: 5,
+    school: 'Illusion',
+    castingTime: 'Action',
+    range: 'Self',
+    components: 'V, S, M',
+    duration: 'Concentration, up to 1 minute',
+    description:
+      'You surround yourself with unearthly majesty for the duration. Whenever a creature of your choice enters the Emanation around you or starts its turn there for the first time on a turn, you can force that creature to make a Wisdom saving throw. On a failed save, the creature takes Psychic damage and has the Prone condition, and you can push it up to 10 feet away from you.',
+    concentration: true,
+  }),
+  defineSrd2024Spell({
+    slug: 'power-word-fortify',
+    name: 'Power Word Fortify',
+    level: 7,
+    school: 'Abjuration',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V',
+    duration: 'Instantaneous',
+    description:
+      'You speak a word of power that fortifies creatures of your choice that you can see within range. Each target gains Temporary Hit Points equal to 120 divided among the targets as you choose. A creature can\'t gain Temporary Hit Points from this spell again until it finishes a Long Rest.',
+  }),
+  defineSrd2024Spell({
+    slug: 'resurrection',
+    name: 'Resurrection',
+    level: 7,
+    school: 'Necromancy',
+    castingTime: '1 hour',
+    range: 'Touch',
+    components: 'V, S, M',
+    duration: 'Instantaneous',
+    description:
+      'You touch a dead creature that has been dead for no more than a century, that didn\'t die of old age, and that isn\'t Undead. If its soul is free and willing, the target returns to life with all its Hit Points. This spell neutralizes any poisons and cures normal diseases afflicting the creature when it died. It doesn\'t remove magical diseases, curses, or similar effects.',
+  }),
+  defineSrd2024Spell({
+    slug: 'glibness',
+    name: 'Glibness',
+    level: 8,
+    school: 'Transmutation',
+    castingTime: 'Action',
+    range: 'Self',
+    components: 'V',
+    duration: '1 hour',
+    description:
+      'Until the spell ends, when you make a Charisma check, you can replace the number you roll with a 15. Additionally, no matter what you say, magic that would determine if you are telling the truth indicates that you are being truthful.',
+  }),
+  defineSrd2024Spell({
+    slug: 'power-word-heal',
+    name: 'Power Word Heal',
+    level: 9,
+    school: 'Evocation',
+    castingTime: 'Action',
+    range: '60 feet',
+    components: 'V',
+    duration: 'Instantaneous',
+    description:
+      'A wave of healing energy washes over one creature you can see within range. The target regains all its Hit Points. If the creature has the Charmed, Frightened, Paralyzed, Poisoned, or Stunned condition, that condition ends. If the creature has the Prone condition, it can use its Reaction to stand up.',
+  }),
+]

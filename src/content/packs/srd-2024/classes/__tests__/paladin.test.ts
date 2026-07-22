@@ -40,7 +40,7 @@ describe('paladinSrd2024', () => {
     ).toBe(2)
   })
 
-  it('includes Blessed Warrior among Fighting Style options', () => {
+  it('includes Blessed Warrior as a Fighting Style alternate option', () => {
     const fightingStyle = paladinSrd2024.choices.find(
       (choice) => choice.id === 'fighting-style',
     )
@@ -48,14 +48,14 @@ describe('paladinSrd2024', () => {
     expect(fightingStyle?.type).toBe('single-select')
     expect(
       fightingStyle?.type === 'single-select'
+        ? fightingStyle.featGrantCategory
+        : undefined,
+    ).toBe('fighting-style')
+    expect(
+      fightingStyle?.type === 'single-select'
         ? fightingStyle.options.map((option) => option.id)
         : [],
-    ).toEqual([
-      'defense',
-      'great-weapon-fighting',
-      'two-weapon-fighting',
-      'blessed-warrior',
-    ])
+    ).toEqual(['blessed-warrior'])
   })
 
   it('declares the level at which each choice becomes available', () => {

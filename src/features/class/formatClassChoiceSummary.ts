@@ -11,6 +11,11 @@ import {
   isEpicBoonChoiceId,
 } from '../../domain/class/epicBoon'
 import {
+  formatFightingStyleChoiceSummary,
+  isCompleteFightingStyleChoiceValue,
+  isFightingStyleFeatGrantChoice,
+} from '../../domain/class/fightingStyle'
+import {
   ABILITY_ABBREVIATIONS,
   SKILL_ABILITY_MAP,
 } from '../../domain/character/sheetMechanics'
@@ -55,6 +60,24 @@ export function formatClassChoiceSummary(
     }
 
     return formatEpicBoonChoiceSummary(value, featNameById)
+  }
+
+  if (isFightingStyleFeatGrantChoice(choice)) {
+    if (
+      typeof value !== 'string' ||
+      !isCompleteFightingStyleChoiceValue(choice, value)
+    ) {
+      return null
+    }
+
+    const alternateLabelById = new Map(
+      choice.options.map((option) => [option.id, option.label]),
+    )
+    return formatFightingStyleChoiceSummary(
+      value,
+      featNameById,
+      alternateLabelById,
+    )
   }
 
   if (choice.type === 'single-select') {

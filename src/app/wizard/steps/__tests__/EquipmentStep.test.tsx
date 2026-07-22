@@ -2,6 +2,7 @@
 
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { createBundledEquipmentCatalog } from '../../../../adapters/bundledEquipmentCatalog'
 import { EquipmentStep } from '../EquipmentStep'
 
 const emptyResolved = {
@@ -13,6 +14,8 @@ const emptyResolved = {
   weightCarriedLb: 0,
 }
 
+const equipmentCatalog = createBundledEquipmentCatalog()
+
 describe('EquipmentStep', () => {
   it('renders the heading and empty-state guidance', () => {
     render(
@@ -21,6 +24,8 @@ describe('EquipmentStep', () => {
         selections={[]}
         onChangeSelections={() => {}}
         validationIssues={[]}
+        equipmentCatalog={equipmentCatalog}
+        editionId="srd-2024"
       />,
     )
 

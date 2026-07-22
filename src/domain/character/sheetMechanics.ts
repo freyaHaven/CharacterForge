@@ -44,10 +44,19 @@ export const SKILL_ABILITY_MAP: Record<SkillId, AbilityId> = {
 
 export type ProficiencyRank = 'none' | 'proficient' | 'expertise'
 
+export type GetSkillModifierOptions = {
+  /**
+   * Jack of All Trades: add floor(PB/2) when the skill has no proficiency.
+   * Never stacks with proficient or expertise.
+   */
+  jackOfAllTrades?: boolean
+}
+
 export function getSkillModifier(
   abilityScore: number,
   proficiencyBonus: number,
   rank: ProficiencyRank,
+  options?: GetSkillModifierOptions,
 ): number {
   const abilityModifier = getAbilityModifier(abilityScore)
 
@@ -57,6 +66,10 @@ export function getSkillModifier(
 
   if (rank === 'proficient') {
     return abilityModifier + proficiencyBonus
+  }
+
+  if (options?.jackOfAllTrades === true) {
+    return abilityModifier + Math.floor(proficiencyBonus / 2)
   }
 
   return abilityModifier

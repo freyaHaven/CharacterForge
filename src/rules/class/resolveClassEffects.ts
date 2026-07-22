@@ -4,6 +4,7 @@ import type {
   ResolvedClassEffect,
 } from '../../domain/class/types'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
+import { getClassFeaturesUpToLevel } from '../../domain/class/featureProgression'
 
 export function resolveClassEffects(
   definition: ClassDefinition,
@@ -32,7 +33,20 @@ export function resolveClassEffects(
     })
   }
 
-  for (const choice of getChoicesAvailableAtLevel(definition, selection.level)) {
+  for (const feature of getClassFeaturesUpToLevel(
+    definition,
+    selection.level,
+  )) {
+    if (feature.effects !== undefined) {
+      effects.push(...feature.effects)
+    }
+  }
+
+  for (const choice of getChoicesAvailableAtLevel(
+    definition,
+    selection.level,
+    selection.choices,
+  )) {
     const value = selection.choices[choice.id]
 
     if (value === undefined) {
@@ -51,5 +65,34 @@ export function resolveClassEffects(
     }
   }
 
-  return effects
+  return dedupeArmorAndWeaponCategories(effects)
+}
+
+/** Keep first occurrence of each armor/weapon proficiency category. */
+function dedupeArmorAndWeaponCategories(
+  effects: ResolvedClassEffect[],
+): ResolvedClassEffect[] {
+  const seenArmor = new Set<string>()
+  const seenWeapons = new Set<string>()
+  const result: ResolvedClassEffect[] = []
+
+  for (const effect of effects) {
+    if (effect.kind === 'armor-proficiency') {
+      if (seenArmor.has(effect.category)) {
+        continue
+      }
+      seenArmor.add(effect.category)
+    }
+
+    if (effect.kind === 'weapon-proficiency') {
+      if (seenWeapons.has(effect.category)) {
+        continue
+      }
+      seenWeapons.add(effect.category)
+    }
+
+    result.push(effect)
+  }
+
+  return result
 }

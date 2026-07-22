@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import type { BackgroundCatalog } from '../../domain/ports/backgroundCatalog'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { Character } from '../../domain/types'
@@ -49,6 +50,7 @@ type UseClassEditorOptions = {
   setCharacter: Dispatch<SetStateAction<Character>>
   classCatalog: ClassCatalog
   featCatalog?: FeatCatalog
+  backgroundCatalog?: BackgroundCatalog
   onDraftChange?: () => void
 }
 
@@ -90,6 +92,7 @@ export function useClassEditor({
   setCharacter,
   classCatalog,
   featCatalog,
+  backgroundCatalog,
   onDraftChange,
 }: UseClassEditorOptions) {
   const [classDrafts, setClassDrafts] = useState<ClassSelectionDrafts>(
@@ -210,13 +213,25 @@ export function useClassEditor({
     committedInstance?.hitPointIncreases,
   ])
 
-  const { classDraftValidation, committedClassValid } = useClassStepValidation(
+  const {
+    classDraftValidation,
+    committedClassValid,
+    multiclassValidationIssues,
+  } = useClassStepValidation(
     classCatalog,
     character.editionId,
     committedSelection,
     classDraft,
-    featCatalog,
-    character.feat?.featId ?? null,
+    {
+      featCatalog,
+      characterFeatId: character.feat?.featId ?? null,
+      committedClasses: character.classes,
+      targetLevel: character.targetLevel,
+      startingClassInstanceId: character.startingClassInstanceId,
+      abilityScores: character.abilityScores,
+      backgroundCatalog,
+      backgroundSelection: character.background,
+    },
   )
 
   const classDraftIncomplete = isAnyClassDraftIncomplete(
@@ -682,6 +697,7 @@ export function useClassEditor({
     classDraftIncomplete,
     classDraftValidation,
     committedClassValid,
+    multiclassValidationIssues,
     resetClassDraft,
     hydrateForCharacter,
     commitClassSelection,

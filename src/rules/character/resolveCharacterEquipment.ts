@@ -15,13 +15,11 @@ import type {
   EquipmentSourceRef,
   StartingEquipmentDefinition,
 } from '../../domain/equipment/types'
+import { GOLD_PIECES_ITEM_ID } from '../../domain/equipment/types'
 import {
-  GOLD_PIECES_ITEM_ID,
-} from '../../domain/equipment/types'
-import {
-  equipmentSelectionKey,
-  equipmentSourcesEqual,
-} from '../../domain/equipment/sourceKey'
+  collectActiveEquipmentNodes,
+  collectActiveEquipmentSelectionKeysForDefinition,
+} from '../../domain/equipment/equipmentChoiceTree'
 import {
   assignDefaultLocations,
   materializeInventoryEntries,
@@ -43,6 +41,8 @@ export type MergedInventoryLine = ResolvedInventoryItem
 
 export type ResolvedEquipmentEntitlement = {
   entitlement: EquipmentEntitlement
+  /** Parent option ids from root; empty for root entitlements. */
+  path: string[]
   selection: EquipmentSelection | null
   isComplete: boolean
 }
@@ -52,6 +52,9 @@ export type ResolvedEquipmentSource = {
   label: string
   sourceKindLabel: EquipmentSourceKindLabel
   completeness: StartingEquipmentDefinition['completeness']
+  /** Full starting-equipment definition (for pruning / nested walks). */
+  definition: StartingEquipmentDefinition
+  /** All active entitlement nodes (root + nested under selected branches). */
   entitlements: ResolvedEquipmentEntitlement[]
   /** Location-aware instances granted by this source. */
   entries: ResolvedInventoryEntry[]
@@ -74,40 +77,6 @@ export type ResolvedEquipment = {
   mergedInventory: MergedInventoryLine[]
   currency: { goldPieces: number }
   weightCarriedLb: number
-}
-
-function findSelection(
-  selections: readonly EquipmentSelection[],
-  source: EquipmentSourceRef,
-  entitlementId: string,
-): EquipmentSelection | null {
-  return (
-    selections.find(
-      (entry) =>
-        equipmentSourcesEqual(entry.source, source) &&
-        entry.entitlementId === entitlementId,
-    ) ?? null
-  )
-}
-
-function isEntitlementComplete(
-  entitlement: EquipmentEntitlement,
-  selection: EquipmentSelection | null,
-): boolean {
-  if (entitlement.type === 'grant') {
-    return true
-  }
-
-  if (entitlement.type === 'choose-option') {
-    if (selection?.optionId == null) {
-      return false
-    }
-
-    return entitlement.options.some((option) => option.id === selection.optionId)
-  }
-
-  const chosen = selection?.choices.length ?? 0
-  return chosen >= entitlement.count
 }
 
 function grantsFromOption(option: EquipmentOption): EquipmentGrant[] {
@@ -179,23 +148,22 @@ function resolveSource(input: {
   catalogById: Map<string, EquipmentItemDefinition>
   ordinalStart: number
 }): ResolvedEquipmentSource & { nextOrdinal: number } {
-  const entitlements: ResolvedEquipmentEntitlement[] =
-    input.definition.entitlements.map((entitlement) => {
-      const selection = findSelection(
-        input.character.equipment.selections,
-        input.source,
-        entitlement.id,
-      )
+  const nodes = collectActiveEquipmentNodes(
+    input.definition,
+    input.source,
+    input.character.equipment.selections,
+    input.catalogById,
+  )
 
-      return {
-        entitlement,
-        selection,
-        isComplete: isEntitlementComplete(entitlement, selection),
-      }
-    })
+  const entitlements: ResolvedEquipmentEntitlement[] = nodes.map((node) => ({
+    entitlement: node.entitlement,
+    path: node.path,
+    selection: node.selection,
+    isComplete: node.isComplete,
+  }))
 
-  const grants = entitlements.flatMap((entry) =>
-    resolveEntitlementGrants(entry.entitlement, entry.selection),
+  const grants = nodes.flatMap((node) =>
+    resolveEntitlementGrants(node.entitlement, node.selection),
   )
 
   const materialized = materializeInventoryEntries(
@@ -211,6 +179,7 @@ function resolveSource(input: {
     label: input.label,
     sourceKindLabel: input.sourceKindLabel,
     completeness: input.definition.completeness,
+    definition: input.definition,
     entitlements,
     entries: materialized.entries,
     items: toInventoryItems(
@@ -302,10 +271,17 @@ export async function resolveCharacterEquipment(
   }
 }
 
+/**
+ * Active selection keys for current class/background definitions, walking
+ * nested branches according to `character.equipment.selections`.
+ */
 export function listActiveEquipmentSelectionKeys(
   character: Character,
   classSelections: readonly CharacterClassSelection[],
-  classDefinitionsById: Map<string, { startingEquipment: StartingEquipmentDefinition }>,
+  classDefinitionsById: Map<
+    string,
+    { startingEquipment: StartingEquipmentDefinition }
+  >,
   backgroundDefinition: StartingEquipmentDefinition | null,
 ): string[] {
   const keys: string[] = []
@@ -321,9 +297,13 @@ export function listActiveEquipmentSelectionKeys(
       instanceId: classSelection.instanceId,
     }
 
-    for (const entitlement of definition.startingEquipment.entitlements) {
-      keys.push(equipmentSelectionKey(source, entitlement.id))
-    }
+    keys.push(
+      ...collectActiveEquipmentSelectionKeysForDefinition(
+        definition.startingEquipment,
+        source,
+        character.equipment.selections,
+      ),
+    )
   }
 
   if (character.background !== null && backgroundDefinition !== null) {
@@ -332,9 +312,13 @@ export function listActiveEquipmentSelectionKeys(
       backgroundId: character.background.backgroundId,
     }
 
-    for (const entitlement of backgroundDefinition.entitlements) {
-      keys.push(equipmentSelectionKey(source, entitlement.id))
-    }
+    keys.push(
+      ...collectActiveEquipmentSelectionKeysForDefinition(
+        backgroundDefinition,
+        source,
+        character.equipment.selections,
+      ),
+    )
   }
 
   return keys

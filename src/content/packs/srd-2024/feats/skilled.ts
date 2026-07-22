@@ -20,5 +20,15 @@ export const skilledSrd2024: FeatDefinition = {
     },
   ],
   repeatable: true,
-  choices: [],
+  choices: [
+    {
+      id: 'skill-or-tool-proficiencies',
+      prompt: 'Choose three skills or tools',
+      type: 'multi-select',
+      required: true,
+      min: 3,
+      max: 3,
+      optionSource: 'skill-or-tool-proficiency',
+    },
+  ],
 }

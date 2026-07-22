@@ -1,6 +1,7 @@
 import type { AbilityId } from '../../domain/abilities/types'
 import { getAbilityModifier } from '../../domain/abilities'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
+import { getClassFeaturesUpToLevel } from '../../domain/class/featureProgression'
 import type {
   ClassDefinition,
 } from '../../domain/class/types'
@@ -19,6 +20,7 @@ import type {
   FeatSpellcasting,
   SpellDefinition,
   SpellEntitlement,
+  SpellPrepareFrom,
   SpellSelectionKind,
   SpellSourceRef,
   SpellSourceState,
@@ -31,7 +33,9 @@ import {
 import { resolveSpellCount } from '../spell/resolveSpellCount'
 import {
   collectSlotContributors,
+  resolvePactMagicSlots,
   resolveSharedSpellSlots,
+  type PactMagicSlots,
   type SharedSpellSlots,
 } from '../spell/resolveSharedSpellSlots'
 
@@ -50,6 +54,8 @@ export type ResolvedSpellEntitlement = {
   selectionKind?: SpellSelectionKind
   listId?: string
   label: string
+  /** Optional helper copy (e.g. Magical Secrets active hint). */
+  description?: string
   limit: number
   accessibleLevels: number[]
   selectedSpellIds: string[]
@@ -62,6 +68,23 @@ export type ResolvedSpellEntitlement = {
   attackBonusLabel: string
   /** Resolved from content or selectionKind defaults. */
   crossSourceDuplicatePolicy?: CrossSourceDuplicatePolicy
+  /** Prepared entitlements: where picks may be chosen from. */
+  prepareFrom?: SpellPrepareFrom
+  /** Linked spellbook entitlement id when prepareFrom is spellbook. */
+  spellbookEntitlementId?: string
+  /** Resolved spellbook contents for UI filtering (same class instance). */
+  spellbookSpellIds?: string[]
+  /**
+   * When false, selections do not consume a shared prepared budget
+   * (Spell Mastery / Signature Spells). Defaults to true for selects.
+   */
+  countsAgainstLimit?: boolean
+  /** School filter from content (case-insensitive match). */
+  schools?: string[]
+  /** Casting-time filter from content (exact match). */
+  castingTime?: string
+  /** Spell ids on the resolved list (when catalogue was available). */
+  listSpellIds?: readonly string[]
 }
 
 export type ResolvedSpellSourceGroup = {
@@ -81,6 +104,8 @@ export type CharacterSpellcastingSummary = {
   spellLines: string[]
   groups: ResolvedSpellSourceGroup[]
   sharedSlots: SharedSpellSlots | null
+  /** Pact Magic pools (never merged into sharedSlots). */
+  pactSlots: PactMagicSlots | null
   activeSources: SpellSourceRef[]
 }
 
@@ -114,12 +139,17 @@ function castingStats(
 function resolveAccessibleLevels(
   entitlement: Extract<SpellEntitlement, { kind: 'select' }>,
   slotCeiling: number,
+  pactSlotLevel: number | null,
 ): number[] {
   const min = entitlement.levelRange.min
-  const max =
-    entitlement.levelRange.max === 'slot-ceiling'
-      ? slotCeiling
-      : entitlement.levelRange.max
+  let max: number
+  if (entitlement.levelRange.max === 'slot-ceiling') {
+    max = slotCeiling
+  } else if (entitlement.levelRange.max === 'pact-slot-level') {
+    max = pactSlotLevel ?? 0
+  } else {
+    max = entitlement.levelRange.max
+  }
 
   if (max < min) {
     return []
@@ -172,7 +202,11 @@ function collectClassActiveEntitlements(
     })
   }
 
-  for (const choice of getChoicesAvailableAtLevel(definition, level)) {
+  for (const choice of getChoicesAvailableAtLevel(
+    definition,
+    level,
+    choices,
+  )) {
     const selected = choices[choice.id]
     if (selected === undefined) {
       continue
@@ -214,7 +248,7 @@ function collectClassActiveEntitlements(
               entitlementId: entitlement.id,
             },
             entitlement,
-            label: feature.name,
+            label: entitlementLabel(entitlement, feature.name),
             ability,
             sourceLevel: level,
             groupId,
@@ -222,6 +256,24 @@ function collectClassActiveEntitlements(
           })
         }
       }
+    }
+  }
+
+  for (const feature of getClassFeaturesUpToLevel(definition, level)) {
+    for (const entitlement of feature.spellEntitlements ?? []) {
+      active.push({
+        source: {
+          kind: 'class-instance',
+          instanceId,
+          entitlementId: entitlement.id,
+        },
+        entitlement,
+        label: entitlementLabel(entitlement, feature.name),
+        ability,
+        sourceLevel: level,
+        groupId,
+        groupLabel,
+      })
     }
   }
 
@@ -236,6 +288,10 @@ function entitlementLabel(
     return fallback
   }
 
+  if (entitlement.label !== undefined && entitlement.label.length > 0) {
+    return entitlement.label
+  }
+
   switch (entitlement.selectionKind) {
     case 'cantrip':
       return 'Cantrips'
@@ -243,7 +299,35 @@ function entitlementLabel(
       return 'Prepared Spells'
     case 'known':
       return 'Known Spells'
+    case 'spellbook':
+      return 'Spellbook'
   }
+}
+
+/** Effective list for a select entitlement at a given source class level. */
+export function resolveSpellEntitlementListId(
+  entitlement: Extract<SpellEntitlement, { kind: 'select' }>,
+  sourceLevel: number,
+): string {
+  if (
+    entitlement.expandedListId !== undefined &&
+    entitlement.expandedFromLevel !== undefined &&
+    sourceLevel >= entitlement.expandedFromLevel
+  ) {
+    return entitlement.expandedListId
+  }
+  return entitlement.listId
+}
+
+function isExpandedSpellListActive(
+  entitlement: Extract<SpellEntitlement, { kind: 'select' }>,
+  sourceLevel: number,
+): boolean {
+  return (
+    entitlement.expandedListId !== undefined &&
+    entitlement.expandedFromLevel !== undefined &&
+    sourceLevel >= entitlement.expandedFromLevel
+  )
 }
 
 function formatGrantedFeatSpellcastingLabel(
@@ -307,13 +391,68 @@ function collectFeatActiveEntitlements(
   }))
 }
 
+function findSpellbookSpellIds(
+  active: ActiveEntitlement,
+  entitlement: Extract<SpellEntitlement, { kind: 'select' }>,
+  states: SpellSourceState[],
+  activeEntitlements: ActiveEntitlement[],
+): string[] | undefined {
+  if (
+    entitlement.selectionKind !== 'prepared' ||
+    entitlement.prepareFrom !== 'spellbook'
+  ) {
+    return undefined
+  }
+
+  if (active.source.kind !== 'class-instance') {
+    return []
+  }
+
+  const instanceId = active.source.instanceId
+  const bookEntitlementId = entitlement.spellbookEntitlementId
+
+  const bookActives = activeEntitlements.filter((candidate) => {
+    if (
+      candidate.source.kind !== 'class-instance' ||
+      candidate.source.instanceId !== instanceId ||
+      candidate.entitlement.kind !== 'select' ||
+      candidate.entitlement.selectionKind !== 'spellbook'
+    ) {
+      return false
+    }
+    if (bookEntitlementId === undefined) {
+      return true
+    }
+    return candidate.entitlement.id === bookEntitlementId
+  })
+
+  const spellIds: string[] = []
+  const seen = new Set<string>()
+  for (const bookActive of bookActives) {
+    const bookState = findSourceState(states, bookActive.source)
+    for (const selection of bookState?.selections ?? []) {
+      if (seen.has(selection.spellId)) {
+        continue
+      }
+      seen.add(selection.spellId)
+      spellIds.push(selection.spellId)
+    }
+  }
+
+  return spellIds
+}
+
 function buildResolvedEntitlement(
   active: ActiveEntitlement,
   state: SpellSourceState | undefined,
   spellsById: Map<string, SpellDefinition>,
   slotCeiling: number,
+  pactSlotLevel: number | null,
   abilityScores: Character['abilityScores'],
   characterLevel: number,
+  allStates: SpellSourceState[],
+  allActive: ActiveEntitlement[],
+  listSpellIdsByListId?: ReadonlyMap<string, readonly string[]>,
 ): ResolvedSpellEntitlement {
   const stats = castingStats(active.ability, abilityScores, characterLevel)
   const { entitlement } = active
@@ -349,7 +488,11 @@ function buildResolvedEntitlement(
   }
 
   const limit = resolveSpellCount(entitlement.count, active.sourceLevel)
-  const accessibleLevels = resolveAccessibleLevels(entitlement, slotCeiling)
+  const accessibleLevels = resolveAccessibleLevels(
+    entitlement,
+    slotCeiling,
+    pactSlotLevel,
+  )
   const grantedCounting = 0
   const selectedSpellIds = (state?.selections ?? []).map(
     (selection) => selection.spellId,
@@ -358,13 +501,31 @@ function buildResolvedEntitlement(
     0,
     limit - selectedSpellIds.length - grantedCounting,
   )
+  const spellbookSpellIds = findSpellbookSpellIds(
+    active,
+    entitlement,
+    allStates,
+    allActive,
+  )
+  const listId = resolveSpellEntitlementListId(entitlement, active.sourceLevel)
+  const expandedActive = isExpandedSpellListActive(
+    entitlement,
+    active.sourceLevel,
+  )
+  const description =
+    entitlement.description ??
+    (expandedActive
+      ? 'Magical Secrets: you may prepare spells from the Bard, Cleric, Druid, and Wizard lists.'
+      : undefined)
+  const listSpellIds = listSpellIdsByListId?.get(listId)
 
   return {
     entitlementId: entitlement.id,
     kind: 'select',
     selectionKind: entitlement.selectionKind,
-    listId: entitlement.listId,
+    listId,
     label: active.label,
+    description,
     limit,
     accessibleLevels,
     selectedSpellIds,
@@ -372,6 +533,13 @@ function buildResolvedEntitlement(
     remainingPicks,
     ability: active.ability,
     crossSourceDuplicatePolicy: entitlement.crossSourceDuplicatePolicy,
+    prepareFrom: entitlement.prepareFrom,
+    spellbookEntitlementId: entitlement.spellbookEntitlementId,
+    spellbookSpellIds,
+    countsAgainstLimit: entitlement.countsAgainstLimit ?? true,
+    schools: entitlement.schools,
+    castingTime: entitlement.castingTime,
+    listSpellIds,
     ...stats,
   }
 }
@@ -425,6 +593,7 @@ export async function resolveCharacterSpellcasting(
   }
 
   const spellsById = new Map<string, SpellDefinition>()
+  const listSpellIdsByListId = new Map<string, readonly string[]>()
   if (options?.spellCatalog !== undefined) {
     const spells = await options.spellCatalog.listSpells(character.editionId)
     for (const spell of spells) {
@@ -589,12 +758,41 @@ export async function resolveCharacterSpellcasting(
 
   const normalizedActive = activeEntitlements
 
+  if (options?.spellCatalog !== undefined) {
+    const neededListIds = new Set<string>()
+    for (const active of normalizedActive) {
+      if (active.entitlement.kind !== 'select') {
+        continue
+      }
+      neededListIds.add(
+        resolveSpellEntitlementListId(active.entitlement, active.sourceLevel),
+      )
+      neededListIds.add(active.entitlement.listId)
+      if (active.entitlement.expandedListId !== undefined) {
+        neededListIds.add(active.entitlement.expandedListId)
+      }
+    }
+    for (const listId of neededListIds) {
+      const list = await options.spellCatalog.getSpellList(listId)
+      if (list !== null) {
+        listSpellIdsByListId.set(listId, list.spellIds)
+      }
+    }
+  }
+
   const contributors = collectSlotContributors(
     character.classes,
     definitionsById,
   )
   const sharedSlots = resolveSharedSpellSlots(contributors)
+  const pactSlots = resolvePactMagicSlots(character.classes, definitionsById)
   const slotCeiling = sharedSlots?.highestSlotLevel ?? 0
+  const pactSlotLevelByInstanceId = new Map<string, number>()
+  if (pactSlots !== null) {
+    for (const source of pactSlots.sources) {
+      pactSlotLevelByInstanceId.set(source.instanceId, source.slotLevel)
+    }
+  }
 
   const groupsById = new Map<string, ResolvedSpellSourceGroup>()
 
@@ -617,13 +815,21 @@ export async function resolveCharacterSpellcasting(
     }
 
     const state = findSourceState(character.spellSourceStates, active.source)
+    const pactSlotLevel =
+      active.source.kind === 'class-instance'
+        ? (pactSlotLevelByInstanceId.get(active.source.instanceId) ?? null)
+        : null
     const resolved = buildResolvedEntitlement(
       active,
       state,
       spellsById,
       slotCeiling,
+      pactSlotLevel,
       character.abilityScores,
       character.targetLevel,
+      character.spellSourceStates,
+      normalizedActive,
+      listSpellIdsByListId,
     )
 
     group.entitlements.push(resolved)
@@ -649,6 +855,15 @@ export async function resolveCharacterSpellcasting(
       if (entitlement.kind !== 'select' || entitlement.selectionKind === undefined) {
         continue
       }
+      // Bonus prepared pools (Spell Mastery / Signature) keep their own picks
+      // and must not absorb always-prepared grants from the main pool.
+      if (entitlement.countsAgainstLimit === false) {
+        entitlement.remainingPicks = Math.max(
+          0,
+          entitlement.limit - entitlement.selectedSpellIds.length,
+        )
+        continue
+      }
       const grants = grantedByKind.get(entitlement.selectionKind) ?? []
       const counting = grants.filter((grant) => grant.countsAgainstLimit).length
       entitlement.grantedSpells = grants
@@ -661,12 +876,46 @@ export async function resolveCharacterSpellcasting(
 
   const groups = [...groupsById.values()]
   const activeSources = normalizedActive.map((entry) => entry.source)
-  const hasSpellContent = groups.some(
-    (group) => group.entitlements.length > 0,
+  const hasSpellbookContent = groups.some((group) =>
+    group.entitlements.some(
+      (entitlement) =>
+        entitlement.selectionKind === 'spellbook' &&
+        (entitlement.selectedSpellIds.length > 0 || entitlement.limit > 0),
+    ),
   )
-  const hasSpellcastingCapability = contributors.length > 0 || hasSpellContent
+  const hasSpellContent =
+    groups.some((group) => group.entitlements.length > 0) ||
+    pactSlots !== null
+  const hasSpellcastingCapability =
+    contributors.length > 0 || hasSpellContent || pactSlots !== null
 
   const spellLines: string[] = []
+  if (pactSlots !== null) {
+    for (const source of pactSlots.sources) {
+      const recoveryLabel =
+        source.recovery === 'short-rest' ? 'short rest' : 'long rest'
+      spellLines.push(
+        `${source.className} — Pact Magic: ${source.slotCount}× level ${source.slotLevel} (${recoveryLabel})`,
+      )
+    }
+  }
+  if (hasSpellbookContent) {
+    for (const group of groups) {
+      for (const entitlement of group.entitlements) {
+        if (
+          entitlement.selectionKind === 'spellbook' &&
+          entitlement.selectedSpellIds.length > 0
+        ) {
+          const names = entitlement.selectedSpellIds.map(
+            (spellId) => spellsById.get(spellId)?.name ?? spellId,
+          )
+          spellLines.push(
+            `${group.label} — Spellbook: ${names.join(', ')}`,
+          )
+        }
+      }
+    }
+  }
   for (const group of groups) {
     for (const entitlement of group.entitlements) {
       for (const granted of entitlement.grantedSpells) {
@@ -676,6 +925,7 @@ export async function resolveCharacterSpellcasting(
       }
       if (
         entitlement.kind === 'select' &&
+        entitlement.selectionKind !== 'spellbook' &&
         entitlement.selectedSpellIds.length > 0
       ) {
         const names = entitlement.selectedSpellIds.map(
@@ -694,6 +944,7 @@ export async function resolveCharacterSpellcasting(
     spellLines: [...new Set(spellLines)],
     groups,
     sharedSlots,
+    pactSlots,
     activeSources,
   }
 }

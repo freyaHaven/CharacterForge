@@ -1,6 +1,7 @@
 import type { ClassDefinition } from '../../../../domain/class/types'
 import { createAsiChoiceDefinition } from '../../../../domain/class/abilityScoreImprovement'
 import { createEpicBoonChoiceDefinition } from '../../../../domain/class/epicBoon'
+import { createFightingStyleChoiceDefinition } from '../../../../domain/class/fightingStyle'
 import { subclassToChoiceOption } from '../../../../domain/class/subclassDefinition'
 import type { SkillId } from '../../../../domain/skills/types'
 import { SKILL_LABELS } from '../../../../domain/skills/types'
@@ -51,6 +52,12 @@ export const rangerSrd2024: ClassDefinition = {
   catalogOrder: 18,
   hitDie: { sides: 10 },
   primaryAbilities: ['dexterity', 'wisdom'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['dexterity', 'wisdom'],
+    minimum: 13,
+    summary: 'Dexterity and Wisdom 13',
+  },
   savingThrows: ['strength', 'dexterity'],
   spellcasting: rangerSpellcastingSrd2024,
   proficiencies: {
@@ -345,46 +352,19 @@ export const rangerSrd2024: ClassDefinition = {
       max: 2,
       options: WEAPON_MASTERY_OPTIONS,
     },
-    {
-      id: 'fighting-style',
+    createFightingStyleChoiceDefinition({
       level: 2,
-      prompt: 'Choose a Fighting Style',
-      type: 'single-select',
-      required: true,
-      options: [
-        {
-          id: 'archery',
-          label: 'Archery',
-          description:
-            'You gain a +2 bonus to attack rolls you make with Ranged weapons.',
-          effects: [{ kind: 'fighting-style', styleId: 'archery' }],
-        },
-        {
-          id: 'defense',
-          label: 'Defense',
-          description:
-            'While you are wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.',
-          effects: [{ kind: 'fighting-style', styleId: 'defense' }],
-        },
-        {
-          id: 'two-weapon-fighting',
-          label: 'Two-Weapon Fighting',
-          description:
-            'When you make an extra attack as a result of using a Light weapon, you can add your ability modifier to the damage of that attack if you are not already adding it to the damage.',
-          effects: [
-            { kind: 'fighting-style', styleId: 'two-weapon-fighting' },
-          ],
-        },
+      recommendedFeatId: 'srd-2024:archery',
+      alternateOptions: [
         {
           id: 'druidic-warrior',
           label: 'Druidic Warrior',
           description:
             'You learn two Druid cantrips of your choice. Guidance and Starry Wisp are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip.',
-          effects: [{ kind: 'fighting-style', styleId: 'druidic-warrior' }],
           spellEntitlements: [druidicWarriorCantripsEntitlement],
         },
       ],
-    },
+    }),
     {
       id: 'expertise',
       level: 2,

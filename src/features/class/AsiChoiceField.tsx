@@ -14,9 +14,10 @@ import {
   selectAsiPlus2,
   type AsiMode,
 } from '../../domain/class/abilityScoreImprovement'
-import { isFeatExcludedFromFeatGrantPickers } from '../../domain/class/epicBoon'
+import { isFeatExcludedFromAsiFeatModePicker } from '../../domain/class/epicBoon'
 import { formatAbilityLabel } from './formatClassDetails'
 import type { AbilityId } from '../../domain/abilities/types'
+import { FeatSubChoicesFields } from '../feat/FeatSubChoicesFields'
 
 export type AsiChoiceFieldProps = {
   choiceId: string
@@ -25,8 +26,16 @@ export type AsiChoiceFieldProps = {
   featCatalog: FeatCatalog
   /** Feat ids already taken by other ASI slots / character.feat (exclude this choice). */
   takenFeatIds: readonly string[]
+  /** Nested feat sub-choices for the selected feat (companion keys). */
+  featChoices?: Record<string, string | string[]>
+  ownedSkillIds?: ReadonlySet<string>
+  ownedToolIds?: ReadonlySet<string>
   errorId?: string
   onChange: (choiceId: string, value: string) => void
+  onFeatChoiceChange?: (
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) => void
 }
 
 function EmbeddedFeatSelect({
@@ -87,8 +96,12 @@ export function AsiChoiceField({
   editionId,
   featCatalog,
   takenFeatIds,
+  featChoices = {},
+  ownedSkillIds = new Set(),
+  ownedToolIds = new Set(),
   errorId,
   onChange,
+  onFeatChoiceChange,
 }: AsiChoiceFieldProps) {
   const reactId = useId()
   const mode = getAsiMode(value)
@@ -101,7 +114,7 @@ export function AsiChoiceField({
     void featCatalog.listFeats(editionId).then((list) => {
       if (active) {
         setFeats(
-          list.filter((feat) => !isFeatExcludedFromFeatGrantPickers(feat.id)),
+          list.filter((feat) => !isFeatExcludedFromAsiFeatModePicker(feat.id)),
         )
       }
     })
@@ -116,6 +129,10 @@ export function AsiChoiceField({
   const plus1Abilities =
     parsed?.kind === 'plus-1-1' ? parsed.abilityIds : null
   const selectedFeatId = parsed?.kind === 'feat' ? parsed.featId : null
+  const selectedFeatDefinition =
+    selectedFeatId === null
+      ? null
+      : (feats.find((feat) => feat.id === selectedFeatId) ?? null)
 
   const handleModeChange = (nextMode: AsiMode) => {
     onChange(choiceId, selectAsiMode(nextMode))
@@ -255,6 +272,17 @@ export function AsiChoiceField({
               onChange(choiceId, selectAsiFeat(featId))
             }}
           />
+          {selectedFeatDefinition !== null &&
+          selectedFeatDefinition.choices.length > 0 &&
+          onFeatChoiceChange !== undefined ? (
+            <FeatSubChoicesFields
+              definition={selectedFeatDefinition}
+              choices={featChoices}
+              ownedSkillIds={ownedSkillIds}
+              ownedToolIds={ownedToolIds}
+              onChange={onFeatChoiceChange}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

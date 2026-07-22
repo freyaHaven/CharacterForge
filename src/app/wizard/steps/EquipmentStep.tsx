@@ -1,6 +1,10 @@
+import { useEffect, useState } from 'react'
 import type {
+  EquipmentItemDefinition,
   EquipmentSelection,
 } from '../../../domain/equipment/types'
+import type { EquipmentCatalog } from '../../../domain/ports/equipmentCatalog'
+import type { EditionId } from '../../../domain/edition'
 import type { ResolvedEquipment } from '../../../rules/character/resolveCharacterEquipment'
 import type { EquipmentValidationIssue } from '../../../rules/equipment/validateEquipmentSelections'
 import { EquipmentSourceSection } from '../../../features/equipment/EquipmentSourceSection'
@@ -10,6 +14,8 @@ type EquipmentStepProps = {
   selections: EquipmentSelection[]
   onChangeSelections: (next: EquipmentSelection[]) => void
   validationIssues: EquipmentValidationIssue[]
+  equipmentCatalog: EquipmentCatalog
+  editionId: EditionId
 }
 
 export function EquipmentStep({
@@ -17,8 +23,28 @@ export function EquipmentStep({
   selections,
   onChangeSelections,
   validationIssues,
+  equipmentCatalog,
+  editionId,
 }: EquipmentStepProps) {
   const hasSources = resolved.sources.length > 0
+  const [catalogueItems, setCatalogueItems] = useState<
+    EquipmentItemDefinition[]
+  >([])
+
+  useEffect(() => {
+    let isActive = true
+
+    void (async () => {
+      const items = await equipmentCatalog.listEquipment(editionId)
+      if (isActive) {
+        setCatalogueItems(items)
+      }
+    })()
+
+    return () => {
+      isActive = false
+    }
+  }, [editionId, equipmentCatalog])
 
   return (
     <section
@@ -41,7 +67,9 @@ export function EquipmentStep({
       {validationIssues.length > 0 ? (
         <ul className="equipment-step__issues" aria-live="polite">
           {validationIssues.map((issue) => (
-            <li key={`${issue.sourceLabel}-${issue.entitlementId}`}>
+            <li
+              key={`${issue.sourceLabel}-${issue.entitlementId}-${issue.message}`}
+            >
               {issue.message}
             </li>
           ))}
@@ -54,6 +82,7 @@ export function EquipmentStep({
             key={`${source.sourceKindLabel}-${source.label}`}
             source={source}
             selections={selections}
+            catalogueItems={catalogueItems}
             onChangeSelections={onChangeSelections}
           />
         ))}

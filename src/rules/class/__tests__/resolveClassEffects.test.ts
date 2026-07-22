@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { clericSrd2024 } from '../../../content/packs/srd-2024/classes/cleric'
+import { druidSrd2024 } from '../../../content/packs/srd-2024/classes/druid'
 import { fighterSrd2024 } from '../../../content/packs/srd-2024/classes/fighter'
 import type { ClassSelection } from '../../../domain/class/types'
 import { createTestClassSpellcasting } from '../../../testing/createTestClassSpellcasting'
@@ -39,13 +41,9 @@ describe('resolveClassEffects', () => {
     })
   })
 
-  it('adds choice-specific effects without branching on class id', () => {
+  it('adds choice-specific skill effects without branching on class id', () => {
     const effects = resolveClassEffects(fighterSrd2024, completeFighterSelection)
 
-    expect(effects).toContainEqual({
-      kind: 'fighting-style',
-      styleId: 'great-weapon-fighting',
-    })
     expect(effects).toContainEqual({
       kind: 'skill-proficiency',
       skillId: 'athletics',
@@ -54,6 +52,10 @@ describe('resolveClassEffects', () => {
       kind: 'skill-proficiency',
       skillId: 'intimidation',
     })
+    // Fighting Styles are feat grants — not class option effects.
+    expect(effects.some((effect) => effect.kind === 'fighting-style')).toBe(
+      false,
+    )
   })
 
   it('includes spellcasting when the class definition grants it', () => {
@@ -68,6 +70,58 @@ describe('resolveClassEffects', () => {
     expect(effects).toContainEqual({
       kind: 'spellcasting',
       ability: 'intelligence',
+    })
+  })
+
+  it('applies feature progression effects and choice armor without duplicates', () => {
+    const effects = resolveClassEffects(druidSrd2024, {
+      classId: 'srd-2024:druid',
+      level: 1,
+      choices: {
+        'skill-proficiencies': ['nature', 'perception'],
+        'primal-order': 'warden',
+      },
+    })
+
+    expect(effects).toContainEqual({
+      kind: 'language',
+      languageId: 'druidic',
+      label: 'Druidic',
+    })
+    expect(effects).toContainEqual({
+      kind: 'tool-proficiency',
+      toolId: 'herbalism-kit',
+      label: 'Herbalism Kit',
+    })
+    expect(effects).toContainEqual({
+      kind: 'armor-proficiency',
+      category: 'medium',
+    })
+    expect(
+      effects.filter(
+        (effect) =>
+          effect.kind === 'armor-proficiency' && effect.category === 'light',
+      ),
+    ).toHaveLength(1)
+  })
+
+  it('applies Cleric Protector heavy armor and martial weapons', () => {
+    const effects = resolveClassEffects(clericSrd2024, {
+      classId: 'srd-2024:cleric',
+      level: 1,
+      choices: {
+        'skill-proficiencies': ['insight', 'religion'],
+        'divine-order': 'protector',
+      },
+    })
+
+    expect(effects).toContainEqual({
+      kind: 'armor-proficiency',
+      category: 'heavy',
+    })
+    expect(effects).toContainEqual({
+      kind: 'weapon-proficiency',
+      category: 'martial',
     })
   })
 })

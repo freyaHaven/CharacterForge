@@ -59,6 +59,8 @@ import {
 } from './classSelectionDraft'
 import type { SpeciesDefinition, SpeciesSelection } from '../../domain/species/types'
 import { calculateCharacterHitPoints } from '../../rules/hit-points/calculateCharacterHitPoints'
+import { resolveClassEffects } from '../../rules/class/resolveClassEffects'
+import { resolveSpeciesEffects } from '../../rules/species/resolveSpeciesEffects'
 
 type ClassPickerProps = {
   editionId: EditionId
@@ -71,10 +73,17 @@ type ClassPickerProps = {
   draft: ClassSelectionDraft | null
   abilityScores: AbilityScores
   speciesSelection: SpeciesSelection | null
+  /** Background skill proficiencies for Expertise eligibility. */
+  backgroundSkillIds?: readonly string[]
   catalog: ClassCatalog
   speciesCatalog: SpeciesCatalog
   featCatalog: FeatCatalog
   characterFeatId?: string | null
+  multiclassValidationIssues?: readonly {
+    sourceInstanceId: string
+    sourceClassId: string
+    message: string
+  }[]
   onBuildModeChange: (mode: ClassBuildMode) => void
   onReturnToClassPathIntro: () => void
   onSwitchToMulticlass: () => void
@@ -98,8 +107,13 @@ function getFeatureLinkedChoiceStateKeys(
   instanceId: string,
   definition: ClassDefinition,
   level: number,
+  selectedChoices: Record<string, string | string[]> = {},
 ): string[] {
-  const availableChoices = getChoicesAvailableAtLevel(definition, level)
+  const availableChoices = getChoicesAvailableAtLevel(
+    definition,
+    level,
+    selectedChoices,
+  )
   const featureIds = getClassFeatureProgressionUpToLevel(definition, level)
     .flatMap((entry) => entry.features)
     .map((feature) => feature.id)
@@ -123,10 +137,12 @@ export function ClassPicker({
   draft,
   abilityScores,
   speciesSelection,
+  backgroundSkillIds = [],
   catalog,
   speciesCatalog,
   featCatalog,
   characterFeatId = null,
+  multiclassValidationIssues = [],
   onBuildModeChange,
   onReturnToClassPathIntro,
   onSwitchToMulticlass,
@@ -267,6 +283,48 @@ export function ClassPicker({
       ),
     [classList],
   )
+
+  const ownedProficientSkillIds = useMemo(() => {
+    const skills = new Set<string>()
+
+    for (const skillId of backgroundSkillIds) {
+      skills.add(skillId)
+    }
+
+    for (const instance of effectiveInstances) {
+      const definition = classDefinitionsById.get(instance.classId)
+      if (definition === undefined) {
+        continue
+      }
+      for (const effect of resolveClassEffects(
+        definition,
+        classInstanceToSelection(instance),
+      )) {
+        if (effect.kind === 'skill-proficiency') {
+          skills.add(effect.skillId)
+        }
+      }
+    }
+
+    if (speciesDefinition !== null && speciesSelection !== null) {
+      for (const effect of resolveSpeciesEffects(
+        speciesDefinition,
+        speciesSelection,
+      )) {
+        if (effect.kind === 'skill-proficiency') {
+          skills.add(effect.skillId)
+        }
+      }
+    }
+
+    return skills
+  }, [
+    backgroundSkillIds,
+    classDefinitionsById,
+    effectiveInstances,
+    speciesDefinition,
+    speciesSelection,
+  ])
 
   const maxInstanceLevel =
     buildMode === 'single-class' ? MAX_CLASS_LEVEL : MAX_CLASS_LEVEL
@@ -560,7 +618,12 @@ export function ClassPicker({
       return
     }
 
-    const nextDraft = updateClassDraftChoice(currentDraft, choiceId, value)
+    const nextDraft = updateClassDraftChoice(
+      currentDraft,
+      choiceId,
+      value,
+      activeDefinition ?? undefined,
+    )
     await commitDraft(nextDraft)
   }
 
@@ -601,6 +664,7 @@ export function ClassPicker({
           instanceId,
           activeDefinition,
           clampedLevel,
+          nextDraft.choices,
         ),
       ),
     )
@@ -771,6 +835,7 @@ export function ClassPicker({
                       characterLevel={targetLevel}
                       eligibilityClasses={effectiveInstances}
                       classDefinitionsById={classDefinitionsById}
+                      ownedProficientSkillIds={ownedProficientSkillIds}
                       onLevelChange={(level) => {
                         void handleLevelChange(level)
                       }}
@@ -785,9 +850,32 @@ export function ClassPicker({
                 </>
               ) : null}
 
-              {buildMode === 'multiclass' ? (
+                  {buildMode === 'multiclass' ? (
                 <>
                   <h2 className="class-picker__path-heading">Multiclass</h2>
+
+                  {multiclassValidationIssues.length > 0 ? (
+                    <div
+                      className="class-picker__multiclass-prereq-alert"
+                      role="alert"
+                    >
+                      <p className="validation-message">
+                        Multiclass ability score prerequisites are not met:
+                      </p>
+                      <ul className="validation-message-list">
+                        {multiclassValidationIssues.map((issue) => (
+                          <li key={`${issue.sourceInstanceId}:${issue.message}`}>
+                            {issue.message}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="helper-text">
+                        Raise the required scores on the Abilities step (or via
+                        background ASI), or change your class mix. Existing
+                        selections are kept until you change them.
+                      </p>
+                    </div>
+                  ) : null}
 
                   {multiclassStage === 'select-classes' ? (
                     <section
@@ -892,6 +980,7 @@ export function ClassPicker({
                           characterLevel={targetLevel}
                           eligibilityClasses={effectiveInstances}
                           classDefinitionsById={classDefinitionsById}
+                          ownedProficientSkillIds={ownedProficientSkillIds}
                           onLevelChange={(level) => {
                             void handleLevelChange(level)
                           }}

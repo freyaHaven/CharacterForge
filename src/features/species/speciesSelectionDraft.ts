@@ -3,6 +3,7 @@ import type {
   SpeciesSelection,
   SpeciesSelectionChoiceValue,
 } from '../../domain/species/types'
+import { clearFeatGrantChoices, isFeatGrantChoiceStorageKey } from '../../domain/feat/featGrantChoiceStorage'
 import type { EditionId } from '../../domain/types'
 import {
   validateSpeciesSelection,
@@ -47,7 +48,24 @@ export function updateSpeciesDraftChoice(
   choiceId: string,
   optionId: SpeciesSelectionChoiceValue | undefined,
 ): SpeciesSelectionDraft {
-  const nextChoices = { ...draft.choices }
+  let nextChoices: Record<string, SpeciesSelectionChoiceValue> = {
+    ...draft.choices,
+  }
+
+  const previous = draft.choices[choiceId]
+  const previousFeatId = typeof previous === 'string' ? previous : undefined
+  const nextFeatId = typeof optionId === 'string' ? optionId : undefined
+
+  // When a feat-grant slot changes feat id (or clears), drop nested companion keys.
+  if (
+    !isFeatGrantChoiceStorageKey(choiceId) &&
+    previousFeatId !== nextFeatId
+  ) {
+    nextChoices = clearFeatGrantChoices(
+      nextChoices,
+      choiceId,
+    ) as Record<string, SpeciesSelectionChoiceValue>
+  }
 
   if (optionId === undefined) {
     delete nextChoices[choiceId]

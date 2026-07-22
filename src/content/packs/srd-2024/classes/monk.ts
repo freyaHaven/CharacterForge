@@ -29,6 +29,12 @@ export const monkSrd2024: ClassDefinition = {
   catalogOrder: 15,
   hitDie: { sides: 8 },
   primaryAbilities: ['dexterity', 'wisdom'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['dexterity', 'wisdom'],
+    minimum: 13,
+    summary: 'Dexterity and Wisdom 13',
+  },
   savingThrows: ['strength', 'dexterity'],
   proficiencies: {
     armor: [],
@@ -393,6 +399,15 @@ export const monkSrd2024: ClassDefinition = {
   startingEquipment: createCompleteClassPackageOrGoldStartingEquipment({
     items: MONK_PACKAGE_A,
     goldPieces: 50,
+    packageEntitlements: [
+      {
+        type: 'choose-items',
+        id: 'artisan-tools',
+        label: "Choose artisan's tools",
+        count: 1,
+        catalogueFilter: { kind: 'tags', tags: ['artisan-tools'] },
+      },
+    ],
   }),
   deferredRequirements: [
     {

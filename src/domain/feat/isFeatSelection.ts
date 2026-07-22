@@ -1,5 +1,15 @@
 import type { FeatSelection } from './types'
 
+function isFeatChoiceValue(value: unknown): value is string | string[] {
+  if (typeof value === 'string') {
+    return true
+  }
+
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+  )
+}
+
 export function isFeatSelection(value: unknown): value is FeatSelection {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -17,5 +27,5 @@ export function isFeatSelection(value: unknown): value is FeatSelection {
 
   const choices = candidate.choices as Record<string, unknown>
 
-  return Object.values(choices).every((choice) => typeof choice === 'string')
+  return Object.values(choices).every(isFeatChoiceValue)
 }

@@ -7,7 +7,7 @@ describe('fighterSrd2024', () => {
     expect(fighterSrd2024.editionId).toBe('srd-2024')
   })
 
-  it('includes only the SRD 5.2.1 fighting style options', () => {
+  it('grants Fighting Style feats via the shared feat-grant catalogue', () => {
     const fightingStyle = fighterSrd2024.choices.find(
       (choice) => choice.id === 'fighting-style',
     )
@@ -15,14 +15,17 @@ describe('fighterSrd2024', () => {
     expect(fightingStyle?.type).toBe('single-select')
     expect(
       fightingStyle?.type === 'single-select'
-        ? fightingStyle.options.map((option) => option.id)
-        : [],
-    ).toEqual([
-      'archery',
-      'defense',
-      'great-weapon-fighting',
-      'two-weapon-fighting',
-    ])
+        ? fightingStyle.featGrantCategory
+        : undefined,
+    ).toBe('fighting-style')
+    expect(
+      fightingStyle?.type === 'single-select' ? fightingStyle.options : [],
+    ).toEqual([])
+    expect(
+      fightingStyle?.type === 'single-select'
+        ? fightingStyle.recommendedFeatId
+        : undefined,
+    ).toBe('srd-2024:defense')
   })
 
   it('requires two skill proficiencies', () => {
@@ -74,6 +77,7 @@ describe('fighterSrd2024', () => {
       { id: 'weapon-mastery-weapons-5', level: 10 },
       { id: 'weapon-mastery-weapons-6', level: 16 },
       { id: 'fighter-subclass', level: 3 },
+      { id: 'champion-additional-fighting-style', level: 7 },
       { id: 'ability-score-improvement-4', level: 4 },
       { id: 'ability-score-improvement-6', level: 6 },
       { id: 'ability-score-improvement-8', level: 8 },

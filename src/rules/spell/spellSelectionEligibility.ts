@@ -92,6 +92,11 @@ export function collectSpellAvailability(
         continue
       }
 
+      // Spellbook entries are recorded, not castable — skip availability index.
+      if (entitlement.selectionKind === 'spellbook') {
+        continue
+      }
+
       for (const spellId of entitlement.selectedSpellIds) {
         add(spellId, {
           groupId: group.groupId,

@@ -90,33 +90,71 @@ export type EquipmentGrant = {
   quantity: number
 }
 
-export type EquipmentOption =
-  | { id: string; label: string; kind: 'items'; items: EquipmentGrant[] }
-  | { id: string; label: string; kind: 'gold'; goldPieces: number }
-
+/**
+ * Catalogue filter for `choose-items` entitlements.
+ * Prefer `item-ids` for curated SRD “of your choice” lists.
+ */
 export type EquipmentFilter =
   | { kind: 'item-ids'; itemIds: string[] }
   | { kind: 'category'; categories: EquipmentItemCategory[] }
+  | { kind: 'tags'; tags: string[] }
 
+/**
+ * One branch in a choose-option.
+ * `items` options may nest further entitlements (activated only when selected).
+ */
+export type EquipmentOption =
+  | {
+      id: string
+      label: string
+      kind: 'items'
+      items: EquipmentGrant[]
+      /** Nested choices under this package / branch. */
+      entitlements?: EquipmentEntitlement[]
+      /** Optional short preview shown before selection. */
+      summary?: string
+    }
+  | {
+      id: string
+      label: string
+      kind: 'gold'
+      goldPieces: number
+      summary?: string
+    }
+
+/**
+ * Content-driven starting-equipment choice node.
+ * Trees nest via `choose-option` → option.entitlements.
+ */
 export type EquipmentEntitlement =
   | {
       type: 'grant'
       id: string
       label?: string
       items: EquipmentGrant[]
+      required?: boolean
     }
   | {
       type: 'choose-option'
       id: string
       label: string
       options: EquipmentOption[]
+      /** Defaults to true. */
+      required?: boolean
     }
   | {
       type: 'choose-items'
       id: string
       label: string
-      count: number
+      /** Exact pick count (min === max). Prefer min/max when unequal. */
+      count?: number
+      min?: number
+      max?: number
       catalogueFilter: EquipmentFilter
+      /** Defaults to true. */
+      required?: boolean
+      /** When false (default), each item id may be chosen at most once. */
+      allowDuplicates?: boolean
     }
 
 export type StartingEquipmentCompleteness = 'complete' | 'simplified'
@@ -131,10 +169,18 @@ export type EquipmentItemSelection = {
   quantity: number
 }
 
-/** Player state for one choose-* entitlement. Grants need no selection. */
+/**
+ * Player state for one choose-* entitlement node.
+ *
+ * `path` is the chain of parent option ids from the root (empty at root).
+ * Example: Monk artisan tool under Package A → path `['package-a']`,
+ * entitlementId `artisan-tools`.
+ */
 export type EquipmentSelection = {
   source: EquipmentSourceRef
   entitlementId: string
+  /** Parent option ids from root; omit/`[]` for root entitlements. */
+  path?: string[]
   optionId: string | null
   choices: EquipmentItemSelection[]
 }

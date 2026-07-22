@@ -9,7 +9,7 @@ import type { SpeciesSelection } from '../../domain/species/types'
 import type { BackgroundSelection } from '../../domain/background/types'
 import type { CharacterDetails } from '../../domain/character/details'
 
-export const CURRENT_SCHEMA_VERSION = 14
+export const CURRENT_SCHEMA_VERSION = 15
 
 
 type CharacterIdentity = {
@@ -131,7 +131,13 @@ export type StoredCharacterV14 = {
   character: Character
 }
 
-export type StoredCharacter = StoredCharacterV14
+/** Schema v15: equipment selections include normalized `path` for nested trees. */
+export type StoredCharacterV15 = {
+  schemaVersion: 15
+  character: Character
+}
+
+export type StoredCharacter = StoredCharacterV15
 
 export type ParseStoredCharacterResult =
   | { ok: true; character: Character }
@@ -157,7 +163,8 @@ export function isStoredCharacterEnvelope(
   | StoredCharacterV11
   | StoredCharacterV12
   | StoredCharacterV13
-  | StoredCharacterV14 {
+  | StoredCharacterV14
+  | StoredCharacterV15 {
   if (typeof value !== 'object' || value === null) {
     return false
   }

@@ -20,6 +20,21 @@ describe('isFeatSelection', () => {
     ).toBe(true)
   })
 
+  it('accepts string[] choice values', () => {
+    expect(
+      isFeatSelection({
+        featId: 'srd-2024:skilled',
+        choices: {
+          'skill-or-tool-proficiencies': [
+            'skill:athletics',
+            'skill:perception',
+            'tool:thieves-tools',
+          ],
+        },
+      }),
+    ).toBe(true)
+  })
+
   it('rejects missing or empty feat ids', () => {
     expect(isFeatSelection({ featId: '', choices: {} })).toBe(false)
     expect(isFeatSelection({ choices: {} })).toBe(false)

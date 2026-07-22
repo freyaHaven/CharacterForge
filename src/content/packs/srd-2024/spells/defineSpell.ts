@@ -11,6 +11,8 @@ export type Srd2024SpellInput = {
   components: string
   duration: string
   description: string
+  ritual?: boolean
+  concentration?: boolean
 }
 
 export function defineSrd2024Spell(input: Srd2024SpellInput): SpellDefinition {
@@ -26,5 +28,7 @@ export function defineSrd2024Spell(input: Srd2024SpellInput): SpellDefinition {
     duration: input.duration,
     description: input.description,
     source: SRD_2024_SOURCE,
+    ...(input.ritual === true ? { ritual: true } : {}),
+    ...(input.concentration === true ? { concentration: true } : {}),
   }
 }

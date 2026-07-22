@@ -79,7 +79,7 @@ step UI correctly.
 
 ### Rules content (bundled)
 
-**SRD 2024** (manifest `5.2.1`) — **7 of 12** SRD classes today:
+**SRD 2024** (manifest `5.2.1`) — **10 of 12** SRD classes today:
 
 - Species: Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling
 - Classes:
@@ -88,6 +88,9 @@ step UI correctly.
   - **Barbarian** — levels 1–20, Rage, Unarmored Defense, weapon mastery
     (melee), Path of the Berserker at level 3, feature progression through
     level 20
+  - **Bard** — levels 1–20, Bardic Inspiration (descriptive), Spellcasting
+    (CHA prepared), Expertise, Jack of All Trades, Magical Secrets (L10+ list
+    expansion), College of Lore at level 3, Words of Creation at level 20
   - **Rogue** — levels 1–20, Expertise, Sneak Attack, weapon mastery, Thief
     subclass at level 3, feature progression through level 20
   - **Monk** — levels 1–20, Martial Arts, Focus, Unarmored Defense/Movement,
@@ -99,21 +102,27 @@ step UI correctly.
     level 20
   - **Cleric** — levels 1–20, Spellcasting, Divine Order, Life Domain at
     level 3, feature progression through level 20
+  - **Druid** — levels 1–20, Spellcasting, Druidic, Primal Order, Wild Shape
+    Known Forms (creator-time; no transformation), Circle of the Land at
+    level 3, feature progression through level 20
+  - **Wizard** — levels 1–20, Spellcasting with distinct spellbook acquisition,
+    Ritual Adept, Scholar, Evoker at level 3, Spell Mastery / Signature Spells,
+    feature progression through level 20
 - Backgrounds: Acolyte, Criminal, Sage, Soldier
 - Feats: Alert, Magic Initiate (Cleric/Wizard), Savage Attacker (origin feats for
   backgrounds and ASI selection)
-- Spells: ~100 definitions on demand for bundled casters and feat grants (not a
-  full SRD spell compendium)
+- Spells: ~360 definitions covering Cleric, Paladin, Ranger, Druid, Bard, and full
+  Wizard lists (not every SRD spell for every class)
 
 **Starting equipment (SRD 2024)**
 
 - All bundled classes: Package A (and Package B for Fighter) vs gold on the
-  Equipment step
+  Equipment step; Bard nested musical instrument + Entertainer’s Pack
 - Backgrounds: package vs 50 GP
-- Equipment catalog: ~61 items referenced by starting packages only (not a full
+- Equipment catalog: items referenced by starting packages only (not a full
   SRD compendium or shop)
 
-**Missing SRD 2024 classes:** Bard, Druid, Sorcerer, Warlock, Wizard.
+**Missing SRD 2024 classes:** Sorcerer, Warlock.
 
 **SRD 2014**
 
@@ -122,8 +131,8 @@ step UI correctly.
 
 ### Persistence
 
-- Versioned localStorage envelope (**schema version 14**)
-- Sequential migrations from legacy saves (v0 → v14)
+- Versioned localStorage envelope (**schema version 15**)
+- Sequential migrations from legacy saves (v0 → v15)
 - Multi-instance class model: `classes[]`, `targetLevel`, `startingClassInstanceId`
 - Background, feat, spell, equipment, and character details on the saved character
 - Draft blocking on save when species or class selections are incomplete
@@ -220,7 +229,7 @@ Major milestones:
 - **v7–v8:** character details
 - **v9:** multiclass `classes[]`, `targetLevel`, `startingClassInstanceId`
 - **v10–v11:** feat + hit point increases
-- **v12–v14:** spell states, equipment selections, loadout
+- **v12–v15:** spell states, equipment selections, loadout, nested selection `path`
 
 Migrations run on load in `src/adapters/storage/migrations/`.
 
@@ -228,7 +237,7 @@ Migrations run on load in `src/adapters/storage/migrations/`.
 
 | Edition ID | Label | Species | Classes |
 |------------|-------|---------|---------|
-| `srd-2024` | D&D 5e 2024 | 9 bundled | 7 bundled (Fighter, Barbarian, Rogue, Monk, Ranger, Paladin, Cleric) |
+| `srd-2024` | D&D 5e 2024 | 9 bundled | 10 bundled (Fighter, Barbarian, Bard, Rogue, Monk, Ranger, Paladin, Cleric, Druid, Wizard) |
 | `srd-2014` | D&D 5e 2014 | (none bundled) | (none bundled) |
 
 Mechanical text and choices come from SRD documents under CC-BY-4.0. See
@@ -263,7 +272,7 @@ Icons are decorative; class names in the UI provide accessible labels.
 Prioritized gaps and play-sheet requirements are maintained in
 [`docs/SRD-2024-COVERAGE.md`](docs/SRD-2024-COVERAGE.md). Highlights:
 
-- **Creator:** remaining five SRD classes, species play-time features,
+- **Creator:** remaining two SRD classes (Sorcerer, Warlock), species play-time features,
   Details step visibility; nested ASI-feat config from Epic Boon deferred
 - **Play sheet:** feat-derived stats, resource tracking, rest workflow
 - **Optional:** full SRD compendiums, custom backgrounds, campaign tools

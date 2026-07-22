@@ -3,13 +3,19 @@ import type {
   CharacterLevel,
   ClassDefinition,
 } from '../../domain/class/types'
-import type { EditionId } from '../../domain/types'
+import type { AbilityScores, EditionId } from '../../domain/types'
 import type { ClassCatalog } from '../../domain/ports/classCatalog'
+import type {
+  BackgroundDefinition,
+  BackgroundSelection,
+} from '../../domain/background/types'
 import { getAllocatedLevel, getRemainingLevels } from '../../domain/character/classLevels'
+import { resolveCharacterAbilityScores } from '../character/resolveCharacterAbilityScores'
 import {
   validateClassInstance,
   type ClassInstanceValidationError,
 } from './classRules'
+import { evaluateMulticlassAbilityPrerequisites } from './multiclassPrerequisites'
 
 export type CharacterClassesValidationStatus =
   | 'structurally-invalid'
@@ -30,6 +36,14 @@ export type ValidateCharacterClassesInput = {
   targetLevel: CharacterLevel
   editionId: EditionId
   startingClassInstanceId?: string | null
+  /**
+   * Base ability scores from character creation. When provided (with optional
+   * background), multiclass ability prerequisites are evaluated against
+   * resolved totals (base + background ASI + class ASI choices).
+   */
+  abilityScores?: AbilityScores
+  backgroundDefinition?: BackgroundDefinition | null
+  backgroundSelection?: BackgroundSelection | null
 }
 
 type StructuralValidationResult = {
@@ -191,6 +205,34 @@ export async function validateCharacterClasses(
     }
   }
 
+  if (input.abilityScores !== undefined) {
+    const resolvedScores = resolveCharacterAbilityScores({
+      baseScores: input.abilityScores,
+      backgroundDefinition: input.backgroundDefinition,
+      backgroundSelection: input.backgroundSelection,
+      classes: input.classes,
+    })
+    const definitionsById = new Map<string, ClassDefinition>()
+    await Promise.all(
+      input.classes.map(async (instance) => {
+        if (definitionsById.has(instance.classId)) {
+          return
+        }
+        const definition = await catalog.getClass(instance.classId)
+        if (definition !== null) {
+          definitionsById.set(instance.classId, definition)
+        }
+      }),
+    )
+    instanceIssues.push(
+      ...evaluateMulticlassAbilityPrerequisites(
+        input.classes,
+        (classId) => definitionsById.get(classId) ?? null,
+        resolvedScores,
+      ),
+    )
+  }
+
   return {
     status: deriveStatus(true, allocationComplete, instanceIssues),
     structurallyValid: true,
@@ -230,6 +272,22 @@ export function validateCharacterClassesWithDefinitions(
     if (!result.ok) {
       instanceIssues.push(...result.errors)
     }
+  }
+
+  if (input.abilityScores !== undefined) {
+    const resolvedScores = resolveCharacterAbilityScores({
+      baseScores: input.abilityScores,
+      backgroundDefinition: input.backgroundDefinition,
+      backgroundSelection: input.backgroundSelection,
+      classes: input.classes,
+    })
+    instanceIssues.push(
+      ...evaluateMulticlassAbilityPrerequisites(
+        input.classes,
+        getDefinition,
+        resolvedScores,
+      ),
+    )
   }
 
   return {

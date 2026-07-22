@@ -26,6 +26,16 @@ export const soldierSrd2024: BackgroundDefinition = {
     prompt: 'Choose a Gaming Set',
     options: createGamingSetOptions(),
   },
-  equipment: createBackgroundStartingEquipment(SOLDIER_PACKAGE),
+  equipment: createBackgroundStartingEquipment(SOLDIER_PACKAGE, {
+    packageEntitlements: [
+      {
+        type: 'choose-items',
+        id: 'gaming-set',
+        label: 'Choose a Gaming Set',
+        count: 1,
+        catalogueFilter: { kind: 'tags', tags: ['gaming-set'] },
+      },
+    ],
+  }),
   choices: [],
 }

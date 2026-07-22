@@ -33,6 +33,7 @@ export type SingleClassConfiguratorProps = {
   characterLevel: number
   eligibilityClasses: readonly CharacterClassSelection[]
   classDefinitionsById: ReadonlyMap<string, ClassDefinition>
+  ownedProficientSkillIds?: ReadonlySet<string> | readonly string[]
   onLevelChange: (level: number) => void
   onChoiceChange: (choiceId: string, value: ClassChoiceValue | undefined) => void
   onHitPointIncreaseChange: (
@@ -62,6 +63,7 @@ export function SingleClassConfigurator({
   characterLevel,
   eligibilityClasses,
   classDefinitionsById,
+  ownedProficientSkillIds,
   onLevelChange,
   onChoiceChange,
   onHitPointIncreaseChange,
@@ -110,6 +112,7 @@ export function SingleClassConfigurator({
         characterLevel={characterLevel}
         eligibilityClasses={eligibilityClasses}
         classDefinitionsById={classDefinitionsById}
+        ownedProficientSkillIds={ownedProficientSkillIds}
         onChoiceChange={onChoiceChange}
         onHitPointIncreaseChange={onHitPointIncreaseChange}
       />

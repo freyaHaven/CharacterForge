@@ -13,6 +13,11 @@ import {
   isAbilityScoreImprovementChoiceId,
 } from '../../domain/class/abilityScoreImprovement'
 import { isEpicBoonChoiceId } from '../../domain/class/epicBoon'
+import { isFightingStyleFeatGrantChoice } from '../../domain/class/fightingStyle'
+import {
+  createFeatGrantChoiceStorageKey,
+  readFeatGrantChoices,
+} from '../../domain/feat/featGrantChoiceStorage'
 import { collectClassFeatGrantIds } from '../../rules/character/resolveCharacterFeatGrants'
 import {
   characterHasFightingStyle,
@@ -22,6 +27,9 @@ import type { FeatEligibilityContext } from '../../domain/feat/eligibility'
 import { getChoicesAvailableAtLevel } from '../../domain/class/choiceAvailability'
 import { getClassFeatureProgressionUpToLevel } from '../../domain/class/featureProgression'
 import { validateClassSelection } from '../../rules/class/classRules'
+import { classInstanceToSelection } from '../../domain/character/characterClassSelection'
+import { resolveClassEffects } from '../../rules/class/resolveClassEffects'
+import { isSkillId } from '../../domain/skills/types'
 import { createClassChoiceStateKey } from './classChoiceStateKeys'
 import { resolveDeferredRequirementsForInstances } from '../../rules/class/resolveCharacterDeferredRequirements'
 import { FeatureChoiceCard } from '../choices/FeatureChoiceCard'
@@ -61,6 +69,7 @@ function getExcludedMultiSelectOptionIds(
   definition: ClassDefinition,
   choiceId: string,
   choices: Record<string, ClassChoiceValue>,
+  ownedProficientSkillIds?: ReadonlySet<string> | readonly string[],
 ): string[] {
   if (isWeaponMasteryChoiceId(choiceId)) {
     return collectWeaponMasterySelections(choices, choiceId)
@@ -72,7 +81,12 @@ function getExcludedMultiSelectOptionIds(
   }
 
   if (choiceGrantsSkillExpertise(choice)) {
-    return getExcludedExpertiseOptionIds(definition, choiceId, choices)
+    return getExcludedExpertiseOptionIds(
+      definition,
+      choiceId,
+      choices,
+      ownedProficientSkillIds,
+    )
   }
 
   if (choiceGrantsSkillProficiency(choice)) {
@@ -100,6 +114,11 @@ export type ClassInstanceConfiguratorProps = {
   characterLevel?: number
   eligibilityClasses?: readonly CharacterClassSelection[]
   classDefinitionsById?: ReadonlyMap<string, ClassDefinition>
+  /**
+   * Character-wide proficient skill ids (background, species, feats, all classes).
+   * When set, Expertise options use this set for eligibility.
+   */
+  ownedProficientSkillIds?: ReadonlySet<string> | readonly string[]
   levelLabel?: string
   showRemoveButton?: boolean
   onLevelChange: (level: number) => void
@@ -136,6 +155,7 @@ export function ClassInstanceConfigurator({
   characterLevel = 20,
   eligibilityClasses,
   classDefinitionsById,
+  ownedProficientSkillIds,
   levelLabel = 'Levels in this class',
   showRemoveButton = false,
   onLevelChange,
@@ -207,6 +227,38 @@ export function ClassInstanceConfigurator({
     return ids
   }, [activeInstanceId, characterFeatId, classesForEligibility])
 
+  const ownedSkillIds = useMemo(() => {
+    const skills = new Set<string>()
+    for (const instance of classesForEligibility) {
+      const definition = definitionsMap.get(instance.classId)
+      if (definition === undefined) {
+        continue
+      }
+      for (const effect of resolveClassEffects(
+        definition,
+        classInstanceToSelection(instance),
+      )) {
+        if (effect.kind === 'skill-proficiency' && isSkillId(effect.skillId)) {
+          skills.add(effect.skillId)
+        }
+      }
+    }
+    return skills
+  }, [classesForEligibility, definitionsMap])
+
+  const ownedToolIds = useMemo(() => new Set<string>(), [])
+
+  function handleFeatSubChoiceChange(
+    grantSlotId: string,
+    featChoiceId: string,
+    value: string | string[] | undefined,
+  ) {
+    onChoiceChange(
+      createFeatGrantChoiceStorageKey(grantSlotId, featChoiceId),
+      value,
+    )
+  }
+
   const draftValidation =
     draft === null
       ? null
@@ -230,7 +282,11 @@ export function ClassInstanceConfigurator({
     )
   }, [draftValidation])
 
-  const availableChoices = getChoicesAvailableAtLevel(activeDefinition, activeLevel)
+  const availableChoices = getChoicesAvailableAtLevel(
+    activeDefinition,
+    activeLevel,
+    activeChoices,
+  )
 
   const featureProgression = getClassFeatureProgressionUpToLevel(
     activeDefinition,
@@ -354,8 +410,21 @@ export function ClassInstanceConfigurator({
                                   ),
                                   ...crossInstanceTakenFeatIds,
                                 ]}
+                                featChoices={readFeatGrantChoices(
+                                  activeChoices,
+                                  linkedSingleSelect.id,
+                                )}
+                                ownedSkillIds={ownedSkillIds}
+                                ownedToolIds={ownedToolIds}
                                 errorId={errorId}
                                 onChange={onChoiceChange}
+                                onFeatChoiceChange={(featChoiceId, value) => {
+                                  handleFeatSubChoiceChange(
+                                    linkedSingleSelect.id,
+                                    featChoiceId,
+                                    value,
+                                  )
+                                }}
                               />
                               {issue !== undefined && errorId !== undefined ? (
                                 <p
@@ -400,8 +469,82 @@ export function ClassInstanceConfigurator({
                                 recommendedFeatId={
                                   linkedSingleSelect.recommendedFeatId ?? null
                                 }
+                                featChoices={readFeatGrantChoices(
+                                  activeChoices,
+                                  linkedSingleSelect.id,
+                                )}
+                                ownedSkillIds={ownedSkillIds}
+                                ownedToolIds={ownedToolIds}
                                 errorId={errorId}
                                 onChange={onChoiceChange}
+                                onFeatChoiceChange={(featChoiceId, value) => {
+                                  handleFeatSubChoiceChange(
+                                    linkedSingleSelect.id,
+                                    featChoiceId,
+                                    value,
+                                  )
+                                }}
+                              />
+                              {issue !== undefined && errorId !== undefined ? (
+                                <p
+                                  id={errorId}
+                                  className="class-picker__choice-error"
+                                  role="alert"
+                                >
+                                  {formatClassValidationIssue(issue)}
+                                </p>
+                              ) : null}
+                            </div>
+                          )
+                        }
+
+                        if (isFightingStyleFeatGrantChoice(linkedSingleSelect)) {
+                          return (
+                            <div
+                              key={feature.id}
+                              className="class-picker__choice"
+                            >
+                              <h6>{feature.name}</h6>
+                              <p className="class-picker__feature-accordion-description">
+                                {feature.description}
+                              </p>
+                              <FeatGrantChoiceField
+                                choiceId={linkedSingleSelect.id}
+                                value={
+                                  typeof choiceValue === 'string'
+                                    ? choiceValue
+                                    : undefined
+                                }
+                                editionId={editionId}
+                                featCatalog={featCatalog}
+                                takenFeatIds={[
+                                  ...collectClassFeatGrantIds(
+                                    activeChoices,
+                                    linkedSingleSelect.id,
+                                  ),
+                                  ...crossInstanceTakenFeatIds,
+                                ]}
+                                eligibilityContext={eligibilityContext}
+                                recommendedFeatId={
+                                  linkedSingleSelect.recommendedFeatId ?? null
+                                }
+                                categoryFilter="fighting-style"
+                                alternateOptions={linkedSingleSelect.options}
+                                featChoices={readFeatGrantChoices(
+                                  activeChoices,
+                                  linkedSingleSelect.id,
+                                )}
+                                ownedSkillIds={ownedSkillIds}
+                                ownedToolIds={ownedToolIds}
+                                errorId={errorId}
+                                onChange={onChoiceChange}
+                                onFeatChoiceChange={(featChoiceId, value) => {
+                                  handleFeatSubChoiceChange(
+                                    linkedSingleSelect.id,
+                                    featChoiceId,
+                                    value,
+                                  )
+                                }}
                               />
                               {issue !== undefined && errorId !== undefined ? (
                                 <p
@@ -497,6 +640,7 @@ export function ClassInstanceConfigurator({
                                 activeDefinition,
                                 linkedMultiSelect.id,
                                 activeChoices,
+                                ownedProficientSkillIds,
                               )}
                               onChange={onChoiceChange}
                             />
@@ -553,6 +697,7 @@ export function ClassInstanceConfigurator({
                         activeDefinition,
                         choice.id,
                         activeChoices,
+                        ownedProficientSkillIds,
                       )}
                       onChange={onChoiceChange}
                     />

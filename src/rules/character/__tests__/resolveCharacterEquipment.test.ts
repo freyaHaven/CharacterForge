@@ -23,6 +23,31 @@ const classCatalog = createBundledClassCatalog()
 const backgroundCatalog = createBundledBackgroundCatalog()
 const equipmentCatalog = createBundledEquipmentCatalog()
 
+function soldierPackageSelections(backgroundId = 'srd-2024:soldier') {
+  return [
+    {
+      source: {
+        kind: 'background' as const,
+        backgroundId,
+      },
+      entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+      path: [],
+      optionId: PACKAGE_OPTION_ID,
+      choices: [],
+    },
+    {
+      source: {
+        kind: 'background' as const,
+        backgroundId,
+      },
+      entitlementId: 'gaming-set',
+      path: [PACKAGE_OPTION_ID],
+      optionId: null,
+      choices: [{ itemId: 'srd-2024:dice-set', quantity: 1 }],
+    },
+  ]
+}
+
 describe('resolveCharacterEquipment', () => {
   it('resolves Fighter package A and Soldier package into per-source and merged inventory', async () => {
     const fighter = createTestFighterClassInstance()
@@ -45,18 +70,11 @@ describe('resolveCharacterEquipment', () => {
               instanceId: fighter.instanceId,
             },
             entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
             optionId: 'package-a',
             choices: [],
           },
-          {
-            source: {
-              kind: 'background',
-              backgroundId: 'srd-2024:soldier',
-            },
-            entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
-            optionId: PACKAGE_OPTION_ID,
-            choices: [],
-          },
+          ...soldierPackageSelections(),
         ],
         loadout: EMPTY_EQUIPMENT_LOADOUT,
       },
@@ -82,6 +100,12 @@ describe('resolveCharacterEquipment', () => {
       completeness: 'complete',
       isComplete: true,
     })
+    expect(
+      resolved.sources[1]?.entitlements.map((entry) => entry.entitlement.id),
+    ).toEqual(['starting-equipment', 'gaming-set'])
+    expect(resolved.sources[1]?.entitlements[1]?.path).toEqual([
+      PACKAGE_OPTION_ID,
+    ])
 
     expect(resolved.sources[0]?.items.map((item) => item.itemId)).toEqual(
       expect.arrayContaining([
@@ -179,6 +203,7 @@ describe('resolveCharacterEquipment', () => {
               instanceId: fighter.instanceId,
             },
             entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
             optionId: 'package-b',
             choices: [],
           },
@@ -216,6 +241,154 @@ describe('resolveCharacterEquipment', () => {
     ).toBe(20)
   })
 
+  it('resolves Monk nested artisan tools and skips them for gold', async () => {
+    const monkInstance = {
+      instanceId: 'monk-1',
+      classId: 'srd-2024:monk',
+      level: 1 as const,
+      choices: {},
+    }
+
+    const packageCharacter = createDefaultCharacter({
+      ...withSingleClassInstance(monkInstance),
+      equipment: {
+        selections: [
+          {
+            source: {
+              kind: 'class-instance',
+              instanceId: monkInstance.instanceId,
+            },
+            entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
+            optionId: 'package-a',
+            choices: [],
+          },
+          {
+            source: {
+              kind: 'class-instance',
+              instanceId: monkInstance.instanceId,
+            },
+            entitlementId: 'artisan-tools',
+            path: ['package-a'],
+            optionId: null,
+            choices: [{ itemId: 'srd-2024:smiths-tools', quantity: 1 }],
+          },
+        ],
+        loadout: EMPTY_EQUIPMENT_LOADOUT,
+      },
+    })
+
+    const packageResolved = await resolveCharacterEquipment(
+      classCatalog,
+      backgroundCatalog,
+      equipmentCatalog,
+      packageCharacter,
+    )
+
+    expect(packageResolved.sources[0]?.isComplete).toBe(true)
+    expect(
+      packageResolved.sources[0]?.items.map((item) => item.itemId),
+    ).toEqual(
+      expect.arrayContaining([
+        'srd-2024:spear',
+        'srd-2024:smiths-tools',
+        'srd-2024:torch',
+      ]),
+    )
+    expect(
+      packageResolved.sources[0]?.items.some(
+        (item) => item.itemId === 'srd-2024:artisans-tools',
+      ),
+    ).toBe(false)
+
+    const goldCharacter = createDefaultCharacter({
+      ...withSingleClassInstance(monkInstance),
+      equipment: {
+        selections: [
+          {
+            source: {
+              kind: 'class-instance',
+              instanceId: monkInstance.instanceId,
+            },
+            entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
+            optionId: 'gold-alternative',
+            choices: [],
+          },
+        ],
+        loadout: EMPTY_EQUIPMENT_LOADOUT,
+      },
+    })
+
+    const goldResolved = await resolveCharacterEquipment(
+      classCatalog,
+      backgroundCatalog,
+      equipmentCatalog,
+      goldCharacter,
+    )
+
+    expect(goldResolved.sources[0]?.isComplete).toBe(true)
+    expect(goldResolved.sources[0]?.entitlements).toHaveLength(1)
+    expect(goldResolved.currency.goldPieces).toBe(50)
+    expect(
+      goldResolved.inventory.some(
+        (item) => item.itemId === 'srd-2024:smiths-tools',
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps invalid choose-items picks incomplete without rewriting', async () => {
+    const monkInstance = {
+      instanceId: 'monk-1',
+      classId: 'srd-2024:monk',
+      level: 1 as const,
+      choices: {},
+    }
+
+    const character = createDefaultCharacter({
+      ...withSingleClassInstance(monkInstance),
+      equipment: {
+        selections: [
+          {
+            source: {
+              kind: 'class-instance',
+              instanceId: monkInstance.instanceId,
+            },
+            entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
+            optionId: 'package-a',
+            choices: [],
+          },
+          {
+            source: {
+              kind: 'class-instance',
+              instanceId: monkInstance.instanceId,
+            },
+            entitlementId: 'artisan-tools',
+            path: ['package-a'],
+            optionId: null,
+            choices: [{ itemId: 'srd-2024:dice-set', quantity: 1 }],
+          },
+        ],
+        loadout: EMPTY_EQUIPMENT_LOADOUT,
+      },
+    })
+
+    const resolved = await resolveCharacterEquipment(
+      classCatalog,
+      backgroundCatalog,
+      equipmentCatalog,
+      character,
+    )
+
+    expect(resolved.sources[0]?.isComplete).toBe(false)
+    const artisan = resolved.sources[0]?.entitlements.find(
+      (entry) => entry.entitlement.id === 'artisan-tools',
+    )
+    expect(artisan?.isComplete).toBe(false)
+    expect(artisan?.selection?.choices[0]?.itemId).toBe('srd-2024:dice-set')
+  })
+
   it('marks incomplete choices and prunes removed sources only', async () => {
     const fighter = createTestFighterClassInstance()
     const character = createDefaultCharacter({
@@ -237,24 +410,18 @@ describe('resolveCharacterEquipment', () => {
               instanceId: fighter.instanceId,
             },
             entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
             optionId: 'package-a',
             choices: [],
           },
-          {
-            source: {
-              kind: 'background',
-              backgroundId: 'srd-2024:soldier',
-            },
-            entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
-            optionId: PACKAGE_OPTION_ID,
-            choices: [],
-          },
+          ...soldierPackageSelections(),
           {
             source: {
               kind: 'background',
               backgroundId: 'srd-2024:sage',
             },
             entitlementId: STARTING_EQUIPMENT_ENTITLEMENT_ID,
+            path: [],
             optionId: PACKAGE_OPTION_ID,
             choices: [],
           },
@@ -272,12 +439,16 @@ describe('resolveCharacterEquipment', () => {
 
     const activeKeys = resolved.sources.flatMap((source) =>
       source.entitlements.map((entitlement) =>
-        equipmentSelectionKey(source.source, entitlement.entitlement.id),
+        equipmentSelectionKey(
+          source.source,
+          entitlement.entitlement.id,
+          entitlement.path,
+        ),
       ),
     )
 
     const pruned = pruneInactiveEquipmentSelections(character, activeKeys)
-    expect(pruned).toHaveLength(2)
+    expect(pruned).toHaveLength(3)
     expect(
       pruned.some(
         (selection) =>

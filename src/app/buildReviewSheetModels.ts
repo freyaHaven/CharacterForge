@@ -20,6 +20,12 @@ import { calculateCharacterArmorClass } from '../rules/armor-class/calculateChar
 import type { ResolvedEquipment } from '../rules/character/resolveCharacterEquipment'
 import type { ResolvedFeatGrant } from '../rules/character/resolveCharacterFeatGrants'
 import {
+  hasInitiativeProficiency,
+  resolveArmorClassBonusFromFeatEffects,
+  resolveCharacterFeatEffects,
+} from '../rules/feat/resolveFeatEffects'
+import { selectEquippedArmorAndShield } from '../rules/armor-class/calculateCharacterArmorClass'
+import {
   formatAbilityScoreBonusSummary,
   formatBackgroundChoiceSummary,
   formatToolProficiencySummary,
@@ -32,6 +38,15 @@ import {
   formatFeatCategory,
   formatFeatCategoryBadge,
 } from '../features/feat/formatFeatDetails'
+import { formatAsiChoiceSummary } from '../domain/class/abilityScoreImprovement'
+import {
+  collectSkillIdsFromFeatChoices,
+  collectToolIdsFromFeatChoices,
+} from '../domain/feat/resolveFeatProficiencies'
+import {
+  formatSkillOrToolProficiencyOptionLabel,
+  listSkillOrToolProficiencyOptions,
+} from '../domain/feat/skillOrToolProficiency'
 import { getBackgroundChoiceIds } from '../rules/background/backgroundRules'
 import { resolveSpeciesKnownLanguageLabels } from '../domain/species/standardLanguages'
 import {
@@ -138,6 +153,7 @@ export type ReviewSheetModels = {
     base: number
     dexterityBonus: number
     shieldBonus: number
+    otherBonus: number
     armorItemId: string | null
     shieldItemId: string | null
   }
@@ -147,11 +163,13 @@ function formatSizeLabel(size: SpeciesDefinition['size']): string {
   return size.charAt(0).toUpperCase() + size.slice(1)
 }
 
-function collectProficientSkills(
+export function collectProficientSkills(
   character: Character,
   classDefinitions: Map<string, ClassDefinition>,
   backgroundDefinition: BackgroundDefinition | null,
   speciesDefinition: SpeciesDefinition | null,
+  featGrants?: readonly ResolvedFeatGrant[],
+  featDefinitionsById?: ReadonlyMap<string, FeatDefinition>,
 ): Set<SkillId> {
   const skills = new Set<SkillId>()
 
@@ -188,6 +206,21 @@ function collectProficientSkills(
     }
   }
 
+  if (featGrants !== undefined && featDefinitionsById !== undefined) {
+    for (const grant of featGrants) {
+      const definition = featDefinitionsById.get(grant.featId)
+      if (definition === undefined) {
+        continue
+      }
+      for (const skillId of collectSkillIdsFromFeatChoices(
+        definition,
+        grant.choices,
+      )) {
+        skills.add(skillId)
+      }
+    }
+  }
+
   return skills
 }
 
@@ -214,6 +247,29 @@ function collectExpertiseSkills(
   }
 
   return skills
+}
+
+function collectJackOfAllTrades(
+  character: Character,
+  classDefinitions: Map<string, ClassDefinition>,
+): boolean {
+  for (const instance of character.classes) {
+    const definition = classDefinitions.get(instance.classId)
+    if (definition === undefined) {
+      continue
+    }
+
+    for (const effect of resolveClassEffects(
+      definition,
+      classInstanceToSelection(instance),
+    )) {
+      if (effect.kind === 'jack-of-all-trades') {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 function collectSavingThrowProficiencies(
@@ -308,6 +364,33 @@ function buildBackgroundCard(
   }
 }
 
+function formatFeatChoiceSummary(
+  choice: FeatDefinition['choices'][number],
+  value: string | string[],
+): string {
+  if (choice.type === 'single-select') {
+    if (typeof value !== 'string') {
+      return value.join(', ')
+    }
+    return (
+      choice.options.find((entry) => entry.id === value)?.label ?? value
+    )
+  }
+
+  if (choice.type === 'multi-select') {
+    const ids = typeof value === 'string' ? [value] : value
+    return ids
+      .map((optionId) => formatSkillOrToolProficiencyOptionLabel(optionId))
+      .join(', ')
+  }
+
+  if (typeof value === 'string') {
+    return formatAsiChoiceSummary(value) ?? value
+  }
+
+  return value.join(', ')
+}
+
 function buildFeatCard(
   definition: FeatDefinition | null,
   selection: FeatSelection | null,
@@ -325,14 +408,13 @@ function buildFeatCard(
   const choices: { prompt: string; summary: string }[] = []
   if (selection !== null) {
     for (const choice of definition.choices) {
-      const selectedId = selection.choices[choice.id]
-      if (selectedId === undefined) {
+      const selectedValue = selection.choices[choice.id]
+      if (selectedValue === undefined) {
         continue
       }
-      const option = choice.options.find((entry) => entry.id === selectedId)
       choices.push({
         prompt: choice.prompt,
-        summary: option?.label ?? selectedId,
+        summary: formatFeatChoiceSummary(choice, selectedValue),
       })
     }
   }
@@ -461,6 +543,7 @@ function buildSkills(
   proficiencyBonus: number,
   proficientSkills: Set<SkillId>,
   expertiseSkills: Set<SkillId>,
+  jackOfAllTrades = false,
 ): ReviewSkillRowModel[] {
   return SKILL_IDS.map((skillId) => {
     const abilityId = SKILL_ABILITY_MAP[skillId]
@@ -473,6 +556,7 @@ function buildSkills(
       abilityScores[abilityId],
       proficiencyBonus,
       rank,
+      { jackOfAllTrades },
     )
 
     return {
@@ -515,16 +599,19 @@ function buildSenses(
   proficientSkills: Set<SkillId>,
   speciesDefinition: SpeciesDefinition | null,
   speciesSelection: SpeciesSelection | null,
+  jackOfAllTrades = false,
 ): ReviewSensesModel {
   const perceptionMod = getSkillModifier(
     abilityScores.wisdom,
     proficiencyBonus,
     proficientSkills.has('perception') ? 'proficient' : 'none',
+    { jackOfAllTrades },
   )
   const insightMod = getSkillModifier(
     abilityScores.wisdom,
     proficiencyBonus,
     proficientSkills.has('insight') ? 'proficient' : 'none',
+    { jackOfAllTrades },
   )
   const investigationMod = getAbilityModifier(abilityScores.intelligence)
 
@@ -563,17 +650,20 @@ function buildProficiencies(
   backgroundDefinition: BackgroundDefinition | null,
   backgroundSelection: BackgroundSelection | null,
   speciesDefinition: SpeciesDefinition | null,
+  featGrants?: readonly ResolvedFeatGrant[],
+  featDefinitionsById?: ReadonlyMap<string, FeatDefinition>,
 ): ReviewProficienciesModel {
   const armor = new Set<string>()
   const weapons = new Set<string>()
   const tools = new Set<string>()
-  const languages =
+  const languages = new Set<string>(
     speciesDefinition === null
       ? []
       : resolveSpeciesKnownLanguageLabels(
           speciesDefinition.languages,
           character.species,
-        )
+        ),
+  )
 
   for (const instance of character.classes) {
     const definition = classDefinitions.get(instance.classId)
@@ -581,15 +671,31 @@ function buildProficiencies(
       continue
     }
 
-    for (const label of formatArmorProficiencyChipLabels(
-      definition.proficiencies.armor,
-    )) {
-      armor.add(label)
-    }
-    for (const label of formatWeaponProficiencyChipLabels(
-      definition.proficiencies.weapons,
-    )) {
-      weapons.add(label)
+    for (const effect of resolveClassEffects(definition, {
+      classId: instance.classId,
+      level: instance.level,
+      choices: instance.choices,
+    })) {
+      if (effect.kind === 'armor-proficiency') {
+        for (const label of formatArmorProficiencyChipLabels([
+          effect.category,
+        ])) {
+          armor.add(label)
+        }
+      }
+      if (effect.kind === 'weapon-proficiency') {
+        for (const label of formatWeaponProficiencyChipLabels([
+          effect.category,
+        ])) {
+          weapons.add(label)
+        }
+      }
+      if (effect.kind === 'language') {
+        languages.add(effect.label)
+      }
+      if (effect.kind === 'tool-proficiency') {
+        tools.add(effect.label)
+      }
     }
   }
 
@@ -602,11 +708,32 @@ function buildProficiencies(
     )
   }
 
+  if (featGrants !== undefined && featDefinitionsById !== undefined) {
+    const toolLabelById = new Map(
+      listSkillOrToolProficiencyOptions()
+        .filter((option) => option.kind === 'tool')
+        .map((option) => [option.targetId, option.label]),
+    )
+
+    for (const grant of featGrants) {
+      const definition = featDefinitionsById.get(grant.featId)
+      if (definition === undefined) {
+        continue
+      }
+      for (const toolId of collectToolIdsFromFeatChoices(
+        definition,
+        grant.choices,
+      )) {
+        tools.add(toolLabelById.get(toolId) ?? toolId)
+      }
+    }
+  }
+
   return {
     armor: [...armor],
     weapons: [...weapons],
     tools: [...tools].filter((label) => !label.includes('not chosen yet')),
-    languages,
+    languages: [...languages],
   }
 }
 
@@ -676,8 +803,14 @@ export function buildReviewSheetModels(
     input.classDefinitions,
     input.backgroundDefinition,
     input.speciesDefinition,
+    input.featGrants,
+    input.featDefinitionsById,
   )
   const expertiseSkills = collectExpertiseSkills(
+    character,
+    input.classDefinitions,
+  )
+  const jackOfAllTrades = collectJackOfAllTrades(
     character,
     input.classDefinitions,
   )
@@ -691,8 +824,18 @@ export function buildReviewSheetModels(
     proficiencyBonus,
     proficientSkills,
     expertiseSkills,
+    jackOfAllTrades,
   )
-  const initiativeModifier = getAbilityModifier(character.abilityScores.dexterity)
+  const featEffects =
+    input.featGrants !== undefined
+      ? resolveCharacterFeatEffects(
+          input.featGrants,
+          input.featDefinitionsById ?? new Map(),
+        )
+      : []
+  const initiativeModifier =
+    getAbilityModifier(character.abilityScores.dexterity) +
+    (hasInitiativeProficiency(featEffects) ? proficiencyBonus : 0)
   const speciesCard = buildSpeciesCard(
     input.speciesDefinition,
     character.species,
@@ -719,11 +862,25 @@ export function buildReviewSheetModels(
     currency: { goldPieces: 0 },
     weightCarriedLb: 0,
   }
+  const resolvedEquipmentForAc =
+    input.resolvedEquipment ?? emptyResolvedEquipment
+  const equipmentDefinitionsById =
+    input.equipmentDefinitionsById ?? new Map()
+  const equippedForAc = selectEquippedArmorAndShield(
+    character.equipment.loadout,
+    resolvedEquipmentForAc,
+    equipmentDefinitionsById,
+  )
+  const defenseAcBonus = resolveArmorClassBonusFromFeatEffects(
+    featEffects,
+    equippedForAc.armor !== null,
+  )
   const armorClass = calculateCharacterArmorClass({
     abilityScores: character.abilityScores,
-    resolvedEquipment: input.resolvedEquipment ?? emptyResolvedEquipment,
+    resolvedEquipment: resolvedEquipmentForAc,
     loadout: character.equipment.loadout,
-    equipmentDefinitionsById: input.equipmentDefinitionsById ?? new Map(),
+    equipmentDefinitionsById,
+    otherBonus: defenseAcBonus,
   })
 
   const feats =
@@ -768,6 +925,7 @@ export function buildReviewSheetModels(
       proficientSkills,
       input.speciesDefinition,
       character.species,
+      jackOfAllTrades,
     ),
     proficiencies: buildProficiencies(
       character,
@@ -775,6 +933,8 @@ export function buildReviewSheetModels(
       input.backgroundDefinition,
       character.background,
       input.speciesDefinition,
+      input.featGrants,
+      input.featDefinitionsById,
     ),
     proficiencyBonus,
     proficiencyBonusLabel: formatSignedModifier(proficiencyBonus),
@@ -792,6 +952,7 @@ export function buildReviewSheetModels(
       base: armorClass.base,
       dexterityBonus: armorClass.dexterityBonus,
       shieldBonus: armorClass.shieldBonus,
+      otherBonus: armorClass.otherBonus,
       armorItemId: armorClass.armorItemId,
       shieldItemId: armorClass.shieldItemId,
     },

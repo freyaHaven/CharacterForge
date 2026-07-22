@@ -31,6 +31,12 @@ export const clericSrd2024: ClassDefinition = {
   catalogOrder: 12,
   hitDie: { sides: 8 },
   primaryAbilities: ['wisdom'],
+  multiclassPrerequisite: {
+    kind: 'all-of',
+    abilities: ['wisdom'],
+    minimum: 13,
+    summary: 'Wisdom 13',
+  },
   savingThrows: ['wisdom', 'charisma'],
   spellcasting: clericSpellcastingSrd2024,
   proficiencies: {
@@ -270,6 +276,10 @@ export const clericSrd2024: ClassDefinition = {
           label: 'Protector',
           description:
             'Trained for battle, you gain proficiency with Martial weapons and training with Heavy armor.',
+          effects: [
+            { kind: 'armor-proficiency', category: 'heavy' },
+            { kind: 'weapon-proficiency', category: 'martial' },
+          ],
         },
         {
           id: 'thaumaturge',
