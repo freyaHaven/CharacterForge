@@ -270,7 +270,14 @@ authored union lists.
 | Validation | ✅ | `useSpellsStepValidation`, `spellSelectionEligibility`; union spellbook + schools/castingTime/ritual; invocation prerequisites |
 | Derived | ✅ | Shared multiclass slots (`full`/`half` only); **Pact Magic `pactSlots` separate**; `countsAgainstLimit: false` for mastery/signature/arcanum/tome |
 | Sheet | ✅ | Spell groups on Overview (Pact / Patron / Tome / Arcanum / Contact Patron labels) |
-| Tests | 🟡 | `resolveCharacterSpellcasting*.test.ts`, `spellbookAndPactMagic.test.ts`, `warlock*.test.ts`; **no Spells-step wizard E2E** |
+| Tests | 🟡 | `resolveCharacterSpellcasting*.test.ts`, `spellbookAndPactMagic.test.ts`, `contentDrivenProgressions.test.ts`, `warlock*.test.ts`; **no Spells-step wizard E2E** |
+
+**Progression ownership:** Named-class tables (Cleric/Wizard/Warlock/… cantrips,
+prepared, pact slots, ASI levels, Bardic Inspiration, Wild Shape uses, invocations)
+live in `content/packs/srd-2024/progressions/`. Domain `spell/progressions` keeps
+reusable presets (`FULL_CASTER_*`, `HALF_CASTER_*`, `ZERO_CANTRIPS`) plus helpers
+(`slotsAtLevel`, `pactMagicAtLevel`, `spellbookSizeAtLevel`, …). Resolvers read
+tables from class definitions — they do not import SRD named progressions.
 
 **P2.5–P2.6 architecture:** Spellbook entries live on `selectionKind: 'spellbook'`
 select entitlements (Wizard uses **distinct** `spellbook-1`…`spellbook-20` for

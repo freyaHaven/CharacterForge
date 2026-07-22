@@ -1,9 +1,9 @@
 import type { ClassSpellcasting, SpellEntitlement } from '../../../../domain/class/types'
 import {
-  PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
-  PACT_MAGIC_SLOTS_BY_LEVEL,
+  WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
+  WARLOCK_PACT_SLOTS_BY_LEVEL,
   WARLOCK_PREPARED_BY_LEVEL,
-} from '../../../../domain/spell/progressions'
+} from '../progressions'
 import { SPELL_LIST_IDS } from '../spell-lists'
 
 /** Zero until `unlockLevel`, then `value` for the rest of levels 1–20. */
@@ -105,10 +105,10 @@ export const warlockSpellcastingSrd2024: ClassSpellcasting = {
   spellListId: SPELL_LIST_IDS.warlock,
   slotContributor: 'pact',
   slotsByLevel: [],
-  cantripsKnownByLevel: PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
+  cantripsKnownByLevel: WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
   preparedSpellsByLevel: WARLOCK_PREPARED_BY_LEVEL,
   spellsKnownByLevel: WARLOCK_PREPARED_BY_LEVEL,
-  pactSlotsByLevel: PACT_MAGIC_SLOTS_BY_LEVEL,
+  pactSlotsByLevel: WARLOCK_PACT_SLOTS_BY_LEVEL,
   slotRecovery: 'short-rest',
   entitlements: [
     {
@@ -119,7 +119,7 @@ export const warlockSpellcastingSrd2024: ClassSpellcasting = {
       label: 'Pact Magic Cantrips',
       count: {
         kind: 'by-source-level',
-        table: PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
+        table: WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
       },
       levelRange: { min: 0, max: 0 },
     },

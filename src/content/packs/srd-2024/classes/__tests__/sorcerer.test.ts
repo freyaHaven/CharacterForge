@@ -3,7 +3,7 @@ import { sorcererSrd2024 } from '../sorcerer'
 import {
   SORCERER_CANTRIPS_KNOWN_BY_LEVEL,
   SORCERER_PREPARED_BY_LEVEL,
-} from '../../../../../domain/spell/progressions'
+} from '../../progressions'
 import { SPELL_LIST_IDS } from '../../spell-lists'
 import { getExcludedSharedPoolOptionIds } from '../../../../../domain/class/sharedMultiSelectExclusions'
 

@@ -1,9 +1,9 @@
 import type { ClassSpellcasting } from '../../../../domain/class/types'
+import { FULL_CASTER_SLOTS_BY_LEVEL } from '../../../../domain/spell/progressions'
 import {
   DRUID_CANTRIPS_KNOWN_BY_LEVEL,
   DRUID_PREPARED_BY_LEVEL,
-  FULL_CASTER_SLOTS_BY_LEVEL,
-} from '../../../../domain/spell/progressions'
+} from '../progressions'
 import { SPELL_LIST_IDS } from '../spell-lists'
 
 export const druidSpellcastingSrd2024: ClassSpellcasting = {

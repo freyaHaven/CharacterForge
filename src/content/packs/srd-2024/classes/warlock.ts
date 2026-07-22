@@ -13,7 +13,7 @@ import {
   type MeleeWeaponId,
 } from '../../../../domain/weapons/types'
 import { createCompleteClassPackageOrGoldStartingEquipment } from '../../../../domain/equipment/startingEquipmentHelpers'
-import { WARLOCK_INVOCATIONS_BY_LEVEL } from '../../../../domain/spell/progressions'
+import { WARLOCK_INVOCATIONS_BY_LEVEL } from '../progressions'
 import { WARLOCK_PACKAGE_A } from '../equipment/packages'
 import {
   ELDRITCH_INVOCATION_OPTIONS,

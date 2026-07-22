@@ -3,7 +3,7 @@ import { druidSrd2024 } from '../druid'
 import {
   DRUID_CANTRIPS_KNOWN_BY_LEVEL,
   DRUID_PREPARED_BY_LEVEL,
-} from '../../../../../domain/spell/progressions'
+} from '../../progressions'
 import { getEligibleBeastForms } from '../../../../../domain/class/beastForms'
 
 describe('druidSrd2024', () => {

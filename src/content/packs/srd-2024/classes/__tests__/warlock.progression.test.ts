@@ -31,7 +31,7 @@ import {
   resolvePactMagicSlots,
   resolveSharedSpellSlots,
 } from '../../../../../rules/spell/resolveSharedSpellSlots'
-import { WARLOCK_INVOCATIONS_BY_LEVEL } from '../../../../../domain/spell/progressions'
+import { WARLOCK_INVOCATIONS_BY_LEVEL } from '../../progressions'
 import type { CharacterClassSelection } from '../../../../../domain/class/types'
 
 const FEATURE_IDS_BY_LEVEL: Record<number, readonly string[]> = {

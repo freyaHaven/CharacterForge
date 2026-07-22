@@ -15,7 +15,7 @@ import {
   wordsOfCreationEntitlement,
 } from '../spellcasting/bard'
 import { collegeOfLoreSrd2024 } from '../subclasses/college-of-lore'
-import { BARDIC_INSPIRATION_DIE_BY_LEVEL } from '../../../../domain/spell/progressions'
+import { BARDIC_INSPIRATION_DIE_BY_LEVEL } from '../progressions'
 
 function formatBardicInspirationDieTable(): string {
   const lines = BARDIC_INSPIRATION_DIE_BY_LEVEL.map(

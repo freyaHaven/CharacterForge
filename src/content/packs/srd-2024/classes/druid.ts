@@ -17,7 +17,7 @@ import {
   magicianCantripEntitlement,
 } from '../spellcasting/druid'
 import { circleOfTheLandSrd2024 } from '../subclasses/circle-of-the-land'
-import { DRUID_WILD_SHAPE_USES_BY_LEVEL } from '../../../../domain/spell/progressions'
+import { DRUID_WILD_SHAPE_USES_BY_LEVEL } from '../progressions'
 
 const DRUID_SKILL_OPTIONS = [
   'arcana',

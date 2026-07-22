@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { createBundledSpellCatalog } from '../../../adapters/bundledSpellCatalog'
 import { wizardSrd2024 } from '../../../content/packs/srd-2024/classes/wizard'
 import { createDefaultCharacter } from '../../../domain/character/defaults'
+import { createAsiChoicesUpToLevel } from '../../../domain/class/abilityScoreImprovement'
 import {
   WIZARD_ASI_FEATURE_LEVELS,
-  createAsiChoicesUpToLevel,
-} from '../../../domain/class/abilityScoreImprovement'
-import { WIZARD_PREPARED_BY_LEVEL } from '../../../domain/spell/progressions'
+  WIZARD_PREPARED_BY_LEVEL,
+} from '../../../content/packs/srd-2024/progressions'
 import { resolveCharacterSpellcasting } from '../../character/resolveCharacterSpellcasting'
 import { validateSpellSourceStates } from '../validateSpellSourceStates'
 

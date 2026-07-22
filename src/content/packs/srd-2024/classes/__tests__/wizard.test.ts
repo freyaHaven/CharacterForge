@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { wizardSrd2024 } from '../wizard'
 import { createWizardSpellbookEntitlements } from '../../spellcasting/wizard'
+import { spellbookSizeAtLevel } from '../../../../../domain/spell/progressions'
 import {
   WIZARD_PREPARED_BY_LEVEL,
-  wizardSpellbookSizeAtLevel,
-} from '../../../../../domain/spell/progressions'
+  WIZARD_SPELLBOOK_INITIAL_COUNT,
+  WIZARD_SPELLBOOK_PER_LEVEL,
+} from '../../progressions'
 
 describe('wizardSrd2024', () => {
   it('uses the expected stable id and edition', () => {
@@ -104,7 +106,13 @@ describe('wizardSrd2024', () => {
           total += entitlement.count.table[level - 1] ?? 0
         }
       }
-      expect(total).toBe(wizardSpellbookSizeAtLevel(level))
+      expect(total).toBe(
+        spellbookSizeAtLevel(
+          level,
+          WIZARD_SPELLBOOK_INITIAL_COUNT,
+          WIZARD_SPELLBOOK_PER_LEVEL,
+        ),
+      )
     }
   })
 })

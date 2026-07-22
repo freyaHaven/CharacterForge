@@ -3,7 +3,7 @@ import { bardSrd2024 } from '../bard'
 import {
   BARD_CANTRIPS_KNOWN_BY_LEVEL,
   BARD_PREPARED_BY_LEVEL,
-} from '../../../../../domain/spell/progressions'
+} from '../../progressions'
 import { SPELL_LIST_IDS } from '../../spell-lists'
 import { MUSICAL_INSTRUMENT_LABELS } from '../../../../../domain/tools/types'
 

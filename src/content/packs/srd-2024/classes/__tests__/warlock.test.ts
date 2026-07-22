@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { warlockSrd2024 } from '../warlock'
 import {
-  PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
-  PACT_MAGIC_SLOTS_BY_LEVEL,
+  WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
   WARLOCK_INVOCATIONS_BY_LEVEL,
+  WARLOCK_PACT_SLOTS_BY_LEVEL,
   WARLOCK_PREPARED_BY_LEVEL,
-} from '../../../../../domain/spell/progressions'
+} from '../../progressions'
 import { SPELL_LIST_IDS } from '../../spell-lists'
 import { withLevelAdjustedChoiceLimits } from '../../../../../domain/class/weaponMastery'
 import { SRD_ELDRITCH_INVOCATION_BASE_IDS } from '../../invocations/eldritchInvocations'
@@ -43,20 +43,20 @@ describe('warlockSrd2024', () => {
   })
 
   it('matches Pact Magic tables', () => {
-    expect(PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL).toEqual([
+    expect(WARLOCK_CANTRIPS_KNOWN_BY_LEVEL).toEqual([
       2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     ])
     expect(WARLOCK_PREPARED_BY_LEVEL).toEqual([
       2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
     ])
     expect(warlockSrd2024.spellcasting?.cantripsKnownByLevel).toEqual(
-      PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
+      WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
     )
     expect(warlockSrd2024.spellcasting?.preparedSpellsByLevel).toEqual(
       WARLOCK_PREPARED_BY_LEVEL,
     )
     expect(warlockSrd2024.spellcasting?.pactSlotsByLevel).toEqual(
-      PACT_MAGIC_SLOTS_BY_LEVEL,
+      WARLOCK_PACT_SLOTS_BY_LEVEL,
     )
   })
 

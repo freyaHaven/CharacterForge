@@ -13,10 +13,11 @@ import {
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
 } from '../../../../../domain/class/featureProgression'
+import { createAsiChoicesUpToLevel } from '../../../../../domain/class/abilityScoreImprovement'
 import {
   BARD_ASI_FEATURE_LEVELS,
-  createAsiChoicesUpToLevel,
-} from '../../../../../domain/class/abilityScoreImprovement'
+  BARDIC_INSPIRATION_DIE_BY_LEVEL,
+} from '../../progressions'
 import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { getExcludedExpertiseOptionIds } from '../../../../../domain/class/skillProficiencySelections'
 import { validateClassSelection } from '../../../../../rules/class/classRules'
@@ -32,10 +33,7 @@ import {
   resolvePactMagicSlots,
   resolveSharedSpellSlots,
 } from '../../../../../rules/spell/resolveSharedSpellSlots'
-import {
-  BARDIC_INSPIRATION_DIE_BY_LEVEL,
-  FULL_CASTER_SLOTS_BY_LEVEL,
-} from '../../../../../domain/spell/progressions'
+import { FULL_CASTER_SLOTS_BY_LEVEL } from '../../../../../domain/spell/progressions'
 import { SPELL_LIST_IDS } from '../../spell-lists'
 import { pruneSpellsNotOnEntitlementList } from '../../../../../rules/spell/pruneSpellsNotOnEntitlementList'
 import { validateSpellSourceStates } from '../../../../../rules/spell/validateSpellSourceStates'

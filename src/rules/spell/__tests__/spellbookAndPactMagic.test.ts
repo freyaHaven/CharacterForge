@@ -3,9 +3,11 @@ import { createBundledSpellCatalog } from '../../../adapters/bundledSpellCatalog
 import { createDefaultCharacter } from '../../../domain/character/defaults'
 import { clericSrd2024 } from '../../../content/packs/srd-2024/classes/cleric'
 import {
-  PACT_MAGIC_SLOTS_BY_LEVEL,
-  wizardSpellbookSizeAtLevel,
-} from '../../../domain/spell/progressions'
+  WARLOCK_PACT_SLOTS_BY_LEVEL,
+  WIZARD_SPELLBOOK_INITIAL_COUNT,
+  WIZARD_SPELLBOOK_PER_LEVEL,
+} from '../../../content/packs/srd-2024/progressions'
+import { spellbookSizeAtLevel } from '../../../domain/spell/progressions'
 import type { ClassDefinition } from '../../../domain/class/types'
 import {
   createTestPactCasterClass,
@@ -107,7 +109,13 @@ describe('spellbook and pact magic architecture', () => {
       (entry) => entry.entitlementId === 'spellbook',
     )
     expect(spellbook?.label).toBe('Spellbook')
-    expect(spellbook?.limit).toBe(wizardSpellbookSizeAtLevel(1))
+    expect(spellbook?.limit).toBe(
+      spellbookSizeAtLevel(
+        1,
+        WIZARD_SPELLBOOK_INITIAL_COUNT,
+        WIZARD_SPELLBOOK_PER_LEVEL,
+      ),
+    )
 
     const validation = await validateSpellSourceStates(
       summary,
@@ -400,7 +408,13 @@ describe('spellbook and pact magic architecture', () => {
           issue.entitlementId === 'spellbook',
       ),
     ).toBe(true)
-    expect(wizardSpellbookSizeAtLevel(1)).toBe(6)
+    expect(
+      spellbookSizeAtLevel(
+        1,
+        WIZARD_SPELLBOOK_INITIAL_COUNT,
+        WIZARD_SPELLBOOK_PER_LEVEL,
+      ),
+    ).toBe(6)
   })
 
   it('resolves pact progression at several levels', () => {
@@ -408,7 +422,7 @@ describe('spellbook and pact magic architecture', () => {
     const definitionsById = new Map([[definition.id, definition]])
 
     for (const level of [1, 2, 5, 11, 17] as const) {
-      const expected = PACT_MAGIC_SLOTS_BY_LEVEL[level - 1]!
+      const expected = WARLOCK_PACT_SLOTS_BY_LEVEL[level - 1]!
       const pact = resolvePactMagicSlots(
         [
           {

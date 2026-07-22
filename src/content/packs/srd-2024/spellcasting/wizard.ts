@@ -1,12 +1,12 @@
 import type { ClassSpellcasting } from '../../../../domain/class/types'
 import type { SpellEntitlement } from '../../../../domain/spell/types'
+import { FULL_CASTER_SLOTS_BY_LEVEL } from '../../../../domain/spell/progressions'
 import {
-  FULL_CASTER_SLOTS_BY_LEVEL,
   WIZARD_CANTRIPS_KNOWN_BY_LEVEL,
   WIZARD_PREPARED_BY_LEVEL,
   WIZARD_SPELLBOOK_INITIAL_COUNT,
   WIZARD_SPELLBOOK_PER_LEVEL,
-} from '../../../../domain/spell/progressions'
+} from '../progressions'
 import { SPELL_LIST_IDS } from '../spell-lists'
 
 /** Zero until `unlockLevel`, then `value` for the rest of levels 1–20. */

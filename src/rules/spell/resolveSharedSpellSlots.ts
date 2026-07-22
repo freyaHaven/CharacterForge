@@ -47,10 +47,15 @@ function isConventionalSlotContributor(
  * Only `full` and `half` contributors participate.
  * Pact Magic and `none` are ignored (never merged into this pool).
  * Single conventional caster → that class's slot table.
- * Multiple contributors → multiclass full-caster table from summed levels.
+ * Multiple contributors → multiclass table from summed levels
+ * (defaults to the reusable full-caster preset; callers may inject another).
  */
 export function resolveSharedSpellSlots(
   contributors: SlotContributorInstance[],
+  options?: {
+    /** Slot table used when two or more conventional casters contribute. */
+    multiclassSlotsByLevel?: number[][]
+  },
 ): SharedSpellSlots | null {
   if (contributors.length === 0) {
     return null
@@ -78,7 +83,9 @@ export function resolveSharedSpellSlots(
     return { slotsByLevel: [], highestSlotLevel: 0 }
   }
 
-  const slots = slotsAtLevel(FULL_CASTER_SLOTS_BY_LEVEL, multiclassCasterLevel)
+  const multiclassTable =
+    options?.multiclassSlotsByLevel ?? FULL_CASTER_SLOTS_BY_LEVEL
+  const slots = slotsAtLevel(multiclassTable, multiclassCasterLevel)
   return {
     slotsByLevel: slots,
     highestSlotLevel: highestSlotLevel(slots),

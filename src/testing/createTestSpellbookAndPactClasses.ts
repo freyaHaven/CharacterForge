@@ -1,11 +1,15 @@
 import type { ClassDefinition } from '../domain/class/types'
 import {
   FULL_CASTER_SLOTS_BY_LEVEL,
-  PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
-  PACT_MAGIC_SLOTS_BY_LEVEL,
-  PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL,
-  wizardSpellbookSizeAtLevel,
+  spellbookSizeAtLevel,
 } from '../domain/spell/progressions'
+import {
+  WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
+  WARLOCK_PACT_SLOTS_BY_LEVEL,
+  WARLOCK_PREPARED_BY_LEVEL,
+  WIZARD_SPELLBOOK_INITIAL_COUNT,
+  WIZARD_SPELLBOOK_PER_LEVEL,
+} from '../content/packs/srd-2024/progressions'
 import { createSyntheticClassDefinition } from './syntheticClassDefinition'
 
 /**
@@ -16,7 +20,11 @@ export function createTestSpellbookCasterClass(
   overrides: Partial<ClassDefinition> = {},
 ): ClassDefinition {
   const spellbookSizeTable = Array.from({ length: 20 }, (_, index) =>
-    wizardSpellbookSizeAtLevel(index + 1),
+    spellbookSizeAtLevel(
+      index + 1,
+      WIZARD_SPELLBOOK_INITIAL_COUNT,
+      WIZARD_SPELLBOOK_PER_LEVEL,
+    ),
   )
   const preparedTable = [
     4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
@@ -100,10 +108,10 @@ export function createTestPactCasterClass(
       spellListId: 'srd-2024:spell-list:wizard',
       slotContributor: 'pact',
       slotsByLevel: [],
-      cantripsKnownByLevel: PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
-      preparedSpellsByLevel: PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL,
-      spellsKnownByLevel: PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL,
-      pactSlotsByLevel: PACT_MAGIC_SLOTS_BY_LEVEL,
+      cantripsKnownByLevel: WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
+      preparedSpellsByLevel: WARLOCK_PREPARED_BY_LEVEL,
+      spellsKnownByLevel: WARLOCK_PREPARED_BY_LEVEL,
+      pactSlotsByLevel: WARLOCK_PACT_SLOTS_BY_LEVEL,
       slotRecovery: 'short-rest',
       entitlements: [
         {
@@ -113,7 +121,7 @@ export function createTestPactCasterClass(
           selectionKind: 'cantrip',
           count: {
             kind: 'by-source-level',
-            table: PACT_MAGIC_CANTRIPS_KNOWN_BY_LEVEL,
+            table: WARLOCK_CANTRIPS_KNOWN_BY_LEVEL,
           },
           levelRange: { min: 0, max: 0 },
         },
@@ -124,7 +132,7 @@ export function createTestPactCasterClass(
           selectionKind: 'prepared',
           count: {
             kind: 'by-source-level',
-            table: PACT_MAGIC_SPELLS_KNOWN_BY_LEVEL,
+            table: WARLOCK_PREPARED_BY_LEVEL,
           },
           levelRange: { min: 1, max: 'pact-slot-level' },
         },

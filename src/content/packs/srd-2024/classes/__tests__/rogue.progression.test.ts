@@ -9,10 +9,8 @@ import {
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
 } from '../../../../../domain/class/featureProgression'
-import {
-  ROGUE_ASI_FEATURE_LEVELS,
-  createAsiChoicesUpToLevel,
-} from '../../../../../domain/class/abilityScoreImprovement'
+import { createAsiChoicesUpToLevel } from '../../../../../domain/class/abilityScoreImprovement'
+import { ROGUE_ASI_FEATURE_LEVELS } from '../../progressions'
 import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import { createRogueWeaponMasteryChoices } from '../rogue.weaponMastery'
 import { validateClassSelection } from '../../../../../rules/class/classRules'

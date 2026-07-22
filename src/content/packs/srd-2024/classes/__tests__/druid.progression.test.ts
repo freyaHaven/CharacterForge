@@ -9,10 +9,8 @@ import {
   getClassFeaturesForLevel,
   getClassFeaturesUpToLevel,
 } from '../../../../../domain/class/featureProgression'
-import {
-  DRUID_ASI_FEATURE_LEVELS,
-  createAsiChoicesUpToLevel,
-} from '../../../../../domain/class/abilityScoreImprovement'
+import { createAsiChoicesUpToLevel } from '../../../../../domain/class/abilityScoreImprovement'
+import { DRUID_ASI_FEATURE_LEVELS } from '../../progressions'
 import { selectEpicBoonFeat } from '../../../../../domain/class/epicBoon'
 import {
   getEligibleBeastForms,
