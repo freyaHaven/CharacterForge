@@ -57,6 +57,12 @@ export const monkSrd2024: ClassDefinition = {
           name: 'Unarmored Defense',
           description:
             'While you aren\'t wearing armor or wielding a Shield, your base Armor Class equals 10 plus your Dexterity and Wisdom modifiers.',
+          effects: [
+            {
+              kind: 'unarmored-defense',
+              abilities: ['dexterity', 'wisdom'],
+            },
+          ],
         },
         {
           id: 'tool-proficiency',

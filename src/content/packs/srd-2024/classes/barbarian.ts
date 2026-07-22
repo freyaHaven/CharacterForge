@@ -66,6 +66,12 @@ export const barbarianSrd2024: ClassDefinition = {
           name: 'Unarmored Defense',
           description:
             'While you aren\'t wearing any armor, your base Armor Class equals 10 plus your Dexterity and Constitution modifiers. You can use a Shield and still gain this benefit.',
+          effects: [
+            {
+              kind: 'unarmored-defense',
+              abilities: ['dexterity', 'constitution'],
+            },
+          ],
         },
         {
           id: 'weapon-mastery',

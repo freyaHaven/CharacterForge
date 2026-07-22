@@ -35,15 +35,15 @@ scored across seven dimensions:
 |------|---------|-------|
 | Species & ancestry | 🟡 | 9/9 SRD species; creator-time effects largely wired; play-time traits descriptive |
 | Backgrounds | 🟡 | 4 bundled backgrounds; no custom background builder |
-| Classes & subclasses | 🟡 | 10/12 SRD classes; 1 subclass each |
+| Classes & subclasses | 🟡 | 11/12 SRD classes; 1 subclass each |
 | Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon pickable at L19; some subclass extras missing |
 | Deferred class requirements | 🟡 | Starting equipment only; Epic Boon is a class choice (not deferred) |
 | Feats & acquisition | 🟡 | Origin + epic boons + Fighting Style + Grappler/Skilled/ASI feat (nested sub-choices ✅); no standalone Feats step |
 | Fighting styles | ✅ | Feat defs + shared grant pipeline; Champion L7 Additional FS; Defense AC ✅ |
 | Weapon mastery | 🟡 | Slot schedules + UI; gear sub-choices deferred |
 | Ability scores & ASIs | ✅ | All three methods + class ASI choices including feat option |
-| Spell catalogue & lists | 🟡 | ~360 need-based spells; full Wizard + Druid + Bard lists; Magical Secrets / Discoveries unions |
-| Spellcasting | 🟡 | Cleric/Paladin/Ranger/Druid/Wizard/Bard; **P2.5 spellbook + Pact Magic architecture**; Warlock content pending |
+| Spell catalogue & lists | 🟡 | ~360 need-based spells; full Wizard + Druid + Bard + Sorcerer lists; Magical Secrets / Discoveries unions |
+| Spellcasting | 🟡 | Cleric/Paladin/Ranger/Druid/Wizard/Bard/Sorcerer; **P2.5 spellbook + Pact Magic architecture**; Warlock content pending |
 | Starting equipment | ✅ | Nested trees for bundled classes/backgrounds (Monk tools, Soldier gaming set) |
 | Full equipment catalogue | ⏸ | Starting-package scope (+ artisan tools / gaming sets); shop deferred |
 | Inventory, currency, loadout | 🟡 | Resolved inventory + Overview loadout; no shop |
@@ -99,7 +99,7 @@ wired; other tool-choice backgrounds N/A until more content ships.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | **10/12** SRD classes; **1 subclass each** |
+| Content | 🟡 | **11/12** SRD classes; **1 subclass each** |
 | UI | ✅ | `ClassStep` — single-class and multiclass workflows |
 | Persistence | ✅ | `classes[]`, `targetLevel`, `startingClassInstanceId`; schema v9+ |
 | Validation | ✅ | `validateCharacterClasses.ts`, `classRules.ts` |
@@ -109,9 +109,14 @@ wired; other tool-choice backgrounds N/A until more content ships.
 
 **Bundled:** Fighter (Champion), Barbarian (Berserker), Bard (College of Lore), Rogue (Thief),
 Monk (Open Hand), Ranger (Hunter), Paladin (Devotion), Cleric (Life Domain),
-Druid (Circle of the Land), Wizard (Evoker).
+Druid (Circle of the Land), Wizard (Evoker), Sorcerer (Draconic Sorcery).
 
-**Missing classes:** Sorcerer, Warlock.
+**Missing classes:** Warlock.
+
+**Sorcerer (Phase 2 boundary):** Prepared CHA full caster (not known-spells). Metamagic is
+creation-time multi-select only (2 at L2 / L10 / L17 with shared-pool exclusion). Font of
+Magic / Innate Sorcery / Sorcery Points / Incarnate / Apotheosis / Restoration are
+descriptive with max points in Font text — no play-time resource state.
 
 **Bardic Inspiration (Phase 2 boundary):** Feature text + die progression metadata only.
 No play-time use tracking or spending.
@@ -234,7 +239,7 @@ companion keys under `epic-boon`.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | **~360** spell definitions; lists for Cleric, Paladin, Ranger, Druid, Wizard, Bard (+ Magical Secrets / Magical Discoveries unions) |
+| Content | 🟡 | **~360** spell definitions; lists for Cleric, Paladin, Ranger, Druid, Wizard, Bard, Sorcerer (+ Magical Secrets / Magical Discoveries unions) |
 | UI | ➖ | Catalogue consumed by Spells step and ASI feat picker |
 | Persistence | ➖ | Definitions only |
 | Validation | ➖ | — |
@@ -243,8 +248,8 @@ companion keys under `epic-boon`.
 | Tests | 🟡 | Spellcasting resolution tests; no full catalogue completeness test vs SRD |
 
 **Scope:** Spells are included **on demand** (class lists, grants, Magic Initiate), not
-as a full SRD spell compendium. Wizard, Druid, and Bard lists are complete through 9th
-level. Magical Secrets / Magical Discoveries are authored union lists.
+as a full SRD spell compendium. Wizard, Druid, Bard, and Sorcerer lists are complete
+through 9th level. Magical Secrets / Magical Discoveries are authored union lists.
 
 ---
 
@@ -252,7 +257,7 @@ level. Magical Secrets / Magical Discoveries are authored union lists.
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | 🟡 | Full/half casters: Cleric, Paladin, Ranger, **Druid**, **Wizard**, **Bard** (prepared CHA); domain/circle/lore grants. **Warlock class content not shipped yet** |
+| Content | 🟡 | Full/half casters: Cleric, Paladin, Ranger, **Druid**, **Wizard**, **Bard**, **Sorcerer** (prepared CHA); domain/circle/lore/draconic grants. **Warlock class content not shipped yet** |
 | UI | ✅ | `SpellsStep` → `SpellSelectionGrid` (conditional visibility); spellbook labels + prepare-from-book filter; mastery/signature sections; Pact Magic slot summary |
 | Persistence | ✅ | `spellSourceStates`; schema v12+ (optional P2.5 fields; **no migration**, stay v15) |
 | Validation | ✅ | `useSpellsStepValidation`, `spellSelectionEligibility`; union spellbook + schools/castingTime; cross-spellbook dups |
@@ -272,7 +277,7 @@ shared slots). Fixtures: `createTestSpellbookCasterClass` /
 **Still pending:** Warlock class content (P2.10),
 play-time Arcane Recovery / Memorize Spell / Overchannel / Potent Cantrip / Sculpt Spells /
 Empowered Evocation execution tracking.
-Sorcerer known-spells. Species lineage spells wired for
+Species lineage spells wired for
 bundled species. Play-time slot expenditure / rest recovery deferred.
 
 **P2.6 Wizard (done):** Full Wizard class + Evoker; distinct spellbook acquisitions;
@@ -283,6 +288,12 @@ Ritual Adept descriptive; Wizard spell list through 9th level (~222 list entries
 Magical Secrets prepared-list expansion at L10+; Magical Discoveries (2 always-prepared
 from Cleric∪Druid∪Wizard); Words of Creation grants; Jack of All Trades (skills only,
 not initiative); Bardic Inspiration descriptive + die metadata only; full Bard spell list.
+
+**P2.9 Sorcerer (done):** Full Sorcerer class + Draconic Sorcery; CHA **prepared** full
+caster (L1 starts at 2 prepared — SRD prose); Metamagic multi-select at L2/10/17 with
+shared-pool exclusion; Font/Innate/Incarnate/Apotheosis/Restoration descriptive; Draconic
+Resilience HP (+1/class level) + unarmored AC (10+DEX+CHA); Elemental Affinity resistance;
+full Sorcerer spell list.
 
 **Finish policy:** Spells step remains `required: false` in the catalog, but when
 `hasSpellContent` is true, incomplete/invalid active spell choices
@@ -295,7 +306,7 @@ not initiative); Bardic Inspiration descriptive + die metadata only; full Bard s
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
-| Content | ✅ | All 10 classes: Package A (+ Package B for Fighter) vs gold; Bard package A + 90 GP with nested instrument; Wizard package A + 55 GP; 4 backgrounds: package vs 50 GP; **nested** Monk artisan tools + Soldier gaming set + Bard musical instrument |
+| Content | ✅ | All 11 classes: Package A (+ Package B for Fighter) vs gold; Sorcerer package A + 50 GP (crystal focus); Bard package A + 90 GP with nested instrument; Wizard package A + 55 GP; 4 backgrounds: package vs 50 GP; **nested** Monk artisan tools + Soldier gaming set + Bard musical instrument |
 | UI | ✅ | `EquipmentStep` → `EquipmentSourceSection` with nested choose-option / choose-items |
 | Persistence | ✅ | `equipment.selections` with `path[]`; schema v15 |
 | Validation | ✅ | Required nested incompleteness blocks Finish via deferred starting-equipment |
@@ -480,7 +491,8 @@ code (documents through v11 at time of audit).
 
 - [x] **Druid (P2.7)** — full class, Circle of the Land, Primal Order, Wild Shape Known Forms (creator-time only), full Druid spell list through 9th
 - [x] **Bard (P2.8)** — full class, College of Lore, Magical Secrets list expansion, Magical Discoveries, Words of Creation, Jack of All Trades, full Bard spell list; Bardic Inspiration Phase 2 descriptive only
-- [ ] **Remaining 2 classes:** Sorcerer, Warlock (P2.10)
+- [x] **Sorcerer (P2.9)** — full class, Draconic Sorcery, prepared CHA full caster, Metamagic creation-time choices, Elemental Affinity resistance, Draconic Resilience HP/AC, full Sorcerer spell list; Font/Innate/points Phase 2 descriptive only
+- [ ] **Remaining class:** Warlock (P2.10)
   - **P2.5 done:** spellbook + Pact Magic architecture (fixtures/resolvers/validation/UI hooks)
   - Warlock class content still deferred to P2.10
 - [ ] **Species play-time features:** Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration
@@ -498,7 +510,7 @@ code (documents through v11 at time of audit).
 - [x] **Creation-time nested starting-equipment trees** for bundled classes/backgrounds (Monk artisan tools, Soldier gaming set); future classes reuse the same architecture
 - [ ] **Additional class starting-equipment branch trees** where SRD offers more nested choices (e.g. remaining package sub-picks) — defs not yet authored, not a resolver gap
 - [ ] **Expand spell catalogue** as new casters ship (full lists per class, not stubs)
-  - Wizard + Druid + Bard lists complete through 9th level; Magical Secrets / Discoveries unions; Sorcerer/Warlock lists still pending
+  - Wizard + Druid + Bard + Sorcerer lists complete through 9th level; Magical Secrets / Discoveries unions; Warlock list still pending
 
 ### 2. Required for a usable character sheet during play
 
@@ -551,7 +563,7 @@ equipment catalogue for starting packages + artisan tools + gaming sets, storage
 
 - **Incomplete authored defs** — a bundled class/background still missing a nested SRD
   sub-choice that the architecture already supports.
-- **Not-yet-implemented classes** — Sorcerer/Warlock (and their gear trees).
+- **Not-yet-implemented classes** — Warlock (and its gear tree).
   Wild Shape play-time transformation is out of Phase 2 (Known Forms only today).
 - **Play-time gaps** — shop, encumbrance enforcement, attunement, rest/level-up inventory.
 

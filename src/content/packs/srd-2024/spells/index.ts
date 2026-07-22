@@ -2,6 +2,7 @@ import type { SpellDefinition } from '../../../../domain/spell/types'
 import { defineSrd2024Spell } from './defineSpell'
 import { SRD_2024_BARD_EXCLUSIVE_SPELLS } from './bard-exclusive'
 import { SRD_2024_DRUID_EXCLUSIVE_SPELLS } from './druid-exclusive'
+import { SRD_2024_SORCERER_EXCLUSIVE_SPELLS } from './sorcerer-exclusive'
 import { SRD_2024_WIZARD_HIGHER_LEVEL_SPELLS } from './wizard-higher-levels'
 
 /**
@@ -2206,4 +2207,5 @@ export const SRD_2024_SPELLS: SpellDefinition[] = [
   ...SRD_2024_WIZARD_HIGHER_LEVEL_SPELLS,
   ...SRD_2024_DRUID_EXCLUSIVE_SPELLS,
   ...SRD_2024_BARD_EXCLUSIVE_SPELLS,
+  ...SRD_2024_SORCERER_EXCLUSIVE_SPELLS,
 ]

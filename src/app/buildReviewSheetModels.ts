@@ -272,6 +272,31 @@ function collectJackOfAllTrades(
   return false
 }
 
+function collectUnarmoredDefenseOptions(
+  character: Character,
+  classDefinitions: Map<string, ClassDefinition>,
+): { abilities: AbilityId[] }[] {
+  const options: { abilities: AbilityId[] }[] = []
+
+  for (const instance of character.classes) {
+    const definition = classDefinitions.get(instance.classId)
+    if (definition === undefined) {
+      continue
+    }
+
+    for (const effect of resolveClassEffects(
+      definition,
+      classInstanceToSelection(instance),
+    )) {
+      if (effect.kind === 'unarmored-defense') {
+        options.push({ abilities: [...effect.abilities] })
+      }
+    }
+  }
+
+  return options
+}
+
 function collectSavingThrowProficiencies(
   character: Character,
   classDefinitions: Map<string, ClassDefinition>,
@@ -881,6 +906,10 @@ export function buildReviewSheetModels(
     loadout: character.equipment.loadout,
     equipmentDefinitionsById,
     otherBonus: defenseAcBonus,
+    unarmoredDefenseOptions: collectUnarmoredDefenseOptions(
+      character,
+      input.classDefinitions,
+    ),
   })
 
   const feats =

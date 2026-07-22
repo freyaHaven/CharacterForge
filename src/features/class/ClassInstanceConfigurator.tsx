@@ -60,6 +60,7 @@ import {
   collectSkillProficiencySelections,
   getExcludedExpertiseOptionIds,
 } from '../../domain/class/skillProficiencySelections'
+import { getExcludedSharedPoolOptionIds } from '../../domain/class/sharedMultiSelectExclusions'
 import {
   collectWeaponMasterySelections,
   isWeaponMasteryChoiceId,
@@ -93,7 +94,7 @@ function getExcludedMultiSelectOptionIds(
     return collectSkillProficiencySelections(definition, choices, choiceId)
   }
 
-  return []
+  return getExcludedSharedPoolOptionIds(definition, choiceId, choices)
 }
 
 export type ClassInstanceConfiguratorProps = {

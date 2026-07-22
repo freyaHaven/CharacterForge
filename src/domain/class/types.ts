@@ -3,6 +3,7 @@ import type { ContentSource } from '../content/types'
 import type { EditionId } from '../edition'
 import type { FeatCategory } from '../feat/types'
 import type { SkillId } from '../skills/types'
+import type { DamageTypeId } from '../species/types'
 import type { StartingEquipmentDefinition } from '../equipment/types'
 import type {
   ClassSpellcasting,
@@ -83,6 +84,11 @@ export type ClassChoiceEffect =
   | { kind: 'tool-proficiency'; toolId: string; label: string }
   /** Half proficiency (floor) on skill checks lacking proficiency. */
   | { kind: 'jack-of-all-trades' }
+  /** While unarmored: AC = 10 + sum of listed ability modifiers. */
+  | { kind: 'unarmored-defense'; abilities: AbilityId[] }
+  /** Add `amount` to hit point maximum per level in this class instance. */
+  | { kind: 'hit-point-maximum-per-class-level'; amount: number }
+  | { kind: 'damage-resistance'; damageType: DamageTypeId }
 
 /** Feature granted by selecting a subclass (or similar) choice option. */
 export type ClassOptionFeature = {
@@ -92,6 +98,8 @@ export type ClassOptionFeature = {
   level: ClassLevel
   /** Spell entitlements unlocked with this feature (e.g. domain spells). */
   spellEntitlements?: SpellEntitlement[]
+  /** Persistent creator-time effects from this subclass feature. */
+  effects?: ClassChoiceEffect[]
 }
 
 export type ClassChoiceOption = {

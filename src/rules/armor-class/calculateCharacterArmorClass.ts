@@ -1,4 +1,5 @@
 import { getAbilityModifier } from '../../domain/abilities'
+import type { AbilityId } from '../../domain/abilities/types'
 import type { AbilityScores } from '../../domain/types'
 import type {
   ArmorProperties,
@@ -94,10 +95,39 @@ export function selectEquippedArmorAndShield(
   return { armorItemId, armor, shieldItemId, shield }
 }
 
+function bestUnarmoredBase(
+  abilityScores: AbilityScores,
+  unarmoredDefenseOptions: readonly { abilities: readonly AbilityId[] }[],
+): { base: number; dexterityBonus: number } {
+  const dexterityModifier = getAbilityModifier(abilityScores.dexterity)
+  let bestTotal = UNARMORED_BASE_ARMOR_CLASS + dexterityModifier
+  let bestBase = UNARMORED_BASE_ARMOR_CLASS
+  let bestDexterityBonus = dexterityModifier
+
+  for (const option of unarmoredDefenseOptions) {
+    if (option.abilities.length === 0) {
+      continue
+    }
+
+    const sum = option.abilities.reduce(
+      (total, ability) => total + getAbilityModifier(abilityScores[ability]),
+      0,
+    )
+    const candidateTotal = UNARMORED_BASE_ARMOR_CLASS + sum
+    if (candidateTotal > bestTotal) {
+      bestTotal = candidateTotal
+      bestBase = candidateTotal
+      bestDexterityBonus = 0
+    }
+  }
+
+  return { base: bestBase, dexterityBonus: bestDexterityBonus }
+}
+
 /**
  * Derives Armour Class from ability scores and the character's equipment loadout.
  *
- * - No armour: 10 + Dexterity modifier
+ * - No armour: 10 + Dexterity modifier, or the best `unarmored-defense` formula
  * - Light: armour base + full Dexterity modifier
  * - Medium: armour base + Dexterity modifier (capped)
  * - Heavy: armour base only
@@ -111,6 +141,11 @@ export function calculateCharacterArmorClass(input: {
   equipmentDefinitionsById: ReadonlyMap<string, EquipmentItemDefinition>
   /** Pre-resolved passive AC bonuses (Defense, etc.). */
   otherBonus?: number
+  /**
+   * Unarmored Defense formulas from class effects (e.g. DEX+CHA).
+   * Used only while no armour is worn; highest formula wins.
+   */
+  unarmoredDefenseOptions?: readonly { abilities: readonly AbilityId[] }[]
 }): ArmorClassResult {
   const dexterityModifier = getAbilityModifier(input.abilityScores.dexterity)
   const equipped = selectEquippedArmorAndShield(
@@ -119,11 +154,21 @@ export function calculateCharacterArmorClass(input: {
     input.equipmentDefinitionsById,
   )
 
-  const base =
-    equipped.armor === null
-      ? UNARMORED_BASE_ARMOR_CLASS
-      : equipped.armor.baseArmorClass
-  const dexterityBonus = applyDexterityBonus(dexterityModifier, equipped.armor)
+  let base: number
+  let dexterityBonus: number
+
+  if (equipped.armor === null) {
+    const unarmored = bestUnarmoredBase(
+      input.abilityScores,
+      input.unarmoredDefenseOptions ?? [],
+    )
+    base = unarmored.base
+    dexterityBonus = unarmored.dexterityBonus
+  } else {
+    base = equipped.armor.baseArmorClass
+    dexterityBonus = applyDexterityBonus(dexterityModifier, equipped.armor)
+  }
+
   const shieldBonus = equipped.shield?.armorClassBonus ?? 0
   const otherBonus = input.otherBonus ?? 0
 

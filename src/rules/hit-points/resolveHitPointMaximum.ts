@@ -13,6 +13,8 @@ import type { AbilityScores } from '../../domain/types'
 import type { SpeciesDefinition, SpeciesSelection } from '../../domain/species/types'
 import { resolveSpeciesEffects } from '../species/resolveSpeciesEffects'
 import type { RandomSource } from '../rolled/random'
+import { resolveClassEffects } from '../class/resolveClassEffects'
+import { classInstanceToSelection } from '../../domain/character/characterClassSelection'
 
 export type HitPointLevelBreakdown = {
   instanceId: string
@@ -119,6 +121,15 @@ export function resolveHitPointMaximum(input: {
         speciesBonus: speciesBonusPerLevel,
         total,
       })
+    }
+
+    for (const effect of resolveClassEffects(
+      definition,
+      classInstanceToSelection(instance),
+    )) {
+      if (effect.kind === 'hit-point-maximum-per-class-level') {
+        maximum += effect.amount * instance.level
+      }
     }
   }
 

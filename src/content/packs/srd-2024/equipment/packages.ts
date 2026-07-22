@@ -110,6 +110,15 @@ export const WIZARD_PACKAGE_A: EquipmentGrant[] = [
   gold(5),
 ]
 
+/** Sorcerer Package A (SRD 5.2.1): crystal Arcane Focus. */
+export const SORCERER_PACKAGE_A: EquipmentGrant[] = [
+  item(id('spear')),
+  item(id('dagger'), 2),
+  item(id('arcane-focus-crystal')),
+  item(id('dungeoneers-pack')),
+  gold(28),
+]
+
 export const ACOLYTE_PACKAGE: EquipmentGrant[] = [
   item(id('calligraphers-supplies')),
   item(id('book-prayers')),

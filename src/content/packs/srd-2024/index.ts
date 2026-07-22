@@ -9,6 +9,7 @@ import { monkSrd2024 } from './classes/monk'
 import { paladinSrd2024 } from './classes/paladin'
 import { rangerSrd2024 } from './classes/ranger'
 import { rogueSrd2024 } from './classes/rogue'
+import { sorcererSrd2024 } from './classes/sorcerer'
 import { wizardSrd2024 } from './classes/wizard'
 import { SRD_2024_EQUIPMENT } from './equipment'
 import { SRD_2024_FEATS } from './feats'
@@ -21,6 +22,7 @@ import { championSrd2024 } from './subclasses/champion'
 import { circleOfTheLandSrd2024 } from './subclasses/circle-of-the-land'
 import { collegeOfLoreSrd2024 } from './subclasses/college-of-lore'
 import { devotionSrd2024 } from './subclasses/devotion'
+import { draconicSorcerySrd2024 } from './subclasses/draconic-sorcery'
 import { evokerSrd2024 } from './subclasses/evoker'
 import { hunterSrd2024 } from './subclasses/hunter'
 import { lifeDomainSrd2024 } from './subclasses/life-domain'
@@ -41,6 +43,7 @@ export const srd2024ContentPack: ContentPack = {
     druidSrd2024,
     wizardSrd2024,
     bardSrd2024,
+    sorcererSrd2024,
   ],
   subclasses: [
     championSrd2024,
@@ -53,6 +56,7 @@ export const srd2024ContentPack: ContentPack = {
     circleOfTheLandSrd2024,
     evokerSrd2024,
     collegeOfLoreSrd2024,
+    draconicSorcerySrd2024,
   ],
   feats: [...SRD_2024_FEATS],
   backgrounds: [...SRD_2024_BACKGROUNDS],

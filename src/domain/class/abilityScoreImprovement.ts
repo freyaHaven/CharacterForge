@@ -339,6 +339,8 @@ export const WIZARD_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
 
 export const BARD_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
 
+export const SORCERER_ASI_FEATURE_LEVELS = [4, 8, 12, 16] as const
+
 /** Deterministic complete ASI picks for tests and fixtures. */
 export function createAsiChoicesUpToLevel(
   level: number,

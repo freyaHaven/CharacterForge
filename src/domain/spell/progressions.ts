@@ -167,6 +167,22 @@ export const BARD_PREPARED_BY_LEVEL = [
 ]
 
 /**
+ * Sorcerer cantrips known by class level (index = level - 1).
+ * SRD Features table: 4 at L1–3, then 5 / 6 at later tiers.
+ */
+export const SORCERER_CANTRIPS_KNOWN_BY_LEVEL = [
+  4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+]
+
+/**
+ * Sorcerer prepared L1+ spells by class level.
+ * SRD prose chooses two at L1 (HTML tables that show 4 are ignored).
+ */
+export const SORCERER_PREPARED_BY_LEVEL = [
+  2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
+]
+
+/**
  * Bardic Inspiration die faces by Bard level (index = level - 1).
  * d6 (1–4), d8 (5–9), d10 (10–14), d12 (15–20).
  */

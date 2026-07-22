@@ -289,6 +289,11 @@ const RAW_SRD_2024_EQUIPMENT: EquipmentItemDefinition[] = [
     name: 'Druidic Focus (sprig of mistletoe)',
     category: 'tool',
   }),
+  def({
+    id: id('arcane-focus-crystal'),
+    name: 'Arcane Focus (crystal)',
+    category: 'tool',
+  }),
   /** Generic stand-in kept for backward-compat grants; not tagged for choose-items. */
   def({
     id: id('artisans-tools'),
@@ -595,6 +600,7 @@ const EQUIPMENT_STATS: Record<
   [id('healers-kit')]: { weightLb: 3, costGp: 5 },
   [id('holy-symbol')]: { weightLb: 1, costGp: 5 },
   [id('druidic-focus-mistletoe')]: { weightLb: 0, costGp: 0 },
+  [id('arcane-focus-crystal')]: { weightLb: 1, costGp: 10 },
   [id('artisans-tools')]: { weightLb: 5, costGp: 10 },
   [id('dice-set')]: { weightLb: 0, costGp: 0.1 },
   [id('dragonchess-set')]: { weightLb: 0.5, costGp: 1 },
