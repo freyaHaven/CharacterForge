@@ -128,6 +128,16 @@ async function completeRequiredSteps(
   }
 
   await completeFighterSelection(user, screen)
+
+  await goToWizardStep(user, screen, 'Background')
+  await waitFor(() => {
+    expect(screen.queryByText(/loading backgrounds/i)).not.toBeInTheDocument()
+  })
+  await user.click(screen.getByRole('button', { name: 'Soldier' }))
+  await user.click(screen.getByLabelText('+2 / +1'))
+  await user.selectOptions(screen.getByLabelText('+2 Ability'), 'strength')
+  await user.selectOptions(screen.getByLabelText('+1 Ability'), 'constitution')
+  await user.click(screen.getByLabelText('Dice Set'))
 }
 
 describe('Review wizard integration', () => {
@@ -205,7 +215,7 @@ describe('Review wizard integration', () => {
       expect(finishButton).toBeDisabled()
     })
     expect(
-      screen.getByText(/complete remaining character decisions before finishing/i),
+      screen.getByText(/Finish is blocked until you complete:/i),
     ).toBeInTheDocument()
   })
 

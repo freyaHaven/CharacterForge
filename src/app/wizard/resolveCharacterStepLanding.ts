@@ -4,8 +4,8 @@ import type { EquipmentCatalog } from '../../domain/ports/equipmentCatalog'
 import type { FeatCatalog } from '../../domain/ports/featCatalog'
 import type { SpeciesCatalog } from '../../domain/ports/speciesCatalog'
 import type { SpellCatalog } from '../../domain/ports/spellCatalog'
-import { getCommittedClassSelection } from '../../domain/character/characterClassSelection'
 import type { Character } from '../../domain/types'
+import type { ClassDefinition } from '../../domain/class/types'
 import type { FeatDefinition } from '../../domain/feat/types'
 import {
   abilityScoresToStandardArrayDraft,
@@ -17,7 +17,10 @@ import {
 } from '../../features/ability-scores/rolledDraft'
 import { validatePointBuyAssignment } from '../../rules/point-buy'
 import { validateBackgroundSelection } from '../../rules/background/backgroundRules'
-import { validateClassSelection } from '../../rules/class/classRules'
+import {
+  validateClassInstance,
+} from '../../rules/class/classRules'
+import { validateCharacterClassesWithDefinitions } from '../../rules/class/validateCharacterClasses'
 import { validateFeatSelection } from '../../rules/feat/featRules'
 import { validateSpeciesSelection } from '../../rules/species/speciesRules'
 import { resolveCharacterSpellcasting } from '../../rules/character/resolveCharacterSpellcasting'
@@ -50,11 +53,8 @@ export async function buildCommittedStepValidationContext(
   character: Character,
   catalogs: CharacterStepCatalogs,
 ): Promise<StepValidationContext> {
-  const committedClass = getCommittedClassSelection(character)
-
   const [
     speciesDefinition,
-    classDefinition,
     backgroundDefinition,
     featDefinition,
     feats,
@@ -62,9 +62,6 @@ export async function buildCommittedStepValidationContext(
     character.species === null
       ? Promise.resolve(null)
       : catalogs.speciesCatalog.getSpecies(character.species.speciesId),
-    committedClass === null
-      ? Promise.resolve(null)
-      : catalogs.classCatalog.getClass(committedClass.classId),
     character.background === null
       ? Promise.resolve(null)
       : catalogs.backgroundCatalog.getBackground(
@@ -89,17 +86,69 @@ export async function buildCommittedStepValidationContext(
       { featById },
     ).ok
 
-  const committedClassValid =
-    committedClass !== null &&
-    validateClassSelection(committedClass, character.editionId, classDefinition, {
-      featById,
-      characterFeatId: character.feat?.featId ?? null,
-    }).ok
-
   const originFeatDefinition =
     backgroundDefinition !== null
       ? (featById.get(backgroundDefinition.originFeat.featId) ?? null)
       : null
+
+  const classDefinitionEntries = await Promise.all(
+    character.classes.map(async (instance) => {
+      const definition = await catalogs.classCatalog.getClass(instance.classId)
+      return definition === null
+        ? null
+        : ([instance.classId, definition] as const)
+    }),
+  )
+  const classDefinitionsById = new Map<string, ClassDefinition>(
+    classDefinitionEntries.filter(
+      (entry): entry is readonly [string, ClassDefinition] => entry !== null,
+    ),
+  )
+
+  const outsideTakenFeatIds = [
+    ...(backgroundDefinition !== null
+      ? [backgroundDefinition.originFeat.featId]
+      : []),
+    ...(character.feat?.featId !== undefined ? [character.feat.featId] : []),
+  ]
+
+  const characterClassesResult =
+    character.classes.length === 0
+      ? null
+      : validateCharacterClassesWithDefinitions(
+          {
+            classes: character.classes,
+            targetLevel: character.targetLevel,
+            editionId: character.editionId,
+            startingClassInstanceId: character.startingClassInstanceId,
+            abilityScores: character.abilityScores,
+            backgroundDefinition,
+            backgroundSelection: character.background,
+          },
+          (classId) => classDefinitionsById.get(classId) ?? null,
+        )
+
+  const committedClassValid =
+    character.classes.length > 0 &&
+    characterClassesResult !== null &&
+    characterClassesResult.status === 'complete' &&
+    character.classes.every((instance) => {
+      const definition = classDefinitionsById.get(instance.classId) ?? null
+      return validateClassInstance(instance, character.editionId, definition, {
+        featById,
+        characterFeatId: character.feat?.featId ?? null,
+        takenFeatIds: outsideTakenFeatIds,
+        eligibilityContext: {
+          characterLevel: character.targetLevel,
+          abilityScores: character.abilityScores,
+          hasSpellcasting: [...classDefinitionsById.values()].some(
+            (entry) => entry.spellcasting !== undefined,
+          ),
+          hasFightingStyle: true,
+          takenFeatIds: outsideTakenFeatIds,
+        },
+      }).ok
+    })
 
   const committedBackgroundValid =
     character.background !== null &&

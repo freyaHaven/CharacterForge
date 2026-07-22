@@ -37,6 +37,7 @@ describe('getFinishPolicyResult', () => {
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'complete', hasValidationErrors: false },
           class: { completion: 'complete', hasValidationErrors: false },
+          background: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
         }),
       ),
@@ -54,6 +55,7 @@ describe('getFinishPolicyResult', () => {
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'in-progress', hasValidationErrors: true },
           class: { completion: 'complete', hasValidationErrors: false },
+          background: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
         }),
       ),
@@ -83,6 +85,7 @@ describe('getFinishPolicyResult', () => {
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'complete', hasValidationErrors: false },
           class: { completion: 'complete', hasValidationErrors: false },
+          background: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
         }),
         deferredRequirements,
@@ -94,7 +97,7 @@ describe('getFinishPolicyResult', () => {
     })
   })
 
-  it('does not block finishing because optional placeholder steps are incomplete', () => {
+  it('blocks finishing when Background is incomplete (required for SRD characters)', () => {
     expect(
       getFinishPolicyResult(
         createStatuses({
@@ -103,6 +106,26 @@ describe('getFinishPolicyResult', () => {
           class: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
           background: { completion: 'not-started', hasValidationErrors: false },
+        }),
+      ),
+    ).toEqual({
+      canFinish: false,
+      incompleteRequiredSteps: [
+        { stepId: 'background', label: 'Background' },
+      ],
+      unresolvedDeferredRequirements: [],
+    })
+  })
+
+  it('does not block finishing because optional Equipment is incomplete when no deferred gate', () => {
+    expect(
+      getFinishPolicyResult(
+        createStatuses({
+          basics: { completion: 'complete', hasValidationErrors: false },
+          species: { completion: 'complete', hasValidationErrors: false },
+          class: { completion: 'complete', hasValidationErrors: false },
+          background: { completion: 'complete', hasValidationErrors: false },
+          'ability-scores': { completion: 'complete', hasValidationErrors: false },
           equipment: { completion: 'not-started', hasValidationErrors: false },
         }),
       ).canFinish,
@@ -116,6 +139,7 @@ describe('getFinishPolicyResult', () => {
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'complete', hasValidationErrors: false },
           class: { completion: 'complete', hasValidationErrors: false },
+          background: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
           spells: { completion: 'in-progress', hasValidationErrors: true },
         }),
@@ -136,6 +160,7 @@ describe('getFinishPolicyResult', () => {
           basics: { completion: 'complete', hasValidationErrors: false },
           species: { completion: 'complete', hasValidationErrors: false },
           class: { completion: 'complete', hasValidationErrors: false },
+          background: { completion: 'complete', hasValidationErrors: false },
           'ability-scores': { completion: 'complete', hasValidationErrors: false },
           spells: { completion: 'complete', hasValidationErrors: false },
         }),
@@ -165,7 +190,7 @@ describe('formatFinishBlockedMessage', () => {
         ],
       }),
     ).toBe(
-      'Complete remaining character decisions before finishing your character.',
+      'Finish is blocked until you complete: Starting Equipment.',
     )
   })
 })

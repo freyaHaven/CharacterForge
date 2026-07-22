@@ -1,4 +1,5 @@
 import type { ResolvedEquipment } from '../character/resolveCharacterEquipment'
+import { sortValidationIssues } from '../validation/issueOrdering'
 
 export type EquipmentValidationIssue = {
   code: 'incomplete-choice'
@@ -34,6 +35,6 @@ export function validateResolvedEquipment(
 
   return {
     ok: issues.length === 0,
-    issues,
+    issues: sortValidationIssues(issues),
   }
 }

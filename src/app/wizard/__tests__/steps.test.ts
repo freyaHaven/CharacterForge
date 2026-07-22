@@ -37,12 +37,12 @@ describe('WIZARD_STEPS', () => {
     expect(requiredById['ability-scores']).toBe(true)
   })
 
-  it('marks optional steps as not required', () => {
+  it('marks Background as required and other optional steps as not required', () => {
     const requiredById = Object.fromEntries(
       WIZARD_STEPS.map((step) => [step.id, step.required]),
     ) as Record<WizardStepId, boolean>
 
-    expect(requiredById.background).toBe(false)
+    expect(requiredById.background).toBe(true)
     expect(requiredById.equipment).toBe(false)
     expect(requiredById.feats).toBe(false)
     expect(requiredById.spells).toBe(false)

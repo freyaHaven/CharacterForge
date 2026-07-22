@@ -10,6 +10,7 @@ import {
   collectSpellAvailability,
   evaluateSpellSelectionEligibility,
 } from './spellSelectionEligibility'
+import { sortValidationIssues } from '../validation/issueOrdering'
 
 export type SpellValidationIssueCode =
   | 'inactive-source-state'
@@ -438,7 +439,7 @@ export async function validateSpellSourceStates(
   }
 
   if (issues.length > 0) {
-    return { ok: false, issues }
+    return { ok: false, issues: sortValidationIssues(issues) }
   }
 
   return { ok: true }

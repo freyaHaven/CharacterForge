@@ -218,7 +218,9 @@ describe('Character Details workflow', () => {
       ),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByText(/complete remaining character decisions before finishing/i),
+      screen.getByText(
+        /complete these required steps before finishing:.*Background/i,
+      ),
     ).toBeInTheDocument()
   })
 })

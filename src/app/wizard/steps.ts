@@ -3,7 +3,7 @@ import type { WizardStepDefinition, WizardUiState } from './types'
 export const WIZARD_STEPS: readonly WizardStepDefinition[] = [
   { id: 'basics', label: 'Basics', required: true },
   { id: 'class', label: 'Class', required: true },
-  { id: 'background', label: 'Background', required: false },
+  { id: 'background', label: 'Background', required: true },
   { id: 'species', label: 'Species', required: true },
   { id: 'ability-scores', label: 'Abilities', required: true },
   { id: 'equipment', label: 'Equipment', required: false },

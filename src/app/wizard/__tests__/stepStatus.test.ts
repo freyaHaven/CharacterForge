@@ -335,7 +335,7 @@ describe('getReviewStepStatus', () => {
         species: { completion: 'complete', hasValidationErrors: false },
         class: { completion: 'complete', hasValidationErrors: false },
         'ability-scores': { completion: 'complete', hasValidationErrors: false },
-        background: { completion: 'not-started', hasValidationErrors: false },
+        background: { completion: 'complete', hasValidationErrors: false },
         equipment: { completion: 'not-started', hasValidationErrors: false },
         feats: { completion: 'not-started', hasValidationErrors: false },
         spells: { completion: 'not-started', hasValidationErrors: false },
@@ -426,9 +426,19 @@ describe('getAllStepStatuses', () => {
           name: 'Aldric',
           species: { speciesId: 'srd-2024:dwarf', choices: {} },
           ...withSingleClassInstance(createTestFighterClassInstance()),
+          background: {
+            backgroundId: 'srd-2024:soldier',
+            abilityScoreIncrease: {
+              mode: 'two-and-one',
+              plusTwo: 'strength',
+              plusOne: 'constitution',
+            },
+            choices: { 'gaming-set': 'dice-set' },
+          },
         }),
         committedSpeciesValid: true,
         committedClassValid: true,
+        committedBackgroundValid: true,
         abilityScoresTouched: true,
       }),
     )
@@ -436,6 +446,7 @@ describe('getAllStepStatuses', () => {
     expect(statuses.basics.completion).toBe('complete')
     expect(statuses.species.completion).toBe('complete')
     expect(statuses.class.completion).toBe('complete')
+    expect(statuses.background.completion).toBe('complete')
     expect(statuses['ability-scores'].completion).toBe('complete')
     expect(statuses.review).toEqual({
       completion: 'complete',

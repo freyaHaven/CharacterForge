@@ -95,7 +95,13 @@ export function formatFinishBlockedMessage(result: FinishPolicyResult): string {
   }
 
   if (result.unresolvedDeferredRequirements.length > 0) {
-    return 'Complete remaining character decisions before finishing your character.'
+    const labels = result.unresolvedDeferredRequirements
+      .map((requirement) => requirement.label)
+      .filter((label, index, all) => all.indexOf(label) === index)
+    if (labels.length === 1) {
+      return `Finish is blocked until you complete: ${labels[0]}.`
+    }
+    return `Finish is blocked until you complete: ${labels.join(', ')}.`
   }
 
   return 'Complete the required steps before finishing your character.'

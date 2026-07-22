@@ -33,27 +33,75 @@ scored across seven dimensions:
 
 | Area | Overall | Notes |
 |------|---------|-------|
-| Species & ancestry | 🟡 | 9/9 SRD species; creator-time effects largely wired; play-time traits descriptive |
-| Backgrounds | 🟡 | 4 bundled backgrounds; no custom background builder |
+| Species & ancestry | 🟡 | 9/9 SRD species; creator-time effects wired; play-time traits descriptive (Phase 3) |
+| Backgrounds | ✅ | 4/4 SRD backgrounds; Background is required for Finish |
 | Classes & subclasses | ✅ | **12/12** SRD classes; 1 subclass each |
-| Class feature choices | 🟡 | Most L1–20 choices work; Epic Boon pickable at L19; some subclass extras missing |
-| Deferred class requirements | 🟡 | Starting equipment only; Epic Boon is a class choice (not deferred) |
-| Feats & acquisition | 🟡 | Origin + epic boons + Fighting Style + Grappler/Skilled/ASI feat (nested sub-choices ✅); no standalone Feats step |
+| Class feature choices | ✅ | L1–20 choices including Epic Boon nested ASI; play-time activations Phase 3 |
+| Deferred class requirements | ✅ | Starting equipment gates Finish via deferred requirements |
+| Feats & acquisition | ✅ | Origin + epic boons + Fighting Style + Grappler/Skilled/ASI/Magic Initiate; Feats step hidden |
 | Fighting styles | ✅ | Feat defs + shared grant pipeline; Champion L7 Additional FS; Defense AC ✅ |
-| Weapon mastery | 🟡 | Slot schedules + UI; gear sub-choices deferred |
+| Weapon mastery | 🟡 | Slot schedules + UI; combat execution deferred |
 | Ability scores & ASIs | ✅ | All three methods + class ASI choices including feat option |
-| Spell catalogue & lists | 🟡 | ~360 need-based spells; full lists for all 12 classes; Magical Secrets / Discoveries / all-cantrips / L1-rituals unions |
-| Spellcasting | 🟡 | All 12 classes; **P2.5 spellbook + Pact Magic**; Warlock prepared Pact Magic + invocations + arcanum |
-| Starting equipment | ✅ | Nested trees for bundled classes/backgrounds (Monk tools, Soldier gaming set) |
-| Full equipment catalogue | ⏸ | Starting-package scope (+ artisan tools / gaming sets); shop deferred |
+| Spell catalogue & lists | ✅ | Full lists for all 12 classes; Magical Secrets / Discoveries / unions |
+| Spellcasting | ✅ | All 12 classes; spellbook + Pact Magic; prepared limits; creation-time only |
+| Starting equipment | ✅ | Nested trees for bundled classes/backgrounds |
+| Full equipment catalogue | ⏸ | Starting-package scope; shop deferred |
 | Inventory, currency, loadout | 🟡 | Resolved inventory + Overview loadout; no shop |
-| Proficiencies & languages | 🟡 | Class/background on sheet; species/feat gaps |
-| Derived combat stats | 🟡 | HP/AC strong; Alert initiative ✅; Defense FS AC ✅; WM combat still open |
-| Multiclass | 🟡 | UI + validation + shared slots; **ability prerequisites ✅ (P2.1)** |
-| Higher-level creation | 🟡 | Levels 1–20 supported; L19 Epic Boon pickable on Class step |
-| Wizard visibility & routing | 🟡 | 10-step catalog; Details/Feats hidden (legacy); no URL routing |
+| Proficiencies & languages | 🟡 | Class/background/species/feat on sheet; some play-time gaps |
+| Derived combat stats | 🟡 | HP/AC/initiative strong; combat execution Phase 3 |
+| Multiclass | ✅ | UI + validation + shared slots + ability prerequisites + open/import routing |
+| Higher-level creation | ✅ | Levels 1–20; legal-build matrix + incomplete routing matrix (P2.12) |
+| Wizard visibility & routing | ✅ | Shared `getCharacterOpenDestination`; Background required |
 | Import/export & migrations | ✅ | `.cforge` + localStorage v0→v15 |
-| Overview & in-play management | 🟡 | Rich creation-time sheet; no rest/level-up/play mode |
+| Overview & in-play management | 🟡 | Creation-time sheet complete; no rest/combat/play mode |
+
+---
+
+## Phase 2 completion
+
+**Phase 2 guarantees complete and legal SRD 2024 character creation. It does not yet execute play-time combat, rest, resource, condition, summon, or temporary-effect mechanics.**
+
+As of **P2.12** (schema **v15**):
+
+- All **12** SRD 2024 classes are creatable at levels 1–20 with their bundled subclass.
+- All bundled species, backgrounds, feats, subclasses, spells, and starting-equipment paths participate in validation.
+- Legal builds reach Overview / Finish; incomplete or illegal builds block Finish with actionable issues and route to the first incomplete active step.
+- Save, load, export, and import preserve creation-time state; migrations do not invent selections.
+- Content-driven progression remains the architecture; named SRD IDs in generic layers are limited to documented exceptions below.
+
+### Finish policy (P2.12)
+
+Finish is allowed only when every required wizard step is complete, active entitlements are satisfied, prerequisites hold, duplicates/stale dependents are cleared, and derived resolution has no blocking errors. Finish does **not** block on play-time concerns (unspent resources, current HP, expended slots, rests, summons, temp effects, combat targets, reactions, attunement, ammunition, mid-play preparation).
+
+Shared APIs: `getFinishPolicyResult`, `getAllStepStatuses` / `getFirstIncompleteCharacterStep`, `getCharacterOpenDestination` / `buildCommittedStepValidationContext`.
+
+### Coverage matrices (P2.12)
+
+- Legal builds: `src/app/__tests__/p212LegalBuilds.test.ts` (+ `src/testing/srdLegalClassChoices.ts`, `autofillSpellSourceStates.ts`)
+- Incomplete routing: `src/app/__tests__/p212IncompleteRouting.test.ts`
+- Catalogue integrity: `src/content/packs/srd-2024/__tests__/catalogueIntegrity.test.ts`
+- Issue ordering: `src/rules/validation/issueOrdering.ts`
+
+### Documented deliberate exceptions
+
+| Exception | Location | Notes |
+|-----------|----------|-------|
+| Fighting Style legacy option → feat map | `domain/class/fightingStyle.ts` (`FIGHTING_STYLE_LEGACY_OPTION_TO_FEAT_ID`) | Compatibility for saves using option ids (`defense`, `archery`, …) |
+| Gold pieces item id | `domain/equipment/types.ts` (`GOLD_PIECES_ITEM_ID` = `srd-2024:gold-pieces`) | Stable currency grant id in equipment trees |
+| ASI feat cycle guard | ASI feat-mode pickers | Prevents selecting the ASI feat as an ASI feat-mode pick |
+| Content registry overrides/patches | `content/registry/` | Pack registration may patch/override by id; document pack-level only |
+| UI asset / icon mappings | feature UI | Labels/icons may map content ids without affecting resolution |
+| Runtime resources & active effects | sheet / Phase 3 | Descriptive only until play-time systems exist |
+
+### Deferred to Phase 3
+
+- Combat execution (attacks, weapon mastery combat, Savage Attacker rolls)
+- Rest workflows; HP / hit-dice / spell-slot expenditure tracking
+- Concentration, conditions, summons, temporary HP, familiar / pact weapon conjure
+- Wild Shape transformation (Known Forms remain creation-time)
+- Attunement, ammunition, encumbrance enforcement, shop
+- Species play-time uses (Luck, Breath Weapon, Relentless Endurance, etc.)
+- Post-creation level-up workflow and live session sheet mode
 
 ---
 
@@ -515,6 +563,7 @@ code (documents through v11 at time of audit).
 - [x] **Sorcerer (P2.9)** — full class, Draconic Sorcery, prepared CHA full caster, Metamagic creation-time choices, Elemental Affinity resistance, Draconic Resilience HP/AC, full Sorcerer spell list; Font/Innate/points Phase 2 descriptive only
 - [x] **Warlock (P2.10)** — full class, Fiend Patron, CHA prepared Pact Magic, Eldritch Invocations (prereqs + `limitsByLevel`), Pact Boons as invocations, Mystic Arcanum, Contact Patron, Fiendish Resilience creation-time choice, full Warlock spell list; Magical Cunning / temp HP / familiar / conjure / Hurl Through Hell Phase 2 descriptive only
 - [x] **P2.11 Complete SRD 2024 feats** — all checklist feats + Epic Boon ASI/senses/resistances; Magic Initiate Druid + ability choice; no schema migration
+- [x] **P2.12 Phase 2 Finish, Validation, and Coverage Hardening** — Finish policy, shared routing, legal/incomplete matrices, catalogue integrity, issue ordering; schema remains v15
 - [ ] **Species play-time features:** Luck, Breath Weapon, Relentless Endurance, Giant Ancestry uses, Large Form, Resourceful Inspiration
 - [x] **ASI feat from Epic Boon / ASI feat-mode** — nested +2 / +1+1 via companion keys; ASI feat excluded from ASI feat-mode pickers only (cycle guard)
 - [x] **Skilled sub-choices** — multi-select skill/tool companion keys under feat grants
@@ -576,9 +625,9 @@ code (documents through v11 at time of audit).
 **Method:** File inspection, test grep, and spot-checks of resolver and wizard paths.
 Comments and README claims were verified against code.
 
-**Counts verified in repo:** 9 species, 9 classes, 9 subclasses, 4 backgrounds, 18 feats
-(4 origin + 4 fighting style + 7 epic boons + ASI + Grappler + Skilled), ~350 spells,
-equipment catalogue for starting packages + artisan tools + gaming sets, storage schema v15.
+**Counts verified in repo:** 9 species, **12** classes, **12** subclasses, 4 backgrounds, **19** feats
+(origin feats + fighting styles + epic boons + ASI + Grappler + Skilled + Magic Initiate variants as shipped),
+~360 spells, equipment catalogue for starting packages + artisan tools + gaming sets, storage schema **v15**.
 
 **Distinguish gaps carefully:**
 
@@ -592,9 +641,7 @@ equipment catalogue for starting packages + artisan tools + gaming sets, storage
 
 - Whether each starting-equipment package exactly matches SRD 5.2.1 item quantities and
   gold amounts (content tests cover bundled options but not literal SRD page parity).
-- Complete spell list sizes for future full casters (current stubs are intentionally partial).
 - Whether all class feature **text** on Overview matches SRD wording (mechanical resolution
   was the audit focus).
 
-**Documentation lag:** `README.md` and `src/adapters/STORAGE.md` previously cited schema
-v9/v11; code is at **v15** as of this audit.
+**Documentation:** This file is the Phase 2 closure status document (P2.12).
