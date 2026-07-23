@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SpellDefinition } from '../../../../domain/spell/types'
@@ -79,49 +79,100 @@ function spellbookEntitlement(
     attackBonus: 5,
     saveDcLabel: '13',
     attackBonusLabel: '+5',
-    crossSourceDuplicatePolicy: 'allow',
     countsAgainstLimit: true,
     ...partial,
   }
 }
 
-describe('SpellsStep spellbook catalogue exclusions', () => {
-  it('hides spells already in earlier Wizard spellbook entitlements', async () => {
-    const user = userEvent.setup()
-    const group: ResolvedSpellSourceGroup = {
-      groupId: 'class:wiz-1',
-      label: 'Wizard',
-      ability: 'intelligence',
-      saveDc: 13,
-      attackBonus: 5,
-      saveDcLabel: '13',
-      attackBonusLabel: '+5',
-      sortKey: {
-        originKind: 'class-core',
-        classInstanceIndex: 0,
-        grantingLevel: 1,
-        progressionOrder: 0,
-        displayName: 'Wizard',
-      },
-      entitlements: [
-        spellbookEntitlement({
-          entitlementId: 'spellbook-1',
-          label: 'Wizard level 1 spellbook',
-          limit: 6,
-          accessibleLevels: [1],
-          selectedSpellIds: [magicMissile.id, shield.id],
-          remainingPicks: 4,
-        }),
-        spellbookEntitlement({
-          entitlementId: 'spellbook-3',
-          label: 'Wizard level 3 spellbook addition',
-          limit: 2,
-          accessibleLevels: [1, 2],
-          selectedSpellIds: [],
-          remainingPicks: 2,
-        }),
-      ],
+function wizardSpellbookGroup(
+  entitlements: ResolvedSpellEntitlement[],
+): ResolvedSpellSourceGroup {
+  return {
+    groupId: 'class:wiz-1',
+    label: 'Wizard',
+    ability: 'intelligence',
+    saveDc: 13,
+    attackBonus: 5,
+    saveDcLabel: '13',
+    attackBonusLabel: '+5',
+    sortKey: {
+      originKind: 'class-core',
+      classInstanceIndex: 0,
+      grantingLevel: 1,
+      progressionOrder: 0,
+      displayName: 'Wizard',
+    },
+    entitlements,
+  }
+}
+
+function makeCatalog(spells: SpellDefinition[]) {
+  const spellsById = new Map(spells.map((entry) => [entry.id, entry]))
+  return {
+    getSpell: vi.fn(async (id: string) => spellsById.get(id) ?? null),
+    getSpellList: vi.fn(async () => ({
+      id: 'srd-2024:spell-list:wizard',
+      editionId: 'srd-2024' as const,
+      name: 'Wizard',
+      spellIds: [...spellsById.keys()],
+      source: TEST_SOURCE,
+    })),
+    listSpells: vi.fn(async () => [...spellsById.values()]),
+    listSpellLists: vi.fn(async () => []),
+  }
+}
+
+async function expandCollapsedAccordions(
+  root: ParentNode,
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  const headers = root.querySelectorAll('button.choice-accordion__header')
+  for (const button of headers) {
+    if (button.getAttribute('aria-expanded') === 'false') {
+      await user.click(button)
     }
+  }
+}
+
+function additionSection(): HTMLElement {
+  const heading = screen.getByRole('heading', {
+    name: /wizard level 3 spellbook addition/i,
+  })
+  const section = heading.closest('section')
+  expect(section).not.toBeNull()
+  return section!
+}
+
+function additionRedundantToggle(): HTMLInputElement {
+  const section = additionSection()
+  const label = section.previousElementSibling
+  expect(label).not.toBeNull()
+  const input = label!.querySelector('input[type="checkbox"]')
+  expect(input).not.toBeNull()
+  return input as HTMLInputElement
+}
+
+describe('SpellsStep spellbook catalogue exclusions', () => {
+  it('hides already-known spellbook spells by default and reveals them with attribution', async () => {
+    const user = userEvent.setup()
+    const group = wizardSpellbookGroup([
+      spellbookEntitlement({
+        entitlementId: 'spellbook-1',
+        label: 'Wizard level 1 spellbook',
+        limit: 6,
+        accessibleLevels: [1],
+        selectedSpellIds: [magicMissile.id, shield.id],
+        remainingPicks: 4,
+      }),
+      spellbookEntitlement({
+        entitlementId: 'spellbook-3',
+        label: 'Wizard level 3 spellbook addition',
+        limit: 2,
+        accessibleLevels: [1, 2],
+        selectedSpellIds: [],
+        remainingPicks: 2,
+      }),
+    ])
 
     const summary: CharacterSpellcastingSummary = {
       hasSpellcastingCapability: true,
@@ -142,26 +193,6 @@ describe('SpellsStep spellbook catalogue exclusions', () => {
           entitlementId: 'spellbook-3',
         },
       ],
-    }
-
-    const spellsById = new Map([
-      [magicMissile.id, magicMissile],
-      [shield.id, shield],
-      [mistyStep.id, mistyStep],
-      [blur.id, blur],
-    ])
-
-    const catalog = {
-      getSpell: vi.fn(async (id: string) => spellsById.get(id) ?? null),
-      getSpellList: vi.fn(async () => ({
-        id: 'srd-2024:spell-list:wizard',
-        editionId: 'srd-2024' as const,
-        name: 'Wizard',
-        spellIds: [...spellsById.keys()],
-        source: TEST_SOURCE,
-      })),
-      listSpells: vi.fn(async () => [...spellsById.values()]),
-      listSpellLists: vi.fn(async () => []),
     }
 
     render(
@@ -169,79 +200,78 @@ describe('SpellsStep spellbook catalogue exclusions', () => {
         summary={summary}
         spellSourceStates={[]}
         onChangeSpellSourceStates={() => undefined}
-        spellCatalog={catalog}
+        spellCatalog={makeCatalog([magicMissile, shield, mistyStep, blur])}
         validationIssues={[]}
       />,
     )
 
-    await screen.findByRole('heading', {
-      name: /wizard level 3 spellbook addition/i,
-    })
-
-    const addition = screen
-      .getByRole('heading', { name: /wizard level 3 spellbook addition/i })
-      .closest('section')
-    expect(addition).not.toBeNull()
-
-    // Expand both level partitions in the addition entitlement.
-    const browseButtons = addition!.querySelectorAll(
-      'button.spell-level-accordion__trigger',
-    )
-    for (const button of browseButtons) {
-      await user.click(button)
-    }
+    const addition = additionSection()
+    await expandCollapsedAccordions(addition, user)
 
     expect(
-      addition!.querySelector('[id*="magic-missile"]'),
-    ).toBeNull()
-    expect(addition!.querySelector('[id*="shield"]')).toBeNull()
-    expect(
-      screen.getByRole('checkbox', { name: /misty step/i }),
+      await within(addition).findByRole('checkbox', { name: /misty step/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: /blur/i })).toBeInTheDocument()
+    expect(
+      within(addition).getByRole('checkbox', { name: /blur/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(addition).queryByRole('checkbox', { name: /magic missile/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(addition).queryByRole('checkbox', { name: /shield/i }),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('heading', {
         name: /wizard level 3 spellbook addition/i,
       }),
     ).toHaveTextContent('0/2')
-    expect(screen.queryByText('0/4')).not.toBeInTheDocument()
+    expect(
+      within(addition).getByRole('status'),
+    ).toHaveTextContent(/2 redundant choices hidden/i)
+
+    await user.click(additionRedundantToggle())
+    await expandCollapsedAccordions(addition, user)
+
+    expect(
+      await within(addition).findByRole('checkbox', { name: /magic missile/i }),
+    ).toBeInTheDocument()
+    expect(within(addition).getAllByText('Redundant').length).toBeGreaterThan(0)
+    expect(
+      within(addition).getAllByText(
+        /Already known from:.*Wizard level 1 spellbook/i,
+      ).length,
+    ).toBeGreaterThan(0)
+
+    // Redundant catalogue entries do not change entitlement progress.
+    expect(
+      screen.getByRole('heading', {
+        name: /wizard level 3 spellbook addition/i,
+      }),
+    ).toHaveTextContent('0/2')
+    expect(
+      within(addition).getByRole('checkbox', { name: /misty step/i }),
+    ).toBeInTheDocument()
   })
 
-  it('keeps a legacy duplicate visible so it can be cleared', async () => {
-    const group: ResolvedSpellSourceGroup = {
-      groupId: 'class:wiz-1',
-      label: 'Wizard',
-      ability: 'intelligence',
-      saveDc: 13,
-      attackBonus: 5,
-      saveDcLabel: '13',
-      attackBonusLabel: '+5',
-      sortKey: {
-        originKind: 'class-core',
-        classInstanceIndex: 0,
-        grantingLevel: 1,
-        progressionOrder: 0,
-        displayName: 'Wizard',
-      },
-      entitlements: [
-        spellbookEntitlement({
-          entitlementId: 'spellbook-1',
-          label: 'Wizard level 1 spellbook',
-          limit: 6,
-          accessibleLevels: [1],
-          selectedSpellIds: [magicMissile.id],
-          remainingPicks: 5,
-        }),
-        spellbookEntitlement({
-          entitlementId: 'spellbook-3',
-          label: 'Wizard level 3 spellbook addition',
-          limit: 2,
-          accessibleLevels: [1, 2],
-          selectedSpellIds: [magicMissile.id],
-          remainingPicks: 1,
-        }),
-      ],
-    }
+  it('keeps a committed redundant spellbook pick visible and clearable', async () => {
+    const group = wizardSpellbookGroup([
+      spellbookEntitlement({
+        entitlementId: 'spellbook-1',
+        label: 'Wizard level 1 spellbook',
+        limit: 6,
+        accessibleLevels: [1],
+        selectedSpellIds: [magicMissile.id],
+        remainingPicks: 5,
+      }),
+      spellbookEntitlement({
+        entitlementId: 'spellbook-3',
+        label: 'Wizard level 3 spellbook addition',
+        limit: 2,
+        accessibleLevels: [1, 2],
+        selectedSpellIds: [magicMissile.id],
+        remainingPicks: 1,
+      }),
+    ])
 
     const summary: CharacterSpellcastingSummary = {
       hasSpellcastingCapability: true,
@@ -262,25 +292,6 @@ describe('SpellsStep spellbook catalogue exclusions', () => {
           entitlementId: 'spellbook-3',
         },
       ],
-    }
-
-    const catalog = {
-      getSpell: vi.fn(async (id: string) =>
-        id === magicMissile.id
-          ? magicMissile
-          : id === mistyStep.id
-            ? mistyStep
-            : null,
-      ),
-      getSpellList: vi.fn(async () => ({
-        id: 'srd-2024:spell-list:wizard',
-        editionId: 'srd-2024' as const,
-        name: 'Wizard',
-        spellIds: [magicMissile.id, mistyStep.id],
-        source: TEST_SOURCE,
-      })),
-      listSpells: vi.fn(async () => [magicMissile, mistyStep]),
-      listSpellLists: vi.fn(async () => []),
     }
 
     render(
@@ -297,7 +308,7 @@ describe('SpellsStep spellbook catalogue exclusions', () => {
           },
         ]}
         onChangeSpellSourceStates={() => undefined}
-        spellCatalog={catalog}
+        spellCatalog={makeCatalog([magicMissile, mistyStep])}
         validationIssues={[
           {
             code: 'cross-source-duplicate',
@@ -311,8 +322,17 @@ describe('SpellsStep spellbook catalogue exclusions', () => {
       />,
     )
 
+    const addition = additionSection()
+    const missile = await within(addition).findByRole('checkbox', {
+      name: /magic missile/i,
+    })
+    expect(missile).toBeChecked()
+    expect(missile).toHaveAttribute('aria-invalid', 'true')
+    expect(missile).not.toBeDisabled()
     expect(
-      await screen.findByRole('checkbox', { name: /magic missile/i }),
-    ).toBeInTheDocument()
+      screen.getByRole('heading', {
+        name: /wizard level 3 spellbook addition/i,
+      }),
+    ).toHaveTextContent('1/2')
   })
 })

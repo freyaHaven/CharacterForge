@@ -4,6 +4,7 @@ import {
   formatLevelCountValue,
   formatSpellLevelAccordionSummary,
   formatSpellLevelBandLabel,
+  formatSpellLevelSectionLabel,
 } from '../entitlementCountDisplay'
 
 describe('formatSpellLevelBandLabel', () => {
@@ -13,6 +14,14 @@ describe('formatSpellLevelBandLabel', () => {
     expect(formatSpellLevelBandLabel(2)).toBe('2nd level')
     expect(formatSpellLevelBandLabel(3)).toBe('3rd level')
     expect(formatSpellLevelBandLabel(5)).toBe('5th level')
+  })
+})
+
+describe('formatSpellLevelSectionLabel', () => {
+  it('formats level section titles for accordion headers', () => {
+    expect(formatSpellLevelSectionLabel(0)).toBe('Cantrips')
+    expect(formatSpellLevelSectionLabel(1)).toBe('1st-level Spells')
+    expect(formatSpellLevelSectionLabel(2)).toBe('2nd-level Spells')
   })
 })
 

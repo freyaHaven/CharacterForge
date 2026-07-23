@@ -1,19 +1,35 @@
-import { useId, useState } from 'react'
-import { ChoiceChevronIcon } from '../choices/ChoiceChevronIcon'
+import {
+  ThresholdCollapseList,
+  formatThresholdCollapseTitle,
+} from '../choices/ThresholdCollapseList'
 import type { SpellDefinition } from '../../domain/spell/types'
 import type { SpellSelectionEligibility } from '../../rules/spell/spellSelectionEligibility'
 import type { SpellLevelCountRow } from './entitlementCountDisplay'
 import {
-  formatLevelCountValue,
-  formatSpellLevelAccordionSummary,
+  formatSpellLevelSectionLabel,
 } from './entitlementCountDisplay'
 import { SpellSelectionCard } from './SpellSelectionCard'
+import {
+  formatSelectionProgress,
+  formatSpellSectionTitle,
+  resolveSpellSectionDefaultExpanded,
+} from './spellSectionCollapse'
+
+export type SpellSelectionProgress = {
+  selected: number
+  limit: number
+}
 
 export type SpellSelectionGridProps = {
   /** Stable id prefix for checkbox inputs. */
   idPrefix: string
   title: string
   countLabel: string
+  /**
+   * Entitlement selection progress for accordion headers and default open
+   * state. Prefer this over parsing {@link countLabel}.
+   */
+  selectionProgress?: SpellSelectionProgress
   /** Per-level counts when more than one spell level is available. */
   levelRows?: SpellLevelCountRow[]
   selectableSpells: SpellDefinition[]
@@ -25,10 +41,13 @@ export type SpellSelectionGridProps = {
   /** When true, unchecked selectable cards are disabled (global pick limit). */
   atSelectionLimit?: boolean
   /**
-   * When false (default), discouraged/redundant unselected spells are hidden.
-   * Selected redundant spells stay visible so they can be cleared.
+   * When false (default), unselected redundant / already-known spells are
+   * omitted from the catalogue. Selected redundant spells stay visible so
+   * they can be cleared.
    */
   showRedundant?: boolean
+  /** Label for the granted-spell list / accordion (defaults to Always Prepared Spells). */
+  grantedListLabel?: string
   onToggleSpell: (spellId: string) => void
 }
 
@@ -98,114 +117,11 @@ function SpellCardList({
   )
 }
 
-type SpellLevelAccordionProps = {
-  idPrefix: string
-  row: SpellLevelCountRow
-  spells: SpellDefinition[]
-  selectedSpellIds: ReadonlySet<string>
-  invalidSpellIds?: ReadonlySet<string>
-  eligibilityBySpellId?: ReadonlyMap<string, SpellSelectionEligibility>
-  atSelectionLimit: boolean
-  onToggleSpell: (spellId: string) => void
-}
-
-function SpellLevelAccordion({
-  idPrefix,
-  row,
-  spells,
-  selectedSpellIds,
-  invalidSpellIds,
-  eligibilityBySpellId,
-  atSelectionLimit,
-  onToggleSpell,
-}: SpellLevelAccordionProps) {
-  const reactId = useId()
-  const headerId = `${idPrefix}-level-${row.level}-header-${reactId}`
-  const panelId = `${idPrefix}-level-${row.level}-panel-${reactId}`
-  const [expanded, setExpanded] = useState(() =>
-    spells.some((spell) => selectedSpellIds.has(spell.id)),
-  )
-  const countValue = formatLevelCountValue(row)
-  const levelAtCapacity =
-    row.limitScope === 'group' &&
-    row.capacity !== null &&
-    row.selected >= row.capacity
-
-  const selectedHere = spells.filter((spell) => selectedSpellIds.has(spell.id))
-  const unselectedEligible = spells.filter((spell) => {
-    if (selectedSpellIds.has(spell.id)) {
-      return false
-    }
-    const eligibility = eligibilityBySpellId?.get(spell.id)
-    return eligibility?.recommendation !== 'blocked'
-  })
-  const summaryText = formatSpellLevelAccordionSummary({
-    label: row.label,
-    selectedNames: selectedHere.map((spell) => spell.name),
-    eligibleCount: unselectedEligible.length,
-  })
-
-  return (
-    <div
-      className={
-        expanded
-          ? 'spell-level-accordion spell-level-accordion--expanded'
-          : 'spell-level-accordion'
-      }
-    >
-      <div className="spell-level-accordion__summary">
-        <span className="spell-level-accordion__label">{row.label}</span>
-        {countValue !== null ? (
-          <span className="spell-level-accordion__count">{countValue}</span>
-        ) : null}
-      </div>
-
-      <button
-        type="button"
-        id={headerId}
-        className="spell-level-accordion__trigger"
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        onClick={() => {
-          setExpanded((current) => !current)
-        }}
-      >
-        <span>{expanded ? `Hide ${row.label} spells` : summaryText}</span>
-        <span className="spell-level-accordion__chevron" aria-hidden="true">
-          <ChoiceChevronIcon />
-        </span>
-      </button>
-
-      <div
-        id={panelId}
-        role="region"
-        aria-labelledby={headerId}
-        hidden={!expanded}
-        className="spell-level-accordion__panel"
-      >
-        {spells.length === 0 ? (
-          <p className="spell-level-accordion__empty">
-            No additional spells available
-          </p>
-        ) : (
-          <SpellCardList
-            idPrefix={`${idPrefix}-l${row.level}`}
-            listLabel={`${row.label} spells`}
-            spells={spells}
-            selectedSpellIds={selectedSpellIds}
-            invalidSpellIds={invalidSpellIds}
-            eligibilityBySpellId={eligibilityBySpellId}
-            atSelectionLimit={atSelectionLimit}
-            levelAtCapacity={levelAtCapacity}
-            onToggleSpell={onToggleSpell}
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
-function isRedundantUnselected(
+/**
+ * Unselected spells that are already covered elsewhere (discouraged or
+ * forbidden duplicates). These are the "redundant choices" partition.
+ */
+export function isRedundantUnselected(
   spellId: string,
   selectedSpellIds: ReadonlySet<string>,
   eligibilityBySpellId?: ReadonlyMap<string, SpellSelectionEligibility>,
@@ -213,10 +129,32 @@ function isRedundantUnselected(
   if (selectedSpellIds.has(spellId)) {
     return false
   }
-  return eligibilityBySpellId?.get(spellId)?.recommendation === 'discouraged'
+  const recommendation = eligibilityBySpellId?.get(spellId)?.recommendation
+  return recommendation === 'discouraged' || recommendation === 'blocked'
 }
 
-function filterVisibleSpells(
+/**
+ * Split the selectable catalogue into the primary recommended list and the
+ * optional redundant subset (preserving original order in each partition).
+ */
+export function partitionSelectableSpells(
+  spells: SpellDefinition[],
+  selectedSpellIds: ReadonlySet<string>,
+  eligibilityBySpellId: ReadonlyMap<string, SpellSelectionEligibility> | undefined,
+): { recommended: SpellDefinition[]; redundant: SpellDefinition[] } {
+  const recommended: SpellDefinition[] = []
+  const redundant: SpellDefinition[] = []
+  for (const spell of spells) {
+    if (isRedundantUnselected(spell.id, selectedSpellIds, eligibilityBySpellId)) {
+      redundant.push(spell)
+    } else {
+      recommended.push(spell)
+    }
+  }
+  return { recommended, redundant }
+}
+
+function filterCatalogueSpells(
   spells: SpellDefinition[],
   selectedSpellIds: ReadonlySet<string>,
   eligibilityBySpellId: ReadonlyMap<string, SpellSelectionEligibility> | undefined,
@@ -231,14 +169,114 @@ function filterVisibleSpells(
   )
 }
 
+function groupSpellsByLevel(
+  spells: SpellDefinition[],
+): Map<number, SpellDefinition[]> {
+  const spellsByLevel = new Map<number, SpellDefinition[]>()
+  for (const spell of spells) {
+    const bucket = spellsByLevel.get(spell.level) ?? []
+    bucket.push(spell)
+    spellsByLevel.set(spell.level, bucket)
+  }
+  return spellsByLevel
+}
+
+function sectionHasInvalidSpell(
+  spells: SpellDefinition[],
+  invalidSpellIds: ReadonlySet<string> | undefined,
+): boolean {
+  if (invalidSpellIds === undefined || invalidSpellIds.size === 0) {
+    return false
+  }
+  return spells.some((spell) => invalidSpellIds.has(spell.id))
+}
+
+function formatLevelSectionProgress(row: SpellLevelCountRow): string {
+  if (row.limitScope === 'group' && row.capacity !== null) {
+    return formatSelectionProgress(row.selected, row.capacity)
+  }
+  return row.selected === 1 ? '1 selected' : `${row.selected} selected`
+}
+
+type SelectableSpellSectionProps = {
+  id: string
+  label: string
+  progress: string
+  spells: SpellDefinition[]
+  selectedCount: number
+  capacity: number | null
+  hasValidationError: boolean
+  selectedSpellIds: ReadonlySet<string>
+  invalidSpellIds?: ReadonlySet<string>
+  eligibilityBySpellId?: ReadonlyMap<string, SpellSelectionEligibility>
+  atSelectionLimit: boolean
+  levelAtCapacity?: boolean
+  onToggleSpell: (spellId: string) => void
+}
+
+/**
+ * Threshold-based selectable catalogue section (flat entitlement or one level).
+ */
+function SelectableSpellSection({
+  id,
+  label,
+  progress,
+  spells,
+  selectedCount,
+  capacity,
+  hasValidationError,
+  selectedSpellIds,
+  invalidSpellIds,
+  eligibilityBySpellId,
+  atSelectionLimit,
+  levelAtCapacity = false,
+  onToggleSpell,
+}: SelectableSpellSectionProps) {
+  const list = (
+    <SpellCardList
+      idPrefix={id}
+      listLabel={label}
+      spells={spells}
+      selectedSpellIds={selectedSpellIds}
+      invalidSpellIds={invalidSpellIds}
+      eligibilityBySpellId={eligibilityBySpellId}
+      atSelectionLimit={atSelectionLimit}
+      levelAtCapacity={levelAtCapacity}
+      onToggleSpell={onToggleSpell}
+    />
+  )
+
+  return (
+    <ThresholdCollapseList
+      id={id}
+      title={formatSpellSectionTitle(label, progress)}
+      itemCount={spells.length}
+      defaultExpanded={resolveSpellSectionDefaultExpanded({
+        kind: 'selectable',
+        itemCount: spells.length,
+        selectedCount,
+        capacity,
+        hasValidationError,
+      })}
+    >
+      {list}
+    </ThresholdCollapseList>
+  )
+}
+
 /**
  * Responsive catalogue of spell selection cards.
- * Multi-level entitlements use per-level accordions; single-level stays a flat grid.
+ *
+ * Selectable groups / spell-level lists use the shared threshold accordion
+ * policy. Redundant unselected spells are filtered from the catalogue unless
+ * {@link showRedundant} is true, in which case they remain inside the same
+ * section (not a separate accordion).
  */
 export function SpellSelectionGrid({
   idPrefix,
   title,
   countLabel,
+  selectionProgress,
   levelRows = [],
   selectableSpells,
   grantedSpells = [],
@@ -247,88 +285,153 @@ export function SpellSelectionGrid({
   eligibilityBySpellId,
   atSelectionLimit = false,
   showRedundant = false,
+  grantedListLabel = 'Always Prepared Spells',
   onToggleSpell,
 }: SpellSelectionGridProps) {
-  const visibleSpells = filterVisibleSpells(
+  const { redundant } = partitionSelectableSpells(
+    selectableSpells,
+    selectedSpellIds,
+    eligibilityBySpellId,
+  )
+
+  const visibleSpells = filterCatalogueSpells(
     selectableSpells,
     selectedSpellIds,
     eligibilityBySpellId,
     showRedundant,
   )
 
-  const spellsByLevel = new Map<number, SpellDefinition[]>()
-  for (const spell of visibleSpells) {
-    const bucket = spellsByLevel.get(spell.level) ?? []
-    bucket.push(spell)
-    spellsByLevel.set(spell.level, bucket)
-  }
+  const visibleByLevel = groupSpellsByLevel(visibleSpells)
+  const useLevelSections = levelRows.length > 0
 
-  const useLevelAccordions = levelRows.length > 0
-  const hiddenRedundantCount = selectableSpells.length - visibleSpells.length
+  const entitlementSelected = selectionProgress?.selected
+  const entitlementLimit = selectionProgress?.limit ?? null
+  const entitlementProgressLabel =
+    entitlementSelected !== undefined && entitlementLimit !== null
+      ? formatSelectionProgress(entitlementSelected, entitlementLimit)
+      : countLabel.replace(/\s*\(.*\)$/, '')
+
+  const grantedList = (
+    <div
+      className="spell-selection-grid__cards spell-selection-grid__cards--granted"
+      role="list"
+      aria-label={grantedListLabel}
+    >
+      {grantedSpells.map((spell) => (
+        <div key={spell.id} role="listitem">
+          <SpellSelectionCard
+            spell={spell}
+            inputId={`${idPrefix}-granted-${spell.id}`}
+            selected
+            granted
+          />
+        </div>
+      ))}
+    </div>
+  )
+
+  const showEntitlementHeading = useLevelSections || visibleSpells.length <= 3
 
   return (
     <section
       className="spell-selection-grid"
-      aria-labelledby={`${idPrefix}-heading`}
+      aria-labelledby={
+        showEntitlementHeading ? `${idPrefix}-heading` : undefined
+      }
+      aria-label={
+        showEntitlementHeading
+          ? undefined
+          : `${title} ${entitlementProgressLabel}`
+      }
     >
-      <h4 id={`${idPrefix}-heading`} className="spell-selection-grid__title">
-        {title}{' '}
-        <span className="spell-selection-grid__count">{countLabel}</span>
-      </h4>
-
-      {grantedSpells.length > 0 ? (
-        <div
-          className="spell-selection-grid__cards spell-selection-grid__cards--granted"
-          role="list"
-          aria-label="Always prepared spells"
-        >
-          {grantedSpells.map((spell) => (
-            <div key={spell.id} role="listitem">
-              <SpellSelectionCard
-                spell={spell}
-                inputId={`${idPrefix}-granted-${spell.id}`}
-                selected
-                granted
-              />
-            </div>
-          ))}
-        </div>
+      {showEntitlementHeading ? (
+        <h4 id={`${idPrefix}-heading`} className="spell-selection-grid__title">
+          {title}{' '}
+          <span className="spell-selection-grid__count">{countLabel}</span>
+        </h4>
       ) : null}
 
-      {useLevelAccordions ? (
+      {grantedSpells.length > 0 ? (
+        <ThresholdCollapseList
+          id={`${idPrefix}-granted`}
+          title={formatThresholdCollapseTitle(
+            grantedListLabel,
+            grantedSpells.length,
+          )}
+          itemCount={grantedSpells.length}
+          defaultExpanded={resolveSpellSectionDefaultExpanded({
+            kind: 'granted',
+            itemCount: grantedSpells.length,
+          })}
+        >
+          {grantedList}
+        </ThresholdCollapseList>
+      ) : null}
+
+      {useLevelSections ? (
         <div className="spell-selection-grid__levels">
-          {levelRows.map((row) => (
-            <SpellLevelAccordion
-              key={row.level}
-              idPrefix={idPrefix}
-              row={row}
-              spells={spellsByLevel.get(row.level) ?? []}
-              selectedSpellIds={selectedSpellIds}
-              invalidSpellIds={invalidSpellIds}
-              eligibilityBySpellId={eligibilityBySpellId}
-              atSelectionLimit={atSelectionLimit}
-              onToggleSpell={onToggleSpell}
-            />
-          ))}
+          {levelRows.map((row) => {
+            const spells = visibleByLevel.get(row.level) ?? []
+            const label = formatSpellLevelSectionLabel(row.level)
+            const levelCapacity =
+              row.limitScope === 'group' ? row.capacity : entitlementLimit
+            const levelSelected =
+              row.limitScope === 'group'
+                ? row.selected
+                : (entitlementSelected ?? row.selected)
+            const levelAtCapacity =
+              row.limitScope === 'group' &&
+              row.capacity !== null &&
+              row.selected >= row.capacity
+
+            return (
+              <SelectableSpellSection
+                key={row.level}
+                id={`${idPrefix}-l${row.level}`}
+                label={label}
+                progress={formatLevelSectionProgress(row)}
+                spells={spells}
+                selectedCount={levelSelected}
+                capacity={levelCapacity}
+                hasValidationError={sectionHasInvalidSpell(
+                  spells,
+                  invalidSpellIds,
+                )}
+                selectedSpellIds={selectedSpellIds}
+                invalidSpellIds={invalidSpellIds}
+                eligibilityBySpellId={eligibilityBySpellId}
+                atSelectionLimit={atSelectionLimit}
+                levelAtCapacity={levelAtCapacity}
+                onToggleSpell={onToggleSpell}
+              />
+            )
+          })}
         </div>
-      ) : (
-        <SpellCardList
-          idPrefix={idPrefix}
-          listLabel={title}
+      ) : selectableSpells.length > 0 ? (
+        <SelectableSpellSection
+          id={idPrefix}
+          label={title}
+          progress={entitlementProgressLabel}
           spells={visibleSpells}
+          selectedCount={entitlementSelected ?? selectedSpellIds.size}
+          capacity={entitlementLimit}
+          hasValidationError={sectionHasInvalidSpell(
+            visibleSpells,
+            invalidSpellIds,
+          )}
           selectedSpellIds={selectedSpellIds}
           invalidSpellIds={invalidSpellIds}
           eligibilityBySpellId={eligibilityBySpellId}
           atSelectionLimit={atSelectionLimit}
           onToggleSpell={onToggleSpell}
         />
-      )}
+      ) : null}
 
-      {!showRedundant && hiddenRedundantCount > 0 ? (
+      {!showRedundant && redundant.length > 0 ? (
         <p className="spell-selection-grid__redundant-hint" role="status">
-          {hiddenRedundantCount} redundant{' '}
-          {hiddenRedundantCount === 1 ? 'choice' : 'choices'} hidden — enable
-          “Show redundant choices” to browse them.
+          {redundant.length} redundant{' '}
+          {redundant.length === 1 ? 'choice' : 'choices'} hidden — enable “Show
+          redundant choices” to browse them.
         </p>
       ) : null}
     </section>

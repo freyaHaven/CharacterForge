@@ -42,7 +42,7 @@ const DEFAULT_POLICY: CrossSourceDuplicatePolicy = 'discourage'
 /**
  * Default policy when content does not declare one.
  * Cantrips default to forbid — learning the same cantrip twice is never useful.
- * Known/prepared default to discourage — duplicates can be intentional.
+ * Known/prepared/spellbook default to discourage — duplicates can be intentional.
  */
 export function defaultCrossSourceDuplicatePolicy(
   selectionKind: SpellSelectionKind | undefined,
@@ -63,8 +63,30 @@ function resolvePolicy(
 }
 
 /**
+ * Whether an availability origin should count as overlap for the entitlement
+ * being evaluated.
+ *
+ * Spellbook records are not castable knowledge — they only conflict with other
+ * spellbook acquisitions. Preparing a spell does not make recording it in the
+ * spellbook redundant (prepared ⊆ book is expected).
+ */
+export function originAppliesToEntitlement(
+  origin: SpellAvailabilityOrigin,
+  entitlement: ResolvedSpellEntitlement,
+): boolean {
+  if (entitlement.selectionKind === 'spellbook') {
+    return origin.selectionKind !== 'prepared'
+  }
+  return origin.selectionKind !== 'spellbook'
+}
+
+/**
  * Index every spell currently available from resolved spellcasting sources.
- * Uses select entitlements after grant-folding so always-prepared spells are included once.
+ * Includes select picks (including spellbook acquisitions), folded grants on
+ * selects, and standalone granted entitlements.
+ *
+ * Consumers must use {@link originAppliesToEntitlement} so spellbook records
+ * do not incorrectly mark prepared/known catalogues as redundant.
  */
 export function collectSpellAvailability(
   summary: CharacterSpellcastingSummary,
@@ -88,12 +110,21 @@ export function collectSpellAvailability(
 
   for (const group of summary.groups) {
     for (const entitlement of group.entitlements) {
-      if (entitlement.kind !== 'select') {
+      if (entitlement.kind === 'granted') {
+        for (const grant of entitlement.grantedSpells) {
+          add(grant.spellId, {
+            groupId: group.groupId,
+            groupLabel: group.label,
+            entitlementId: grant.entitlementId,
+            entitlementLabel: grant.label,
+            how: 'granted',
+            selectionKind: entitlement.selectionKind,
+          })
+        }
         continue
       }
 
-      // Spellbook entries are recorded, not castable — skip availability index.
-      if (entitlement.selectionKind === 'spellbook') {
+      if (entitlement.kind !== 'select') {
         continue
       }
 
@@ -163,7 +194,9 @@ export function evaluateSpellSelectionEligibility(input: {
 }): SpellSelectionEligibility {
   const availability =
     input.availability ?? collectSpellAvailability(input.summary)
-  const origins = availability.get(input.spellId) ?? []
+  const origins = (availability.get(input.spellId) ?? []).filter((origin) =>
+    originAppliesToEntitlement(origin, input.entitlement),
+  )
   const policy = resolvePolicy(input.entitlement)
 
   const ownedByCurrentEntitlement = origins.some(

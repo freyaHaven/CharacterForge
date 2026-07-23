@@ -201,14 +201,13 @@ describe('SpellSelectionGrid', () => {
     expect(screen.getAllByText('Cantrip • Evocation')).toHaveLength(2)
   })
 
-  it('renders per-level accordions when level rows are provided', async () => {
-    const user = userEvent.setup()
-
+  it('renders per-level sections when level rows are provided', () => {
     render(
       <SpellSelectionGrid
         idPrefix="prepared"
         title="Prepared Spells"
         countLabel="3/5"
+        selectionProgress={{ selected: 3, limit: 5 }}
         levelRows={[
           {
             level: 1,
@@ -237,26 +236,14 @@ describe('SpellSelectionGrid', () => {
     expect(
       screen.getByRole('heading', { name: /prepared spells/i }),
     ).toHaveTextContent('3/5')
-    expect(screen.getByText('1st level')).toBeInTheDocument()
-    expect(screen.getByText('1 selected')).toBeInTheDocument()
-    expect(screen.getByText('2nd level')).toBeInTheDocument()
+    // One spell per level stays below the threshold — inline, not accordioned.
+    expect(
+      screen.queryByRole('button', { name: /1st-level Spells/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /light/i })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /aid/i })).toBeInTheDocument()
     expect(screen.queryByText('2/3')).not.toBeInTheDocument()
     expect(screen.queryByText('1/2')).not.toBeInTheDocument()
-
-    // Level with selections starts expanded; empty selection level stays collapsed.
-    expect(screen.getByRole('checkbox', { name: /light/i })).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /hide 1st level spells/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /browse 2nd-level spells/i }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('checkbox', { name: /aid/i })).not.toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole('button', { name: /browse 2nd-level spells/i }),
-    )
-    expect(screen.getByRole('checkbox', { name: /aid/i })).toBeInTheDocument()
   })
 
   it('blocks unselected spells only for genuine per-group capacity', () => {
@@ -265,6 +252,7 @@ describe('SpellSelectionGrid', () => {
         idPrefix="prepared"
         title="Prepared Spells"
         countLabel="2/5"
+        selectionProgress={{ selected: 2, limit: 5 }}
         levelRows={[
           {
             level: 1,
@@ -297,14 +285,13 @@ describe('SpellSelectionGrid', () => {
     expect(screen.getByRole('checkbox', { name: /bless/i })).toBeDisabled()
   })
 
-  it('does not treat entitlement-scoped selected counts as a per-level pick cap', async () => {
-    const user = userEvent.setup()
-
+  it('does not treat entitlement-scoped selected counts as a per-level pick cap', () => {
     render(
       <SpellSelectionGrid
         idPrefix="spellbook"
         title="Wizard level 3 spellbook addition"
         countLabel="0/2"
+        selectionProgress={{ selected: 0, limit: 2 }}
         levelRows={[
           {
             level: 1,
@@ -337,10 +324,6 @@ describe('SpellSelectionGrid', () => {
     ).toHaveTextContent('0/2')
     expect(screen.queryByText('0/4')).not.toBeInTheDocument()
     expect(screen.queryByText('0/3')).not.toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole('button', { name: /browse 1st-level spells/i }),
-    )
     expect(screen.getByRole('checkbox', { name: /light/i })).not.toBeDisabled()
   })
 
@@ -350,6 +333,7 @@ describe('SpellSelectionGrid', () => {
         idPrefix="cantrips"
         title="Cantrips"
         countLabel="2/2"
+        selectionProgress={{ selected: 2, limit: 2 }}
         selectableSpells={[guidance, light, sacredFlame]}
         selectedSpellIds={new Set(['srd-2024:guidance', 'srd-2024:light'])}
         atSelectionLimit
@@ -362,6 +346,103 @@ describe('SpellSelectionGrid', () => {
     expect(screen.getByRole('checkbox', { name: /sacred flame/i })).toBeDisabled()
   })
 
+  it('keeps a selectable list of 3 inline', () => {
+    render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="0/4"
+        selectionProgress={{ selected: 0, limit: 4 }}
+        selectableSpells={[guidance, light, sacredFlame]}
+        selectedSpellIds={new Set()}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: /cantrips/i })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Cantrips ·/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeInTheDocument()
+  })
+
+  it('wraps a selectable list of 4 in an incomplete accordion that defaults open', () => {
+    const four = [guidance, light, sacredFlame, {
+      ...guidance,
+      id: 'srd-2024:mending',
+      name: 'Mending',
+    }]
+
+    render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="0/4"
+        selectionProgress={{ selected: 0, limit: 4 }}
+        selectableSpells={four}
+        selectedSpellIds={new Set()}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    const header = screen.getByRole('button', { name: /Cantrips · 0\/4/i })
+    expect(header).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeInTheDocument()
+    expect(screen.queryByText('0/4 slots')).not.toBeInTheDocument()
+  })
+
+  it('defaults a complete selectable accordion closed', () => {
+    const four = [guidance, light, sacredFlame, {
+      ...guidance,
+      id: 'srd-2024:mending',
+      name: 'Mending',
+    }]
+
+    render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="4/4"
+        selectionProgress={{ selected: 4, limit: 4 }}
+        selectableSpells={four}
+        selectedSpellIds={new Set(four.map((spell) => spell.id))}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    const header = screen.getByRole('button', { name: /Cantrips · 4\/4/i })
+    expect(header).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByRole('checkbox', { name: /guidance/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('defaults an invalid selectable accordion open even when complete', () => {
+    const four = [guidance, light, sacredFlame, {
+      ...guidance,
+      id: 'srd-2024:mending',
+      name: 'Mending',
+    }]
+
+    render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="4/4"
+        selectionProgress={{ selected: 4, limit: 4 }}
+        selectableSpells={four}
+        selectedSpellIds={new Set(four.map((spell) => spell.id))}
+        invalidSpellIds={new Set([guidance.id])}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(
+      screen.getByRole('button', { name: /Cantrips · 4\/4/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeInTheDocument()
+  })
+
   it('keeps granted spells distinct and non-editable', async () => {
     const user = userEvent.setup()
     const onToggle = vi.fn()
@@ -371,6 +452,7 @@ describe('SpellSelectionGrid', () => {
         idPrefix="prepared"
         title="Prepared Spells"
         countLabel="0/4"
+        selectionProgress={{ selected: 0, limit: 4 }}
         selectableSpells={[light]}
         grantedSpells={[guidance]}
         selectedSpellIds={new Set()}
@@ -383,9 +465,49 @@ describe('SpellSelectionGrid', () => {
     })
     expect(within(grantedList).getByText('Guidance')).toBeInTheDocument()
     expect(within(grantedList).queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Always Prepared Spells/i }),
+    ).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('checkbox', { name: /light/i }))
     expect(onToggle).toHaveBeenCalledWith('srd-2024:light')
+  })
+
+  it('defaults a granted list of 4 closed', async () => {
+    const user = userEvent.setup()
+    const grantedFour = [
+      guidance,
+      light,
+      sacredFlame,
+      { ...guidance, id: 'srd-2024:mending', name: 'Mending' },
+    ]
+
+    render(
+      <SpellSelectionGrid
+        idPrefix="prepared"
+        title="Prepared Spells"
+        countLabel="0/4"
+        selectableSpells={[]}
+        grantedSpells={grantedFour}
+        selectedSpellIds={new Set()}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    const header = screen.getByRole('button', {
+      name: /Always Prepared Spells · 4/i,
+    })
+    expect(header).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByRole('list', { name: /always prepared spells/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(header)
+    const grantedList = screen.getByRole('list', {
+      name: /always prepared spells/i,
+    })
+    expect(within(grantedList).getByText('Guidance')).toBeInTheDocument()
+    expect(within(grantedList).getByText('Mending')).toBeInTheDocument()
   })
 
   it('positions the shared popover in a portal when opened via info control', async () => {
@@ -396,6 +518,7 @@ describe('SpellSelectionGrid', () => {
         idPrefix="cantrips"
         title="Cantrips"
         countLabel="0/3"
+        selectionProgress={{ selected: 0, limit: 3 }}
         selectableSpells={[guidance]}
         selectedSpellIds={new Set()}
         onToggleSpell={() => undefined}
@@ -406,5 +529,210 @@ describe('SpellSelectionGrid', () => {
     const tooltip = await screen.findByRole('tooltip', { hidden: true })
     expect(tooltip.parentElement).toBe(document.body)
     expect(tooltip.className).toContain('spell-preview-popover')
+  })
+
+  it('hides unselected already-known and redundant spells while the toggle is off', () => {
+    const eligibilityBySpellId = new Map([
+      [
+        light.id,
+        {
+          spellId: light.id,
+          alreadyAvailableFromOtherSource: true,
+          duplicateWithinCurrentSource: false,
+          ownedByCurrentEntitlement: false,
+          duplicateReason: 'Already known from: Elf: Elven Lineage (always prepared)',
+          otherSourceOrigins: [],
+          currentSourceOrigins: [],
+          policy: 'forbid' as const,
+          canSelect: false,
+          recommendation: 'blocked' as const,
+        },
+      ],
+      [
+        sacredFlame.id,
+        {
+          spellId: sacredFlame.id,
+          alreadyAvailableFromOtherSource: true,
+          duplicateWithinCurrentSource: false,
+          ownedByCurrentEntitlement: false,
+          duplicateReason: 'Already known from: Cleric — Cantrips',
+          otherSourceOrigins: [],
+          currentSourceOrigins: [],
+          policy: 'discourage' as const,
+          canSelect: true,
+          recommendation: 'discouraged' as const,
+        },
+      ],
+    ])
+
+    render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="0/3"
+        selectionProgress={{ selected: 0, limit: 3 }}
+        selectableSpells={[guidance, light, sacredFlame]}
+        selectedSpellIds={new Set()}
+        eligibilityBySpellId={eligibilityBySpellId}
+        showRedundant={false}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /light/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('checkbox', { name: /sacred flame/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Already known')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/2 redundant choices hidden/i)
+  })
+
+  it('reveals redundant spells inside the catalogue accordion with attribution', () => {
+    const catalogue = [
+      guidance,
+      light,
+      sacredFlame,
+      { ...guidance, id: 'srd-2024:mending', name: 'Mending' },
+      { ...guidance, id: 'srd-2024:dancing-lights', name: 'Dancing Lights' },
+    ]
+    const eligibilityBySpellId = new Map([
+      [
+        'srd-2024:dancing-lights',
+        {
+          spellId: 'srd-2024:dancing-lights',
+          alreadyAvailableFromOtherSource: true,
+          duplicateWithinCurrentSource: false,
+          ownedByCurrentEntitlement: false,
+          duplicateReason:
+            'Already known from: Elf: Elven Lineage (always prepared)',
+          otherSourceOrigins: [],
+          currentSourceOrigins: [],
+          policy: 'forbid' as const,
+          canSelect: false,
+          recommendation: 'blocked' as const,
+        },
+      ],
+    ])
+
+    const { rerender } = render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="0/4"
+        selectionProgress={{ selected: 0, limit: 4 }}
+        selectableSpells={catalogue}
+        selectedSpellIds={new Set()}
+        eligibilityBySpellId={eligibilityBySpellId}
+        showRedundant={false}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    // Four recommended spells → accordion; redundant stays hidden.
+    expect(
+      screen.getByRole('button', { name: /Cantrips · 0\/4/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(
+      screen.queryByRole('checkbox', { name: /dancing lights/i }),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="0/4"
+        selectionProgress={{ selected: 0, limit: 4 }}
+        selectableSpells={catalogue}
+        selectedSpellIds={new Set()}
+        eligibilityBySpellId={eligibilityBySpellId}
+        showRedundant
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', { name: /Redundant Spells/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /dancing lights/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Already known')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Already known from: Elf: Elven Lineage (always prepared)',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('does not alter selected recommended spells when toggling redundant visibility', () => {
+    const eligibilityBySpellId = new Map([
+      [
+        light.id,
+        {
+          spellId: light.id,
+          alreadyAvailableFromOtherSource: true,
+          duplicateWithinCurrentSource: false,
+          ownedByCurrentEntitlement: false,
+          duplicateReason: 'Already known from: Other Source',
+          otherSourceOrigins: [],
+          currentSourceOrigins: [],
+          policy: 'forbid' as const,
+          canSelect: false,
+          recommendation: 'blocked' as const,
+        },
+      ],
+    ])
+
+    const { rerender } = render(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="1/3"
+        selectionProgress={{ selected: 1, limit: 3 }}
+        selectableSpells={[guidance, light]}
+        selectedSpellIds={new Set([guidance.id])}
+        eligibilityBySpellId={eligibilityBySpellId}
+        showRedundant={false}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /light/i })).not.toBeInTheDocument()
+
+    rerender(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="1/3"
+        selectionProgress={{ selected: 1, limit: 3 }}
+        selectableSpells={[guidance, light]}
+        selectedSpellIds={new Set([guidance.id])}
+        eligibilityBySpellId={eligibilityBySpellId}
+        showRedundant
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /light/i })).toBeInTheDocument()
+
+    rerender(
+      <SpellSelectionGrid
+        idPrefix="cantrips"
+        title="Cantrips"
+        countLabel="1/3"
+        selectionProgress={{ selected: 1, limit: 3 }}
+        selectableSpells={[guidance, light]}
+        selectedSpellIds={new Set([guidance.id])}
+        eligibilityBySpellId={eligibilityBySpellId}
+        showRedundant={false}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /guidance/i })).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /light/i })).not.toBeInTheDocument()
   })
 })

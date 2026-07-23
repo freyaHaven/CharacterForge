@@ -1,5 +1,6 @@
 import type {
   CharacterSpellcastingSummary,
+  ResolvedSpellEntitlement,
   ResolvedSpellSourceGroup,
 } from '../character/resolveCharacterSpellcasting'
 import type {
@@ -83,17 +84,57 @@ function tokensFromFeatEffect(
   }
 }
 
+function addConcreteSpellToken(
+  tokens: CapabilityToken[],
+  input: {
+    spellId: string
+    group: ResolvedSpellSourceGroup
+    entitlementLabel: string
+    entitlementId: string
+    how: 'selected' | 'granted'
+    sourceKind: string
+  },
+): void {
+  addToken(tokens, {
+    kind: 'spell',
+    id: input.spellId,
+    source: {
+      label: `${input.group.label} — ${input.entitlementLabel}`,
+      kind: input.sourceKind,
+      id: input.group.groupId,
+    },
+    how: input.how,
+  })
+}
+
+/**
+ * Index concrete spells and (separately) spell-list access from one group.
+ *
+ * Distinctions:
+ * - `spell` + how `selected` — known / prepared / chosen
+ * - `spell` + how `granted` — always-prepared or innate grants
+ * - `spell-list-access` — may prepare/learn from a list; does NOT mean every
+ *   spell on that list is already known
+ *
+ * Standalone `granted` entitlements (species lineage, some subclass features)
+ * are included even when no select pool exists on the same group.
+ */
 function addSpellcastingGroupTokens(
   tokens: CapabilityToken[],
   group: ResolvedSpellSourceGroup,
 ): void {
-  const source = {
+  const listAccessSource = {
     label: group.label,
     kind: 'spell-source',
     id: group.groupId,
   }
 
   for (const entitlement of group.entitlements) {
+    if (entitlement.kind === 'granted') {
+      addGrantedEntitlementTokens(tokens, group, entitlement)
+      continue
+    }
+
     if (entitlement.kind !== 'select') {
       continue
     }
@@ -106,42 +147,59 @@ function addSpellcastingGroupTokens(
       addToken(tokens, {
         kind: 'spell-list-access',
         id: entitlement.listId,
-        source,
+        source: listAccessSource,
         how: 'fixed',
       })
     }
 
     for (const spellId of entitlement.selectedSpellIds) {
-      addToken(tokens, {
-        kind: 'spell',
-        id: spellId,
-        source: {
-          label: `${group.label} — ${entitlement.label}`,
-          kind: 'spell-selection',
-          id: group.groupId,
-        },
+      addConcreteSpellToken(tokens, {
+        spellId,
+        group,
+        entitlementLabel: entitlement.label,
+        entitlementId: entitlement.entitlementId,
         how: 'selected',
+        sourceKind: 'spell-selection',
       })
     }
 
     for (const grant of entitlement.grantedSpells) {
-      addToken(tokens, {
-        kind: 'spell',
-        id: grant.spellId,
-        source: {
-          label: `${group.label} — ${grant.label}`,
-          kind: 'spell-grant',
-          id: group.groupId,
-        },
+      addConcreteSpellToken(tokens, {
+        spellId: grant.spellId,
+        group,
+        entitlementLabel: grant.label,
+        entitlementId: grant.entitlementId,
         how: 'granted',
+        sourceKind: 'spell-grant',
       })
     }
   }
 }
 
+function addGrantedEntitlementTokens(
+  tokens: CapabilityToken[],
+  group: ResolvedSpellSourceGroup,
+  entitlement: ResolvedSpellEntitlement,
+): void {
+  for (const grant of entitlement.grantedSpells) {
+    addConcreteSpellToken(tokens, {
+      spellId: grant.spellId,
+      group,
+      entitlementLabel: grant.label,
+      entitlementId: grant.entitlementId,
+      how: 'granted',
+      sourceKind: 'spell-grant',
+    })
+  }
+}
+
 /**
- * Build a capability inventory from resolved spellcasting (and optional feat effects).
- * Extensible — callers can merge additional tokens from class/species/background resolvers.
+ * Build a capability inventory from resolved character state.
+ *
+ * Spell capabilities come from {@link CharacterSpellcastingSummary}, which
+ * already aggregates class, subclass, species, background, and feat sources.
+ * Item / homebrew grants should either appear in that summary or be passed via
+ * {@link extraTokens} until a dedicated equipment-spell resolver exists.
  */
 export function buildCharacterCapabilityInventory(input: {
   spellcasting?: CharacterSpellcastingSummary | null
@@ -176,6 +234,8 @@ export function buildCharacterCapabilityInventory(input: {
 /**
  * Lightweight inventory from class definitions alone (spell-list access).
  * Useful for ASI / feat-grant pickers that do not have a full spellcasting summary.
+ *
+ * Does not imply any concrete spell is known — only that the class list is available.
  */
 export function buildSpellListAccessTokensFromClasses(
   classes: readonly {

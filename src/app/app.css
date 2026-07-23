@@ -3906,6 +3906,11 @@ html {
   display: none;
 }
 
+/* Spacing when threshold collapse wraps dense granted-spell (or similar) lists. */
+.threshold-collapse {
+  margin: 0.5rem 0 0.75rem;
+}
+
 .choice-accordion__options {
   display: grid;
   gap: 0.75rem;

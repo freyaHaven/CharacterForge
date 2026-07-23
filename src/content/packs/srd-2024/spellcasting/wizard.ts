@@ -30,8 +30,6 @@ export function createWizardSpellbookEntitlements(): SpellEntitlement[] {
       count: { kind: 'fixed', value: WIZARD_SPELLBOOK_INITIAL_COUNT },
       levelRange: { min: 1, max: 1 },
       label: 'Wizard level 1 spellbook',
-      // Cross-spellbook dups are validated separately; prepared ⊆ book is expected.
-      crossSourceDuplicatePolicy: 'allow',
     },
   ]
 
@@ -51,7 +49,6 @@ export function createWizardSpellbookEntitlements(): SpellEntitlement[] {
         slotCeilingAt: 'count-unlock-level',
       },
       label: `Wizard level ${level} spellbook addition`,
-      crossSourceDuplicatePolicy: 'allow',
     })
   }
 
@@ -140,7 +137,6 @@ export const evocationSavantInitialEntitlement: SpellEntitlement = {
   levelRange: { min: 1, max: 2 },
   schools: ['Evocation'],
   label: 'Evocation Savant (initial)',
-  crossSourceDuplicatePolicy: 'allow',
 }
 
 /**
@@ -165,6 +161,5 @@ export function createEvocationSavantSlotEntitlements(): SpellEntitlement[] {
     },
     schools: ['Evocation'],
     label: `Evocation Savant (level ${level} slot)`,
-    crossSourceDuplicatePolicy: 'allow' as const,
   }))
 }

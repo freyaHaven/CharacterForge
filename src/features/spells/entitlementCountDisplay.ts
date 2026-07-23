@@ -23,6 +23,18 @@ export function formatSpellLevelBandLabel(level: number): string {
 }
 
 /**
+ * Accordion / section title for a spell-level catalogue partition.
+ * e.g. "Cantrips", "1st-level Spells".
+ */
+export function formatSpellLevelSectionLabel(level: number): string {
+  if (level <= 0) {
+    return 'Cantrips'
+  }
+
+  return `${formatSpellLevelBandLabel(level).replace(/ level$/i, '-level')} Spells`
+}
+
+/**
  * How a child spell-level group relates to selection limits.
  * - entitlement — partition/filter only; quota lives on the entitlement header
  * - group — this level has its own independently enforced pick limit
