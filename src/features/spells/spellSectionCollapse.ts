@@ -67,3 +67,19 @@ export function formatSelectionProgress(
 ): string {
   return `${selected}/${limit}`
 }
+
+/**
+ * Whether a spell-level catalogue partition should render.
+ * Hide empty future levels with nothing selectable, granted, or selected.
+ */
+export function spellLevelSectionHasContent(input: {
+  selectableCount: number
+  grantedCount: number
+  selectedCount: number
+}): boolean {
+  return (
+    input.selectableCount > 0 ||
+    input.grantedCount > 0 ||
+    input.selectedCount > 0
+  )
+}

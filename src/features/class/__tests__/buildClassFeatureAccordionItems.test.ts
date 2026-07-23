@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fighterSrd2024 } from '../../../content/packs/srd-2024/classes/fighter'
+import { wizardSrd2024 } from '../../../content/packs/srd-2024/classes/wizard'
 import { buildClassFeatureAccordionItems } from '../buildClassFeatureAccordionItems'
 import { formatOrdinalLevel } from '../formatClassFeatureMeta'
 
@@ -149,5 +150,32 @@ describe('buildClassFeatureAccordionItems', () => {
     expect(additionalFightingStyle?.singleSelectChoice?.id).toBe(
       'champion-additional-fighting-style',
     )
+  })
+
+  it('keeps Evoker package features with Wizard Subclass before level 4 ASI', () => {
+    const items = buildClassFeatureAccordionItems(wizardSrd2024, 4, {
+      'wizard-subclass': 'evoker',
+      'ability-score-improvement-4': 'plus-2:intelligence',
+    })
+
+    const subclassIndex = items.findIndex(
+      (item) => item.title === 'Wizard Subclass',
+    )
+    const asiIndex = items.findIndex(
+      (item) => item.title === 'Ability Score Improvement',
+    )
+
+    expect(subclassIndex).toBeGreaterThanOrEqual(0)
+    expect(asiIndex).toBeGreaterThanOrEqual(0)
+    expect(subclassIndex).toBeLessThan(asiIndex)
+
+    const subclass = items[subclassIndex]!
+    expect(subclass.level).toBe(3)
+    expect(subclass.summaryLabel).toBe('Evoker')
+    expect(subclass.grantedFeatures.map((feature) => feature.name)).toEqual([
+      'Evocation Savant',
+      'Potent Cantrip',
+    ])
+    expect(items[asiIndex]!.level).toBe(4)
   })
 })

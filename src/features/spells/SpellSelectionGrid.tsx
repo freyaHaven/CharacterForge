@@ -13,6 +13,7 @@ import {
   formatSelectionProgress,
   formatSpellSectionTitle,
   resolveSpellSectionDefaultExpanded,
+  spellLevelSectionHasContent,
 } from './spellSectionCollapse'
 
 export type SpellSelectionProgress = {
@@ -48,6 +49,11 @@ export type SpellSelectionGridProps = {
   showRedundant?: boolean
   /** Label for the granted-spell list / accordion (defaults to Always Prepared Spells). */
   grantedListLabel?: string
+  /**
+   * When true, omit the entitlement h4 — the parent source section already
+   * provides the heading (Spells page source → level hierarchy).
+   */
+  nestedUnderSource?: boolean
   onToggleSpell: (spellId: string) => void
 }
 
@@ -286,6 +292,7 @@ export function SpellSelectionGrid({
   atSelectionLimit = false,
   showRedundant = false,
   grantedListLabel = 'Always Prepared Spells',
+  nestedUnderSource = false,
   onToggleSpell,
 }: SpellSelectionGridProps) {
   const { redundant } = partitionSelectableSpells(
@@ -302,6 +309,7 @@ export function SpellSelectionGrid({
   )
 
   const visibleByLevel = groupSpellsByLevel(visibleSpells)
+  const grantedByLevel = groupSpellsByLevel(grantedSpells)
   const useLevelSections = levelRows.length > 0
 
   const entitlementSelected = selectionProgress?.selected
@@ -330,7 +338,21 @@ export function SpellSelectionGrid({
     </div>
   )
 
-  const showEntitlementHeading = useLevelSections || visibleSpells.length <= 3
+  const showEntitlementHeading = nestedUnderSource
+    ? useLevelSections
+    : useLevelSections || visibleSpells.length <= 3
+
+  const visibleLevelRows = useLevelSections
+    ? levelRows.filter((row) => {
+        const selectableAtLevel = visibleByLevel.get(row.level) ?? []
+        const grantedAtLevel = grantedByLevel.get(row.level) ?? []
+        return spellLevelSectionHasContent({
+          selectableCount: selectableAtLevel.length,
+          grantedCount: grantedAtLevel.length,
+          selectedCount: row.selected,
+        })
+      })
+    : []
 
   return (
     <section
@@ -370,7 +392,7 @@ export function SpellSelectionGrid({
 
       {useLevelSections ? (
         <div className="spell-selection-grid__levels">
-          {levelRows.map((row) => {
+          {visibleLevelRows.map((row) => {
             const spells = visibleByLevel.get(row.level) ?? []
             const label = formatSpellLevelSectionLabel(row.level)
             const levelCapacity =

@@ -4703,6 +4703,40 @@ html {
   color: var(--text);
 }
 
+.spells-category {
+  margin-top: 1.5rem;
+}
+
+.spells-category__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.spells-source {
+  margin-bottom: 1.25rem;
+}
+
+.spells-source__title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.spells-source__meta {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.spells-source__note {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
 .spells-source__redundant-toggle {
   margin-bottom: 0.35rem;
 }

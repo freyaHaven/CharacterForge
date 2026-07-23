@@ -4,6 +4,7 @@ import {
   formatSpellSectionTitle,
   resolveSpellSectionDefaultExpanded,
   shouldCollapseSpellSection,
+  spellLevelSectionHasContent,
 } from '../spellSectionCollapse'
 
 describe('spellSectionCollapse', () => {
@@ -59,5 +60,36 @@ describe('spellSectionCollapse', () => {
     expect(formatSpellSectionTitle('Prepared Spells', '8/8')).toBe(
       'Prepared Spells · 8/8',
     )
+  })
+
+  it('hides empty spell-level sections with no selectable, granted, or selected content', () => {
+    expect(
+      spellLevelSectionHasContent({
+        selectableCount: 0,
+        grantedCount: 0,
+        selectedCount: 0,
+      }),
+    ).toBe(false)
+    expect(
+      spellLevelSectionHasContent({
+        selectableCount: 2,
+        grantedCount: 0,
+        selectedCount: 0,
+      }),
+    ).toBe(true)
+    expect(
+      spellLevelSectionHasContent({
+        selectableCount: 0,
+        grantedCount: 1,
+        selectedCount: 0,
+      }),
+    ).toBe(true)
+    expect(
+      spellLevelSectionHasContent({
+        selectableCount: 0,
+        grantedCount: 0,
+        selectedCount: 1,
+      }),
+    ).toBe(true)
   })
 })

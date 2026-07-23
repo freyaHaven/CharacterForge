@@ -3,9 +3,16 @@ import type { SpellCatalog } from '../../../domain/ports/spellCatalog'
 import type { SpellDefinition } from '../../../domain/spell/types'
 import type { SpellSourceRef, SpellSourceState } from '../../../domain/spell/types'
 import { spellSourcesEqual } from '../../../domain/spell/sourceKey'
+import {
+  ThresholdCollapseList,
+  formatThresholdCollapseTitle,
+} from '../../../features/choices/ThresholdCollapseList'
 import { formatAbilityLabel } from '../../../features/class/formatClassDetails'
 import { buildEntitlementCountDisplay } from '../../../features/spells/entitlementCountDisplay'
+import { SpellSelectionCard } from '../../../features/spells/SpellSelectionCard'
 import { SpellSelectionGrid } from '../../../features/spells/SpellSelectionGrid'
+import { buildSpellPresentationModel } from '../../../features/spells/spellPresentationModel'
+import { resolveSpellSectionDefaultExpanded } from '../../../features/spells/spellSectionCollapse'
 import type {
   CharacterSpellcastingSummary,
   ResolvedSpellEntitlement,
@@ -84,31 +91,40 @@ function isDisplayedSpellIssue(issue: SpellValidationIssue): boolean {
   return issue.code !== 'under-limit'
 }
 
-function issueBelongsToGroup(
+function issueBelongsToGroups(
   issue: SpellValidationIssue,
-  group: ResolvedSpellSourceGroup,
+  groups: readonly ResolvedSpellSourceGroup[],
 ): boolean {
-  if (issue.groupLabel === group.label) {
-    return true
-  }
-  if (
-    issue.entitlementId !== undefined &&
-    group.entitlements.some(
-      (entitlement) => entitlement.entitlementId === issue.entitlementId,
-    )
-  ) {
-    return true
-  }
-  return false
+  return groups.some((group) => {
+    if (issue.groupLabel === group.label) {
+      return true
+    }
+    if (
+      issue.entitlementId !== undefined &&
+      group.entitlements.some(
+        (entitlement) => entitlement.entitlementId === issue.entitlementId,
+      )
+    ) {
+      return true
+    }
+    return false
+  })
 }
 
-function formatIssueMessageForGroup(
+function formatIssueMessageForSource(
   issue: SpellValidationIssue,
-  groupLabel: string,
+  sourceTitle: string,
+  groups: readonly ResolvedSpellSourceGroup[],
 ): string {
-  const prefix = `${groupLabel} — `
-  if (issue.message.startsWith(prefix)) {
-    return issue.message.slice(prefix.length)
+  for (const group of groups) {
+    const prefix = `${group.label} — `
+    if (issue.message.startsWith(prefix)) {
+      return issue.message.slice(prefix.length)
+    }
+  }
+  const sourcePrefix = `${sourceTitle} — `
+  if (issue.message.startsWith(sourcePrefix)) {
+    return issue.message.slice(sourcePrefix.length)
   }
   return issue.message
 }
@@ -117,22 +133,25 @@ function SelectEntitlementEditor({
   summary,
   group,
   entitlement,
+  poolTitle,
   source,
   spellSourceStates,
   onChangeSpellSourceStates,
   availableSpells,
   invalidSpellIds,
+  showRedundant,
 }: {
   summary: CharacterSpellcastingSummary
   group: ResolvedSpellSourceGroup
   entitlement: ResolvedSpellEntitlement
+  poolTitle: string
   source: SpellSourceRef
   spellSourceStates: SpellSourceState[]
   onChangeSpellSourceStates: (next: SpellSourceState[]) => void
   availableSpells: SpellDefinition[]
   invalidSpellIds: ReadonlySet<string>
+  showRedundant: boolean
 }) {
-  const [showRedundant, setShowRedundant] = useState(false)
   const selected = new Set(entitlement.selectedSpellIds)
   const grantedIds = new Set(
     entitlement.grantedSpells.map((grant) => grant.spellId),
@@ -224,7 +243,7 @@ function SelectEntitlementEditor({
       .filter((level): level is number => level !== undefined)
 
     return buildEntitlementCountDisplay({
-      entitlementLabel: entitlement.label,
+      entitlementLabel: poolTitle,
       limit: entitlement.limit,
       accessibleLevels: entitlement.accessibleLevels,
       spellLevelById,
@@ -235,9 +254,9 @@ function SelectEntitlementEditor({
     availableSpells,
     entitlement.accessibleLevels,
     entitlement.grantedSpells,
-    entitlement.label,
     entitlement.limit,
     entitlement.selectedSpellIds,
+    poolTitle,
   ])
 
   const eligibilityBySpellId = useMemo(() => {
@@ -295,8 +314,7 @@ function SelectEntitlementEditor({
   const countingGrants = entitlement.grantedSpells.filter(
     (grant) => grant.countsAgainstLimit,
   ).length
-  const used =
-    entitlement.selectedSpellIds.length + countingGrants
+  const used = entitlement.selectedSpellIds.length + countingGrants
   const atSelectionLimit = used >= entitlement.limit
 
   return (
@@ -308,19 +326,9 @@ function SelectEntitlementEditor({
       entitlement.description.length > 0 ? (
         <p className="spells-source__note">{entitlement.description}</p>
       ) : null}
-      <label className="feat-picker__show-unavailable spells-source__redundant-toggle">
-        <input
-          type="checkbox"
-          checked={showRedundant}
-          onChange={(event) => {
-            setShowRedundant(event.target.checked)
-          }}
-        />
-        <span>Show redundant choices</span>
-      </label>
       <SpellSelectionGrid
         idPrefix={idPrefix}
-        title={entitlement.label}
+        title={poolTitle}
         countLabel={countDisplay.countLabel}
         selectionProgress={{ selected: used, limit: entitlement.limit }}
         levelRows={countDisplay.levelRows}
@@ -331,6 +339,7 @@ function SelectEntitlementEditor({
         eligibilityBySpellId={eligibilityBySpellId}
         atSelectionLimit={atSelectionLimit}
         showRedundant={showRedundant}
+        nestedUnderSource
         onToggleSpell={toggle}
       />
     </>
@@ -349,6 +358,14 @@ export function SpellsStep({
   >({})
   const [spellsById, setSpellsById] = useState<Record<string, SpellDefinition>>(
     {},
+  )
+  const [showRedundantBySource, setShowRedundantBySource] = useState<
+    Record<string, boolean>
+  >({})
+
+  const presentation = useMemo(
+    () => buildSpellPresentationModel(summary),
+    [summary],
   )
 
   useEffect(() => {
@@ -422,7 +439,9 @@ export function SpellsStep({
     () =>
       displayedIssues.filter(
         (issue) =>
-          !summary.groups.some((group) => issueBelongsToGroup(issue, group)),
+          !summary.groups.some((group) =>
+            issueBelongsToGroups(issue, [group]),
+          ),
       ),
     [displayedIssues, summary.groups],
   )
@@ -487,121 +506,173 @@ export function SpellsStep({
         </ul>
       ) : null}
 
-      {summary.groups.map((group) => {
-        const groupIssues = displayedIssues.filter((issue) =>
-          issueBelongsToGroup(issue, group),
-        )
-
-        return (
-          <section
-            key={group.groupId}
-            className="spells-source"
-            aria-labelledby={`spells-source-${group.groupId}`}
+      {presentation.map((category) => (
+        <section
+          key={category.category}
+          className="spells-category"
+          aria-labelledby={`spells-category-${category.category}`}
+        >
+          <h3
+            id={`spells-category-${category.category}`}
+            className="spells-category__title"
           >
-            <h3 id={`spells-source-${group.groupId}`}>{group.label}</h3>
-            <p className="spells-source__meta">
-              {formatAbilityLabel(group.ability)} · Save DC {group.saveDcLabel}{' '}
-              · Spell Attack {group.attackBonusLabel}
-            </p>
+            {category.label}
+          </h3>
 
-            {groupIssues.length > 0 ? (
-              <ul
-                className="spells-validation spells-validation--source"
-                aria-label={`${group.label} spell validation issues`}
+          {category.sources.map((source) => {
+            const sourceIssues = displayedIssues.filter((issue) =>
+              issueBelongsToGroups(issue, source.groups),
+            )
+            const showRedundant = showRedundantBySource[source.id] === true
+            const alwaysPreparedDefinitions = source.alwaysPrepared
+              .map((grant) => spellsById[grant.spellId])
+              .filter(
+                (spell): spell is SpellDefinition => spell !== undefined,
+              )
+            const hasSelectablePool = source.pools.length > 0
+
+            return (
+              <section
+                key={source.id}
+                className="spells-source"
+                aria-labelledby={`spells-source-${source.id}`}
               >
-                {groupIssues.map((issue, index) => (
-                  <li key={`${issue.code}-${issue.sourceKey}-${index}`}>
-                    {formatIssueMessageForGroup(issue, group.label)}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+                <h4
+                  id={`spells-source-${source.id}`}
+                  className="spells-source__title"
+                >
+                  {source.title}
+                </h4>
+                <p className="spells-source__meta">
+                  {formatAbilityLabel(source.ability)} · Save DC{' '}
+                  {source.saveDcLabel} · Spell Attack{' '}
+                  {source.attackBonusLabel}
+                </p>
 
-            {group.entitlements.map((entitlement) => {
-              if (entitlement.kind === 'granted') {
-                const foldedIntoSelect = group.entitlements.some(
-                  (entry) =>
-                    entry.kind === 'select' && entry.grantedSpells.length > 0,
-                )
-                if (foldedIntoSelect) {
-                  return null
-                }
+                {sourceIssues.length > 0 ? (
+                  <ul
+                    className="spells-validation spells-validation--source"
+                    aria-label={`${source.title} spell validation issues`}
+                  >
+                    {sourceIssues.map((issue, index) => (
+                      <li key={`${issue.code}-${issue.sourceKey}-${index}`}>
+                        {formatIssueMessageForSource(
+                          issue,
+                          source.title,
+                          source.groups,
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
 
-                const grantedDefinitions = entitlement.grantedSpells
-                  .map((grant) => spellsById[grant.spellId])
-                  .filter(
-                    (spell): spell is SpellDefinition => spell !== undefined,
+                {alwaysPreparedDefinitions.length > 0 ? (
+                  <ThresholdCollapseList
+                    id={`${source.id}-always-prepared`}
+                    title={formatThresholdCollapseTitle(
+                      'Always Prepared',
+                      alwaysPreparedDefinitions.length,
+                    )}
+                    itemCount={alwaysPreparedDefinitions.length}
+                    defaultExpanded={resolveSpellSectionDefaultExpanded({
+                      kind: 'granted',
+                      itemCount: alwaysPreparedDefinitions.length,
+                    })}
+                  >
+                    <div
+                      className="spell-selection-grid__cards spell-selection-grid__cards--granted"
+                      role="list"
+                      aria-label="Always Prepared"
+                    >
+                      {alwaysPreparedDefinitions.map((spell) => (
+                        <div key={spell.id} role="listitem">
+                          <SpellSelectionCard
+                            spell={spell}
+                            inputId={`${source.id}-granted-${spell.id}`}
+                            selected
+                            granted
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </ThresholdCollapseList>
+                ) : null}
+
+                {hasSelectablePool ? (
+                  <label className="feat-picker__show-unavailable spells-source__redundant-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showRedundant}
+                      onChange={(event) => {
+                        setShowRedundantBySource((previous) => ({
+                          ...previous,
+                          [source.id]: event.target.checked,
+                        }))
+                      }}
+                    />
+                    <span>Show redundant choices</span>
+                  </label>
+                ) : null}
+
+                {source.pools.map((pool) => {
+                  const resolvedSource = findSourceForEntitlement(
+                    summary,
+                    pool.group,
+                    pool.entitlement,
                   )
 
-                return (
-                  <SpellSelectionGrid
-                    key={entitlement.entitlementId}
-                    idPrefix={`${group.groupId}-${entitlement.entitlementId}`}
-                    title={entitlement.label}
-                    countLabel="Always prepared"
-                    selectableSpells={[]}
-                    grantedSpells={grantedDefinitions}
-                    grantedListLabel="Always Prepared Spells"
-                    selectedSpellIds={new Set()}
-                    onToggleSpell={() => undefined}
-                  />
-                )
-              }
+                  if (resolvedSource === undefined) {
+                    return null
+                  }
 
-              const resolvedSource = findSourceForEntitlement(
-                summary,
-                group,
-                entitlement,
-              )
-
-              if (resolvedSource === undefined) {
-                return null
-              }
-
-              const sourceInvalidIds = new Set(
-                validationIssues
-                  .filter(
-                    (issue) =>
-                      issue.entitlementId === entitlement.entitlementId &&
-                      issue.spellId !== undefined,
+                  const sourceInvalidIds = new Set(
+                    validationIssues
+                      .filter(
+                        (issue) =>
+                          issue.entitlementId ===
+                            pool.entitlement.entitlementId &&
+                          issue.spellId !== undefined,
+                      )
+                      .map((issue) => issue.spellId!),
                   )
-                  .map((issue) => issue.spellId!),
-              )
 
-              const listSpells =
-                entitlement.listId !== undefined
-                  ? (spellsByList[entitlement.listId] ?? [])
-                  : []
+                  const listSpells =
+                    pool.entitlement.listId !== undefined
+                      ? (spellsByList[pool.entitlement.listId] ?? [])
+                      : []
 
-              // Merge catalog spells for granted ids that may not be on this list.
-              const availableSpells = [...listSpells]
-              for (const grant of entitlement.grantedSpells) {
-                const spell = spellsById[grant.spellId]
-                if (
-                  spell !== undefined &&
-                  !availableSpells.some((entry) => entry.id === spell.id)
-                ) {
-                  availableSpells.push(spell)
-                }
-              }
+                  const availableSpells = [...listSpells]
+                  for (const grant of pool.entitlement.grantedSpells) {
+                    const spell = spellsById[grant.spellId]
+                    if (
+                      spell !== undefined &&
+                      !availableSpells.some((entry) => entry.id === spell.id)
+                    ) {
+                      availableSpells.push(spell)
+                    }
+                  }
 
-              return (
-                <SelectEntitlementEditor
-                  key={entitlement.entitlementId}
-                  summary={summary}
-                  group={group}
-                  entitlement={entitlement}
-                  source={resolvedSource}
-                  spellSourceStates={spellSourceStates}
-                  onChangeSpellSourceStates={onChangeSpellSourceStates}
-                  availableSpells={availableSpells}
-                  invalidSpellIds={sourceInvalidIds}
-                />
-              )
-            })}
-          </section>
-        )
-      })}
+                  return (
+                    <SelectEntitlementEditor
+                      key={`${pool.group.groupId}-${pool.entitlement.entitlementId}`}
+                      summary={summary}
+                      group={pool.group}
+                      entitlement={pool.entitlement}
+                      poolTitle={pool.title}
+                      source={resolvedSource}
+                      spellSourceStates={spellSourceStates}
+                      onChangeSpellSourceStates={onChangeSpellSourceStates}
+                      availableSpells={availableSpells}
+                      invalidSpellIds={sourceInvalidIds}
+                      showRedundant={showRedundant}
+                    />
+                  )
+                })}
+              </section>
+            )
+          })}
+        </section>
+      ))}
     </section>
   )
 }

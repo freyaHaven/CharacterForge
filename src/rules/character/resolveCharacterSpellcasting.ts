@@ -19,7 +19,9 @@ import {
   compareSpellSourceGroupSortKeys,
   compareSpellSourceSortKeys,
   isSubclassClassChoice,
+  presentationCategoryForOrigin,
   spellSourceGroupBand,
+  type SpellPresentationSourceRef,
   type SpellSourceOriginKind,
   type SpellSourceSortKey,
 } from '../../domain/spell/sourceOrigin'
@@ -100,6 +102,12 @@ export type ResolvedSpellEntitlement = {
   ritual?: boolean
   /** Spell ids on the resolved list (when catalogue was available). */
   listSpellIds?: readonly string[]
+  /**
+   * Presentation metadata for Spells-page hierarchy (collection time).
+   * Does not affect selection, validation, or persistence.
+   */
+  originKind?: SpellSourceOriginKind
+  presentation?: SpellPresentationSourceRef
 }
 
 export type ResolvedSpellSourceGroup = {
@@ -137,6 +145,20 @@ type ActiveEntitlement = {
   /** Class spell-slot progression for class-instance sources (own slots, not shared). */
   classSlotsByLevel?: number[][]
   sortKey: SpellSourceSortKey
+  /** Spells-page source grouping (presentation only). */
+  presentation: SpellPresentationSourceRef
+}
+
+function presentationForOrigin(
+  originKind: SpellSourceOriginKind,
+  sourceId: string,
+  sourceTitle: string,
+): SpellPresentationSourceRef {
+  return {
+    category: presentationCategoryForOrigin(originKind),
+    sourceId,
+    sourceTitle,
+  }
 }
 
 function castingStats(
@@ -165,6 +187,24 @@ export function countUnlockLevel(
   }
   const index = count.table.findIndex((value) => value > 0)
   return index === -1 ? null : index + 1
+}
+
+/**
+ * Progression level for sort keys: later of the feature/choice unlock and any
+ * by-source-level count unlock (e.g. Evocation Savant slot entitlements).
+ */
+export function grantingLevelForSpellEntitlement(
+  entitlement: SpellEntitlement,
+  fallbackLevel: number,
+): number {
+  if (entitlement.kind !== 'select') {
+    return fallbackLevel
+  }
+  const unlock = countUnlockLevel(entitlement.count)
+  if (unlock === null) {
+    return fallbackLevel
+  }
+  return Math.max(fallbackLevel, unlock)
 }
 
 /**
@@ -235,6 +275,21 @@ function findSourceState(
   return states.find((state) => spellSourceKey(state.source) === key)
 }
 
+/**
+ * Whether a class spell entitlement is active at the granting class instance
+ * level. Select entitlements with a resolved count of 0 (e.g. future Wizard
+ * spellbook additions) must not enter activeSources / Spells UI / validation.
+ */
+export function isClassSpellEntitlementActiveAtLevel(
+  entitlement: SpellEntitlement,
+  sourceLevel: number,
+): boolean {
+  if (entitlement.kind === 'granted') {
+    return true
+  }
+  return resolveSpellCount(entitlement.count, sourceLevel) > 0
+}
+
 function collectClassActiveEntitlements(
   definition: ClassDefinition,
   instanceId: string,
@@ -270,6 +325,9 @@ function collectClassActiveEntitlements(
   }
 
   for (const entitlement of spellcasting.entitlements) {
+    if (!isClassSpellEntitlementActiveAtLevel(entitlement, level)) {
+      continue
+    }
     const label = entitlementLabel(entitlement, definition.name)
     active.push({
       source: {
@@ -284,7 +342,16 @@ function collectClassActiveEntitlements(
       groupId,
       groupLabel,
       classSlotsByLevel: spellcasting.slotsByLevel,
-      sortKey: nextSortKey('class-core', 1, label),
+      sortKey: nextSortKey(
+        'class-core',
+        grantingLevelForSpellEntitlement(entitlement, 1),
+        label,
+      ),
+      presentation: presentationForOrigin(
+        'class-core',
+        `class:${instanceId}`,
+        definition.name,
+      ),
     })
   }
 
@@ -306,7 +373,25 @@ function collectClassActiveEntitlements(
         continue
       }
 
+      const originKind = subclassChoice
+        ? ('subclass-feature' as const)
+        : ('class-choice-option' as const)
+      const presentation = subclassChoice
+        ? presentationForOrigin(
+            'subclass-feature',
+            `subclass:${instanceId}:${option.id}`,
+            option.label,
+          )
+        : presentationForOrigin(
+            'class-choice-option',
+            `class:${instanceId}`,
+            definition.name,
+          )
+
       for (const entitlement of option.spellEntitlements ?? []) {
+        if (!isClassSpellEntitlementActiveAtLevel(entitlement, level)) {
+          continue
+        }
         const label = `${option.label}: ${entitlementLabel(entitlement, option.label)}`
         active.push({
           source: {
@@ -322,10 +407,11 @@ function collectClassActiveEntitlements(
           groupLabel,
           classSlotsByLevel: spellcasting.slotsByLevel,
           sortKey: nextSortKey(
-            subclassChoice ? 'subclass-feature' : 'class-choice-option',
-            choice.level,
+            originKind,
+            grantingLevelForSpellEntitlement(entitlement, choice.level),
             label,
           ),
+          presentation,
         })
       }
 
@@ -335,6 +421,9 @@ function collectClassActiveEntitlements(
         }
 
         for (const entitlement of feature.spellEntitlements ?? []) {
+          if (!isClassSpellEntitlementActiveAtLevel(entitlement, level)) {
+            continue
+          }
           const label = entitlementLabel(entitlement, feature.name)
           active.push({
             source: {
@@ -350,10 +439,11 @@ function collectClassActiveEntitlements(
             groupLabel,
             classSlotsByLevel: spellcasting.slotsByLevel,
             sortKey: nextSortKey(
-              subclassChoice ? 'subclass-feature' : 'class-feature',
-              feature.level,
+              originKind,
+              grantingLevelForSpellEntitlement(entitlement, feature.level),
               label,
             ),
+            presentation,
           })
         }
       }
@@ -362,6 +452,9 @@ function collectClassActiveEntitlements(
 
   for (const feature of getClassFeaturesUpToLevel(definition, level)) {
     for (const entitlement of feature.spellEntitlements ?? []) {
+      if (!isClassSpellEntitlementActiveAtLevel(entitlement, level)) {
+        continue
+      }
       const label = entitlementLabel(entitlement, feature.name)
       active.push({
         source: {
@@ -376,7 +469,16 @@ function collectClassActiveEntitlements(
         groupId,
         groupLabel,
         classSlotsByLevel: spellcasting.slotsByLevel,
-        sortKey: nextSortKey('class-feature', feature.level, label),
+        sortKey: nextSortKey(
+          'class-feature',
+          grantingLevelForSpellEntitlement(entitlement, feature.level),
+          label,
+        ),
+        presentation: presentationForOrigin(
+          'class-feature',
+          `class:${instanceId}`,
+          definition.name,
+        ),
       })
     }
   }
@@ -448,6 +550,11 @@ function formatGrantedFeatSpellcastingLabel(
   return `${displayName} ${suffix}`
 }
 
+function featPresentationTitle(featName: string): string {
+  const baseName = featName.replace(/\s*\([^)]*\)\s*$/u, '').trim()
+  return baseName.length > 0 ? baseName : featName
+}
+
 function collectFeatActiveEntitlements(
   spellcasting: FeatSpellcasting,
   choices: Record<string, string | string[]>,
@@ -472,6 +579,8 @@ function collectFeatActiveEntitlements(
   >,
   classInstanceIndex: number,
   progressionCounter: { value: number },
+  presentation: SpellPresentationSourceRef,
+  grantingLevel: number = 1,
 ): ActiveEntitlement[] {
   const ability =
     resolveFeatSpellcastingAbility(spellcasting, choices) ??
@@ -514,10 +623,14 @@ function collectFeatActiveEntitlements(
       sortKey: {
         originKind,
         classInstanceIndex,
-        grantingLevel: 1,
+        grantingLevel: grantingLevelForSpellEntitlement(
+          entitlement,
+          grantingLevel,
+        ),
         progressionOrder,
         displayName: groupLabel,
       },
+      presentation,
     }
   })
 }
@@ -614,6 +727,8 @@ function buildResolvedEntitlement(
       grantedSpells,
       remainingPicks: 0,
       ability: active.ability,
+      originKind: active.sortKey.originKind,
+      presentation: active.presentation,
       ...stats,
     }
   }
@@ -678,6 +793,8 @@ function buildResolvedEntitlement(
     castingTime: entitlement.castingTime,
     ritual: entitlement.ritual,
     listSpellIds,
+    originKind: active.sortKey.originKind,
+    presentation: active.presentation,
     ...stats,
   }
 }
@@ -721,6 +838,11 @@ function collectSpeciesActiveEntitlements(
         progressionOrder,
         displayName: groupLabel,
       },
+      presentation: presentationForOrigin(
+        'species-trait',
+        `species:${speciesId}`,
+        groupLabel,
+      ),
     }
   })
 }
@@ -815,6 +937,11 @@ export async function resolveCharacterSpellcasting(
               'background-origin',
               -1,
               progressionCounter,
+              presentationForOrigin(
+                'background-origin',
+                `background:${grant.source.backgroundId}`,
+                featPresentationTitle(feat.name),
+              ),
             ),
           )
         } else if (grant.source.kind === 'character-feat') {
@@ -832,6 +959,11 @@ export async function resolveCharacterSpellcasting(
               'character-feat',
               -1,
               progressionCounter,
+              presentationForOrigin(
+                'character-feat',
+                `feat:${feat.id}`,
+                featPresentationTitle(feat.name),
+              ),
             ),
           )
         } else if (grant.source.kind === 'species-feat-grant') {
@@ -855,9 +987,28 @@ export async function resolveCharacterSpellcasting(
               'species-feat-grant',
               -1,
               progressionCounter,
+              presentationForOrigin(
+                'species-feat-grant',
+                `feat:${feat.id}:${grant.source.speciesId}:${grant.source.choiceId}`,
+                featPresentationTitle(feat.name),
+              ),
             ),
           )
         } else {
+          const classDefinition = await classCatalog.getClass(
+            grant.source.classId,
+          )
+          const choiceLevel =
+            classDefinition?.choices.find(
+              (choice) => choice.id === grant.source.choiceId,
+            )?.level ??
+            (() => {
+              const match = /^ability-score-improvement-(\d+)$/.exec(
+                grant.source.choiceId,
+              )
+              return match !== null ? Number(match[1]) : 1
+            })()
+
           activeEntitlements.push(
             ...collectFeatActiveEntitlements(
               feat.spellcasting,
@@ -878,6 +1029,12 @@ export async function resolveCharacterSpellcasting(
               'class-feat-grant',
               classInstanceIndexById.get(grant.source.instanceId) ?? -1,
               progressionCounter,
+              presentationForOrigin(
+                'class-feat-grant',
+                `feat:${feat.id}:${grant.source.instanceId}:${grant.source.choiceId}`,
+                featPresentationTitle(feat.name),
+              ),
+              choiceLevel,
             ),
           )
         }
@@ -899,6 +1056,11 @@ export async function resolveCharacterSpellcasting(
             'character-feat',
             -1,
             progressionCounter,
+            presentationForOrigin(
+              'character-feat',
+              `feat:${feat.id}`,
+              featPresentationTitle(feat.name),
+            ),
           ),
         )
       }

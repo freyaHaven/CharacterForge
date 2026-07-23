@@ -246,6 +246,42 @@ describe('SpellSelectionGrid', () => {
     expect(screen.queryByText('1/2')).not.toBeInTheDocument()
   })
 
+  it('omits empty spell-level rows with no selectable or selected content', () => {
+    render(
+      <SpellSelectionGrid
+        idPrefix="prepared"
+        title="Prepared Spells"
+        countLabel="1/5"
+        selectionProgress={{ selected: 1, limit: 5 }}
+        levelRows={[
+          {
+            level: 1,
+            label: '1st level',
+            selected: 1,
+            capacity: null,
+            limitScope: 'entitlement',
+          },
+          {
+            level: 5,
+            label: '5th level',
+            selected: 0,
+            capacity: null,
+            limitScope: 'entitlement',
+          },
+        ]}
+        selectableSpells={[{ ...light, level: 1 }]}
+        selectedSpellIds={new Set(['srd-2024:light'])}
+        onToggleSpell={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('checkbox', { name: /light/i })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /5th-level Spells/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/5th-level Spells/i)).not.toBeInTheDocument()
+  })
+
   it('blocks unselected spells only for genuine per-group capacity', () => {
     render(
       <SpellSelectionGrid

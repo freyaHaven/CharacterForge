@@ -36,32 +36,88 @@ describe('spell source origin ordering', () => {
     ])
   })
 
-  it('places subclass features after class core within the same class', () => {
+  it('orders by granting level within a class instance before origin kind', () => {
     const ordered = [
+      key({
+        originKind: 'class-core',
+        classInstanceIndex: 0,
+        grantingLevel: 4,
+        displayName: 'Spellbook 4',
+      }),
       key({
         originKind: 'subclass-feature',
         classInstanceIndex: 0,
         grantingLevel: 3,
-        displayName: 'Domain',
+        displayName: 'Evocation Savant',
       }),
       key({
         originKind: 'class-core',
         classInstanceIndex: 0,
-        grantingLevel: 1,
-        displayName: 'Cantrips',
+        grantingLevel: 3,
+        displayName: 'Spellbook 3',
+      }),
+    ].sort(compareSpellSourceSortKeys)
+
+    expect(ordered.map((entry) => entry.displayName)).toEqual([
+      'Evocation Savant',
+      'Spellbook 3',
+      'Spellbook 4',
+    ])
+  })
+
+  it('places subclass features before same-level class-core entitlements', () => {
+    const ordered = [
+      key({
+        originKind: 'class-core',
+        classInstanceIndex: 0,
+        grantingLevel: 3,
+        displayName: 'Spellbook 3',
+        progressionOrder: 1,
+      }),
+      key({
+        originKind: 'subclass-feature',
+        classInstanceIndex: 0,
+        grantingLevel: 3,
+        displayName: 'Evocation Savant',
+        progressionOrder: 99,
       }),
       key({
         originKind: 'class-choice-option',
         classInstanceIndex: 0,
-        grantingLevel: 1,
-        displayName: 'Divine Order',
+        grantingLevel: 3,
+        displayName: 'Subclass',
+        progressionOrder: 50,
       }),
     ].sort(compareSpellSourceSortKeys)
 
     expect(ordered.map((entry) => entry.originKind)).toEqual([
-      'class-core',
       'class-choice-option',
       'subclass-feature',
+      'class-core',
+    ])
+  })
+
+  it('keeps class-feat-grant in the class-instance band by granting level', () => {
+    expect(spellSourceGroupBand('class-feat-grant')).toBe('class-instance')
+
+    const ordered = [
+      key({
+        originKind: 'class-feat-grant',
+        classInstanceIndex: 0,
+        grantingLevel: 4,
+        displayName: 'ASI Feat',
+      }),
+      key({
+        originKind: 'subclass-feature',
+        classInstanceIndex: 0,
+        grantingLevel: 3,
+        displayName: 'Savant',
+      }),
+    ].sort(compareSpellSourceSortKeys)
+
+    expect(ordered.map((entry) => entry.displayName)).toEqual([
+      'Savant',
+      'ASI Feat',
     ])
   })
 
@@ -97,9 +153,54 @@ describe('spell source origin ordering', () => {
     ])
   })
 
+  it('ignores definition insertion order for same level and priority', () => {
+    const ordered = [
+      key({
+        originKind: 'subclass-feature',
+        classInstanceIndex: 0,
+        grantingLevel: 3,
+        progressionOrder: 0,
+        displayName: 'Zebra Feature',
+      }),
+      key({
+        originKind: 'subclass-feature',
+        classInstanceIndex: 0,
+        grantingLevel: 3,
+        progressionOrder: 99,
+        displayName: 'Alpha Feature',
+      }),
+    ].sort(compareSpellSourceSortKeys)
+
+    expect(ordered.map((entry) => entry.displayName)).toEqual([
+      'Alpha Feature',
+      'Zebra Feature',
+    ])
+  })
+
+  it('is stable regardless of insertion / progressionOrder when levels differ', () => {
+    const ordered = [
+      key({
+        originKind: 'subclass-feature',
+        classInstanceIndex: 0,
+        grantingLevel: 3,
+        progressionOrder: 0,
+        displayName: 'Later-defined Savant',
+      }),
+      key({
+        originKind: 'class-core',
+        classInstanceIndex: 0,
+        grantingLevel: 4,
+        progressionOrder: 0,
+        displayName: 'Earlier-defined Spellbook 4',
+      }),
+    ].sort(compareSpellSourceSortKeys)
+
+    expect(ordered.map((entry) => entry.grantingLevel)).toEqual([3, 4])
+  })
+
   it('maps origin kinds to group bands without label parsing', () => {
     expect(spellSourceGroupBand('subclass-feature')).toBe('class-instance')
-    expect(spellSourceGroupBand('class-feat-grant')).toBe('class-feat-grant')
+    expect(spellSourceGroupBand('class-feat-grant')).toBe('class-instance')
     expect(spellSourceGroupBand('species-feat-grant')).toBe('species-feat-grant')
   })
 

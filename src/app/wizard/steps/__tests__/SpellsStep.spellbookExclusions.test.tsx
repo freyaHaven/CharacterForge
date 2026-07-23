@@ -138,17 +138,19 @@ function additionSection(): HTMLElement {
   const heading = screen.getByRole('heading', {
     name: /wizard level 3 spellbook addition/i,
   })
-  const section = heading.closest('section')
+  const section = heading.closest('section.spell-selection-grid')
   expect(section).not.toBeNull()
   return section!
 }
 
 function additionRedundantToggle(): HTMLInputElement {
-  const section = additionSection()
-  const label = section.previousElementSibling
-  expect(label).not.toBeNull()
-  const input = label!.querySelector('input[type="checkbox"]')
-  expect(input).not.toBeNull()
+  const source = screen.getByRole('heading', { name: /^Wizard$/i }).closest(
+    'section.spells-source',
+  )
+  expect(source).not.toBeNull()
+  const input = within(source!).getByRole('checkbox', {
+    name: /show redundant choices/i,
+  })
   return input as HTMLInputElement
 }
 
