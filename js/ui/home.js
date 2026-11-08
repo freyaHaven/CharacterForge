@@ -36,6 +36,7 @@
         }).join('') + '</div></section>' +
       '<section class="set-sec"><h3>Weight</h3>' + seg('set-unit', st.unit, [['lb', 'Pounds (lb)'], ['kg', 'Kilograms (kg)']]) + '</section>' +
       '<section class="set-sec"><h3>Theme</h3>' + seg('set-theme', st.theme, [['system', 'Match my device'], ['light', 'Light'], ['dark', 'Dark']]) + '</section>' +
+      '<p class="muted2" style="font-size:12px;margin:0">Character Forge version ' + h(CF.version || '?') + '</p>' +
       '</div></div>';
   }
 

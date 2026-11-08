@@ -41,6 +41,8 @@
     round: function (n, d) { var p = Math.pow(10, d || 0); return Math.round(n * p) / p; }
   };
 
+  CF.version = '2026-11-08b';   // keep in step with the ?v= tags in index.html
+
   /* ---------- content registry (packs = SRD + modules) ---------- */
   var packs = [];
   /** A module can add a subclass to any class (its "subclasses" list, each with a "class" id). Merge them in. */
