@@ -4,13 +4,14 @@
   "manifest_version": 1,
   "description": "D&D 2024 character sheets with 3D dice. Rolls are shared with the room; link tokens to sheets.",
   "author": "Character Forge",
-  "icon": "/icon.svg",
-  "background_url": "/background.html",
+  "icon": "https://freyahaven.github.io/CharacterForge/icon.svg",
+  "background_url": "https://freyahaven.github.io/CharacterForge/background.html",
   "action": {
     "title": "Character Forge",
-    "icon": "/icon.svg",
-    "popover": "/index.html",
+    "icon": "https://freyahaven.github.io/CharacterForge/icon.svg",
+    "popover": "https://freyahaven.github.io/CharacterForge/index.html",
     "width": 1100,
     "height": 900
-  }
+  },
+  "homepage_url": "https://freyahaven.github.io/CharacterForge/"
 }
