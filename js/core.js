@@ -41,7 +41,7 @@
     round: function (n, d) { var p = Math.pow(10, d || 0); return Math.round(n * p) / p; }
   };
 
-  CF.version = '2026-11-08c';   // keep in step with the ?v= tags in index.html
+  CF.version = '2026-11-08d';   // keep in step with the ?v= tags in index.html
 
   /* ---------- content registry (packs = SRD + modules) ---------- */
   var packs = [];
@@ -50,14 +50,39 @@
     if (section === 'spells') return withLists(cls, enabled);
     if (section === 'species') return withLineages(cls, enabled);
     if (section !== 'classes') return cls;
+    cls = withStyles(cls, enabled);
     var extra = [];
     packs.forEach(function (p) {
       if (enabled && enabled.indexOf(p.id) < 0) return;
       (p.subclasses || []).forEach(function (sc) { if (sc.class === cls.id) extra.push(Object.assign({ source: p.id, sourceName: p.name }, sc)); });
     });
-    if (!extra.length) return cls;
     var own = (cls.subclasses || []).filter(function (sc) { return !extra.some(function (x) { return x.id === sc.id; }); });
-    return Object.assign({}, cls, { subclasses: own.concat(extra) });
+    var subs = own.concat(extra);
+    var styled = subs.map(function (sc) { return withStyles(sc, enabled); });
+    if (!extra.length && styled.every(function (x, i) { return x === subs[i]; })) return cls;
+    return Object.assign({}, cls, { subclasses: styled });
+  }
+  /** Fighting Style choices also offer the Fighting Style feats from enabled modules (Dueling, Interception, Thrown Weapon Fighting…). */
+  function withStyles(def, enabled) {
+    if (!def || !(def.choices || []).some(function (q) { return /style$/.test(q.id); })) return def;
+    var feats = [];
+    packs.forEach(function (p) {
+      if (enabled && enabled.indexOf(p.id) < 0) return;
+      (p.feats || []).forEach(function (f) { if (f.category === 'fighting-style') feats.push(Object.assign({ sourceName: p.name }, f)); });
+    });
+    if (!feats.length) return def;
+    var norm = function (n) { return String(n).toLowerCase().replace(/ fighting$/, ''); };
+    return Object.assign({}, def, { choices: def.choices.map(function (q) {
+      if (!/style$/.test(q.id)) return q;
+      var opts = q.options.slice();
+      feats.forEach(function (f) {
+        if (opts.some(function (o) { return o.id === f.id || norm(o.name) === norm(f.name); })) return;
+        var o = { id: f.id, name: f.name, text: f.text, source: f.sourceName };
+        if (f.grants) o.grants = f.grants;
+        opts.push(o);
+      });
+      return Object.assign({}, q, { options: opts });
+    }) });
   }
   /** A module can add lineages to a species from another pack (its "lineages" list, each with a "species" id), e.g. Eladrin for the Elf. */
   function withLineages(sp, enabled) {
