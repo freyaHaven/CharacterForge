@@ -187,7 +187,7 @@
         '<span class="big" style="color:' + (pct > 0.5 ? 'inherit' : pct > 0.25 ? 'var(--warn)' : 'var(--danger)') + '">' + d.hp + '</span><span aria-hidden="true" style="font-size:24px;color:var(--muted2)">/</span>' +
         '<span class="big">' + d.hpMax + '</span>' + (P ? '<input type="number" min="0" class="temp-in" value="' + (d.temp || '') + '" placeholder="—" data-act="temp-set" data-key="temp-set" aria-label="Temporary hit points" title="Temporary HP: type a number (0 to clear)">'
           : '<span style="font-size:22px;font-weight:500;color:var(--muted)">' + (d.temp || '—') + '</span>') +
-        '<span class="k" style="grid-column:1 / span 3">Hit points</span>' + (P ? '<span class="k" style="font-size:10px">type to set</span>' : '') + '</div>';
+        '<span class="k" style="grid-column:1 / span 3">Hit points</span>' + '</div>';
     } else {
       var dead = ds.f >= 3, stable = ds.s >= 3;
       var pips = function (kind, n) { var out = ''; for (var i = 0; i < 3; i++) out += P ? '<button type="button" class="pip' + (i < n ? ' on' : '') + '" data-act="ds" data-arg="' + kind + ':' + i + '" aria-label="Death save ' + (kind === 'f' ? 'failure' : 'success') + ' ' + (i + 1) + '" aria-pressed="' + (i < n) + '"></button>' : '<span class="pip' + (i < n ? ' on' : '') + '"></span>'; return out; };

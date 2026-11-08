@@ -607,11 +607,11 @@ button.exh-pip:hover { border-color: var(--accent); }
 .next-roll button.d[aria-pressed="true"] { background: #c0392b; border-color: #c0392b; color: #fff; }
 
 /* Temp HP: typed straight into the Temp cell in Play mode */
-.temp-in { width: 58px; min-height: 34px; padding: 0 6px; font-size: 20px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
+.temp-in { justify-self: center; width: 100%; max-width: 46px; min-width: 0; box-sizing: border-box; min-height: 32px; padding: 0 2px; font-size: 19px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
 .temp-in::-webkit-outer-spin-button, .temp-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .temp-in:focus { border-style: solid; border-color: var(--accent); outline: none; }
 
 /* Temp HP: typed straight into the Temp cell in Play mode */
-.temp-in { width: 58px; min-height: 34px; padding: 0 6px; font-size: 20px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
+.temp-in { justify-self: center; width: 100%; max-width: 46px; min-width: 0; box-sizing: border-box; min-height: 32px; padding: 0 2px; font-size: 19px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
 .temp-in::-webkit-outer-spin-button, .temp-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .temp-in:focus { border-style: solid; border-color: var(--accent); outline: none; }
