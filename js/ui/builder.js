@@ -441,7 +441,7 @@
       (sp.lineageOptional ? '<button type="button" class="opt" data-act="b-lineage" data-arg="" aria-pressed="' + !ch.species.lineage + '"><span class="nm" style="font-size:17px">Standard ' + h(sp.name) + '</span><span class="p">Just the traits above.</span></button>' : '') +
       sp.lineages.map(function (l) {
         var tag = l.sourceName && l.sourceName !== sp.sourceName ? '<span class="tag">' + h(l.sourceName) + '</span>' : '';
-        return '<button type="button" class="opt" data-act="b-lineage" data-arg="' + h(l.id) + '" aria-pressed="' + (ch.species.lineage === l.id) + '"><span class="t"><span class="nm" style="font-size:17px">' + h(l.name) + '</span>' + tag + '</span><span class="p">' + h(l.text) + '</span></button>';
+        return '<button type="button" class="opt" data-act="b-lineage" data-arg="' + h(l.id) + '" aria-pressed="' + (ch.species.lineage === l.id) + '"><span class="t"><span class="nm" style="font-size:17px">' + h(l.name) + '</span>' + tag + '</span><span class="p" style="white-space:pre-line">' + h(l.text) + '</span></button>';
       }).join('') + '</div>');
     if (sp.keenSenses) out += sec('Keen Senses', 'Choose the skill your sharp elven senses help with.', '<div class="pills">' + sp.keenSenses.map(function (s) { return pillToggle('b-keen', s, h(skillName(s)), ch.species.keenSense === s); }).join('') + '</div>');
     var hasCantrip = (sp.cantrips || []).length || (sp.lineages || []).some(function (l) { return (l.cantrips || []).length; });
