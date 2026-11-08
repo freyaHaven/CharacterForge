@@ -185,8 +185,9 @@
       var pct = d.hp / d.hpMax;
       inner = '<div class="hp-nums' + (d.hpMax >= 100 ? ' wide-hp' : '') + '"><span class="k">Current</span><span></span><span class="k">Max</span><span class="k">Temp</span>' +
         '<span class="big" style="color:' + (pct > 0.5 ? 'inherit' : pct > 0.25 ? 'var(--warn)' : 'var(--danger)') + '">' + d.hp + '</span><span aria-hidden="true" style="font-size:24px;color:var(--muted2)">/</span>' +
-        '<span class="big">' + d.hpMax + '</span><span style="font-size:22px;font-weight:500;color:var(--muted)">' + (d.temp || '—') + '</span>' +
-        '<span class="k" style="grid-column:1 / span 3">Hit points</span>' + (P ? '<button class="small-out" data-act="temp" aria-label="Set temporary HP to the amount">Set</button>' : '') + '</div>';
+        '<span class="big">' + d.hpMax + '</span>' + (P ? '<input type="number" min="0" class="temp-in" value="' + (d.temp || '') + '" placeholder="—" data-act="temp-set" data-key="temp-set" aria-label="Temporary hit points" title="Temporary HP: type a number (0 to clear)">'
+          : '<span style="font-size:22px;font-weight:500;color:var(--muted)">' + (d.temp || '—') + '</span>') +
+        '<span class="k" style="grid-column:1 / span 3">Hit points</span>' + (P ? '<span class="k" style="font-size:10px">type to set</span>' : '') + '</div>';
     } else {
       var dead = ds.f >= 3, stable = ds.s >= 3;
       var pips = function (kind, n) { var out = ''; for (var i = 0; i < 3; i++) out += P ? '<button type="button" class="pip' + (i < n ? ' on' : '') + '" data-act="ds" data-arg="' + kind + ':' + i + '" aria-label="Death save ' + (kind === 'f' ? 'failure' : 'success') + ' ' + (i + 1) + '" aria-pressed="' + (i < n) + '"></button>' : '<span class="pip' + (i < n ? ' on' : '') + '"></span>'; return out; };
@@ -945,7 +946,13 @@
       } else app.view.restNote = '';
     });
   };
-  H.temp = function () { var n = amt(); mutate(function (ch) { ch.play.temp = Math.max(ch.play.temp || 0, n); }); };
+  H.temp = function () { var n = amt(); mutate(function (ch) { ch.play.temp = n; }); };
+  H['temp-set'] = function (a, el) {
+    var ch = cur(); if (!ch) return;
+    ch.play = ch.play || R.freshPlayState();
+    ch.play.temp = Math.max(0, Math.min(999, parseInt(el.value, 10) || 0));
+    CF.store.putSoon(ch, function (ok) { if (!ok) { app.flash('Couldn’t save: storage is full or blocked.', true); app.render(); } });
+  };
   H.ds = function (arg) {
     var p = arg.split(':'), i = +p[1];
     mutate(function (ch) { var ds = ch.play.deathSaves; ds[p[0]] = ds[p[0]] === i + 1 ? i : i + 1; });

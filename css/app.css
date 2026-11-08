@@ -605,3 +605,13 @@ button.exh-pip:hover { border-color: var(--accent); }
 .next-roll button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .next-roll button.a[aria-pressed="true"] { background: #2f8f4e; border-color: #2f8f4e; color: #fff; }
 .next-roll button.d[aria-pressed="true"] { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+/* Temp HP: typed straight into the Temp cell in Play mode */
+.temp-in { width: 58px; min-height: 34px; padding: 0 6px; font-size: 20px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
+.temp-in::-webkit-outer-spin-button, .temp-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.temp-in:focus { border-style: solid; border-color: var(--accent); outline: none; }
+
+/* Temp HP: typed straight into the Temp cell in Play mode */
+.temp-in { width: 58px; min-height: 34px; padding: 0 6px; font-size: 20px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
+.temp-in::-webkit-outer-spin-button, .temp-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.temp-in:focus { border-style: solid; border-color: var(--accent); outline: none; }
