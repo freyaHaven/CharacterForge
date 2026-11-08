@@ -1,0 +1,16 @@
+{
+  "name": "Character Forge",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "description": "D&D 2024 character sheets with 3D dice. Rolls are shared with the room; link tokens to sheets.",
+  "author": "Character Forge",
+  "icon": "/icon.svg",
+  "background_url": "/background.html",
+  "action": {
+    "title": "Character Forge",
+    "icon": "/icon.svg",
+    "popover": "/index.html",
+    "width": 1100,
+    "height": 900
+  }
+}

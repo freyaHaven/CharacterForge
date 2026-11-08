@@ -1,13 +1,43 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>characterforge</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Character Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // apply the saved theme before anything paints, so dark mode doesn't flash white
+  try {
+    var s = JSON.parse(localStorage.getItem('cf.settings.v1') || '{}'), t = s.theme || 'system';
+    if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+</script>
+</head>
+<body>
+<div id="app"><p style="padding:24px">Loading Character Forge…</p></div>
+<noscript><p style="padding:24px">Character Forge needs JavaScript to run.</p></noscript>
+<script src="js/core.js"></script>
+<script src="js/content/srd-5.2.js"></script>
+<script src="js/content/srd-classes.js"></script>
+<script src="js/content/srd-origins.js"></script>
+<script src="js/content/srd-gear.js"></script>
+<script src="js/content/srd-spells-full.js"></script>
+<script src="js/content/srd-levels.js"></script>
+<script src="js/content/srd-levels-high.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ui/home.js"></script>
+<script src="js/ui/sheet.js"></script>
+<script src="js/ui/builder.js"></script>
+<script src="js/ui/levelup.js"></script>
+<script src="js/ui/modules.js"></script>
+<script src="js/ui/personality.js"></script>
+<script src="js/ui/featpicks.js"></script>
+<script src="js/ui/dice3d.js"></script>
+<script src="js/obr.js"></script>
+</body>
 </html>

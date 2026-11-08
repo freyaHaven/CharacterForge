@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Character Forge: Owlbear Rodeo helper</title>
+</head>
+<body>
+<!--
+  Runs hidden in the background of an Owlbear Rodeo room while the extension is on.
+  - Shows a notification when another player rolls.
+  - Adds token menu items: link a token to your current character, and open the linked sheet.
+-->
+<script type="module">
+  const CHANNEL = 'com.characterforge/roll';
+  const LINK = 'com.characterforge/character';
+  const CURRENT = 'cf.obr.current';
+  const MENU_LINK = 'com.characterforge/link';
+  const MENU_OPEN = 'com.characterforge/open';
+
+  async function load() {
+    if (window.__OBR_TEST) return window.__OBR_TEST;
+    try { return (await import('https://esm.sh/@owlbear-rodeo/sdk')).default; }
+    catch (e) { return (await import('https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk/+esm')).default; }
+  }
+  const OBR = await load();
+  const current = () => { try { return JSON.parse(localStorage.getItem(CURRENT) || 'null'); } catch (e) { return null; } };
+  const base = new URL('.', location.href).href;
+
+  OBR.onReady(async () => {
+    // other players' rolls
+    OBR.broadcast.onMessage(CHANNEL, (ev) => {
+      const d = ev.data || {};
+      const tag = d.kind === 'nat20' ? ' · Natural 20!' : d.kind === 'nat1' ? ' · Natural 1' : d.kind === 'crit' ? '' : '';
+      OBR.notification.show((d.who ? d.who + ': ' : '') + d.label + ' = ' + d.total + tag, d.kind === 'nat20' ? 'SUCCESS' : d.kind === 'nat1' ? 'ERROR' : 'DEFAULT');
+    });
+
+    const icon = base + 'icon.svg';
+    const link = async (items) => {
+      const c = current();
+      if (!c) { OBR.notification.show('Open your character in Character Forge first, then link the token.', 'WARNING'); return; }
+      const me = await OBR.player.getId();
+      await OBR.scene.items.updateItems(items, (list) => { for (const it of list) it.metadata[LINK] = { id: c.id, name: c.name, owner: me }; });
+      OBR.notification.show('Token linked to ' + c.name + '.', 'SUCCESS');
+    };
+    const open = async (item) => {
+      const l = item.metadata[LINK];
+      const me = await OBR.player.getId();
+      if (l.owner !== me) { OBR.notification.show(l.name + ' belongs to another player, so their sheet opens on their screen.', 'INFO'); return; }
+      await OBR.popover.open({ id: 'com.characterforge/sheet', url: base + 'index.html#/c/' + encodeURIComponent(l.id) + '/play', width: 1100, height: 900 });
+    };
+    // one entry: "Link to my character" on an unlinked token, "Open character sheet" on a linked one
+    OBR.contextMenu.create({
+      id: MENU_OPEN,
+      icons: [
+        { icon, label: 'Link to my character', filter: { every: [{ key: 'layer', value: 'CHARACTER' }, { key: ['metadata', LINK], value: undefined }], max: 1 } },
+        { icon, label: 'Open character sheet', filter: { every: [{ key: 'layer', value: 'CHARACTER' }], max: 1 } }
+      ],
+      onClick: async (context) => {
+        const item = context.items[0];
+        if (item && item.metadata[LINK]) await open(item); else await link(context.items);
+      }
+    });
+    // relink a token that is already linked (e.g. to a different character)
+    OBR.contextMenu.create({
+      id: MENU_LINK,
+      icons: [{ icon, label: 'Link to my current character', filter: { every: [{ key: 'layer', value: 'CHARACTER' }, { key: ['metadata', LINK], value: undefined, operator: '!=' }], max: 1 } }],
+      onClick: async (context) => link(context.items)
+    });
+  });
+</script>
+</body>
+</html>
