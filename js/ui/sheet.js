@@ -215,7 +215,7 @@
   var TABS = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['background', 'Background'], ['notes', 'Notes'], ['extras', 'Extras']];
   function tabsPanel(ch, d, v) {
     var body = v.tab === 'actions' ? actionsTab(d, v) : v.tab === 'spells' ? spellsTab(d, v) : v.tab === 'inventory' ? inventoryTab(ch, d, v)
-      : v.tab === 'features' ? featuresTab(d, v) : v.tab === 'background' ? backgroundTab(d) : v.tab === 'notes' ? notesTab(ch) : extrasTab();
+      : v.tab === 'features' ? featuresTab(d, v) : v.tab === 'background' ? backgroundTab(d) : v.tab === 'notes' ? notesTab(ch, v) : extrasTab();
     return '<section class="card" aria-label="Character details" style="display:flex;flex-direction:column;min-width:0">' +
       '<div class="tabs" role="tablist" aria-label="Sheet sections">' + TABS.map(function (t) {
         return '<button type="button" role="tab" aria-selected="' + (v.tab === t[0]) + '" data-act="tab" data-arg="' + t[0] + '">' + h(t[1]) + '</button>';
@@ -635,10 +635,37 @@
       '<span class="muted2" style="font-size:12px">Source: ' + h(bg.sourceName) + '</span>';
   }
 
-  function notesTab(ch) {
-    var notes = (ch.play && ch.play.notes) || '';
-    if (!P) return notes ? '<div style="white-space:pre-wrap;font-size:14px;line-height:1.6">' + h(notes) + '</div>' : '<p class="muted2" style="margin:0">No notes yet. Notes you write in Play mode show here.</p>';
-    return '<label for="notes" class="h-sec">Session notes</label><textarea id="notes" rows="16" data-act="notes" data-key="notes" placeholder="NPC names, clues, loot…" style="border-radius:10px;border:1.5px solid var(--line2);background:var(--bg);padding:12px;font-size:15px;line-height:1.5;resize:vertical">' + h(notes) + '</textarea>';
+  /* ---------- notes: session notes plus lists of organisations and allies ---------- */
+  var JOURNAL = [['orgs', 'Organisations', 'organisation', 'e.g. The Harpers', 'Who they are, your rank, contacts, what they want from you…'],
+    ['allies', 'Allies', 'ally', 'e.g. Captain Vey', 'How you met, where to find them, what they owe you…'],
+    ['enemies', 'Enemies', 'enemy', 'e.g. The Black Hand', 'What they did, what they want, where they were last seen…']];
+  function notesTab(ch, v) {
+    var sub = v.noteSub || 'all', J = ch.journal || {};
+    var count = function (k) { return (J[k] || []).length; };
+    var tabs = [['all', 'All']].concat(JOURNAL.map(function (j) { return [j[0], j[1] + ' <small>' + count(j[0]) + '</small>', j[1] + ', ' + count(j[0])]; }), [['backstory', 'Backstory'], ['others', 'Others']]);
+    var out = pills(tabs, sub, 'note-sub', 'Note types');
+    JOURNAL.forEach(function (j) { if (sub === 'all' || sub === j[0]) out += journalList(J[j[0]] || [], j, sub === 'all'); });
+    if (sub === 'all' || sub === 'backstory') {
+      var story = (ch.details && ch.details.backstory) || '';
+      out += '<label for="backstory" class="h-sec">Backstory</label><textarea id="backstory" rows="' + (sub === 'all' ? 5 : 14) + '" data-act="bs-text" data-key="backstory" placeholder="Where do they come from? What do they want? What are they running from?" class="note-area">' + h(story) + '</textarea>';
+    }
+    if (sub === 'all' || sub === 'others') {
+      var notes = (ch.play && ch.play.notes) || '';
+      out += '<label for="notes" class="h-sec">Other notes</label><textarea id="notes" rows="' + (sub === 'all' ? 6 : 14) + '" data-act="notes" data-key="notes" placeholder="Clues, loot, rumours, session recaps…" class="note-area">' + h(notes) + '</textarea>';
+    }
+    return out;
+  }
+  function journalList(list, j, inAll) {
+    var head = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="h-sec">' + h(j[1]) + '</span>' +
+      '<button type="button" class="small-out" data-act="jn-add" data-arg="' + j[0] + '">+ Add ' + h(j[2]) + '</button></div>';
+    if (!list.length) return head + '<p class="muted2" style="margin:0;font-size:13px">No ' + h(j[1].toLowerCase()) + ' yet.' + (inAll ? '' : ' Use “Add ' + h(j[2]) + '” to start one.') + '</p>';
+    return head + '<div class="jn-list">' + list.map(function (e) {
+      var key = j[0] + ':' + e.id;
+      return '<div class="jn-entry"><div style="display:flex;gap:8px;align-items:center">' +
+        '<input type="text" class="jn-name" data-act="jn-field" data-arg="' + h(key) + ':name" data-key="jn-' + h(key) + '-name" value="' + h(e.name || '') + '" placeholder="' + h(j[3]) + '" aria-label="' + h(j[2]) + ' name" autocomplete="off">' +
+        '<button type="button" class="small-out" data-act="jn-del" data-arg="' + h(key) + '" aria-label="Remove ' + h(e.name || j[2]) + '">Remove</button></div>' +
+        '<textarea rows="3" class="note-area" data-act="jn-field" data-arg="' + h(key) + ':text" data-key="jn-' + h(key) + '-text" placeholder="' + h(j[4]) + '" aria-label="Notes about ' + h(e.name || j[2]) + '">' + h(e.text || '') + '</textarea></div>';
+    }).join('') + '</div>';
   }
 
   function extrasTab() { return '<div class="empty"><b style="color:var(--ink)">Extras</b><span>Companions, mounts and other extras will live here.</span></div>'; }
@@ -948,6 +975,30 @@
   H.coin = function (k, el) {
     var ch = cur(); if (!ch) return;
     ch.currency[k] = Math.max(0, parseInt(el.value, 10) || 0); CF.store.putSoon(ch);
+  };
+  H['bs-text'] = function (a, el) {
+    var ch = cur(); if (!ch) return;
+    ch.details = ch.details || {}; ch.details.backstory = el.value;
+    CF.store.putSoon(ch, function (ok) { if (!ok) { app.flash('Couldn’t save: storage is full or blocked.', true); app.render(); } });
+  };
+  H['note-sub'] = function (s) { app.view.noteSub = s; app.view.resetScroll = true; app.render(); };
+  H['jn-add'] = function (k) {
+    var ch = cur(); if (!ch) return;
+    ch.journal = ch.journal || {}; ch.journal[k] = ch.journal[k] || [];
+    ch.journal[k].push({ id: U.uid(), name: '', text: '' });
+    if (!CF.store.put(ch)) app.flash('Couldn’t save: storage is full or blocked.', true);
+    app.render();
+  };
+  H['jn-del'] = function (arg) {
+    var p = arg.split(':'), ch = cur(); if (!ch || !ch.journal || !ch.journal[p[0]]) return;
+    ch.journal[p[0]] = ch.journal[p[0]].filter(function (e) { return e.id !== p[1]; });
+    CF.store.put(ch); app.render();
+  };
+  H['jn-field'] = function (arg, el) {
+    var p = arg.split(':'), ch = cur(); if (!ch || !ch.journal || !ch.journal[p[0]]) return;
+    var e = ch.journal[p[0]].find(function (x) { return x.id === p[1]; }); if (!e) return;
+    e[p[2]] = el.value;
+    CF.store.putSoon(ch, function (ok) { if (!ok) { app.flash('Couldn’t save notes: storage is full or blocked.', true); app.render(); } });
   };
   H.notes = function (a, el) {
     var ch = cur(); if (!ch) return;
