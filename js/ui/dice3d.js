@@ -89,7 +89,8 @@
 
   /* ---------- drawing ---------- */
   function css(name, fallback) { try { var v = getComputedStyle(doc.documentElement).getPropertyValue(name).trim(); return v || fallback; } catch (e) { return fallback; } }
-  function drawDie(ctx, shape, q, cx, cy, size, labels, tone, hi, settle) {
+  function drawDie(ctx, shape, q, cx, cy, size, labels, tone, hi, settle, dim) {
+    dim = dim == null ? 1 : dim; ctx.globalAlpha = dim;
     var light = norm([-0.4, -0.6, 1]), f = 3.2;
     var faces = shape.faces.map(function (fc, i) {
       var pts = fc.v.map(function (k) { var p = qrot(q, shape.vs[k]); var s = f / (f - p[2]); return [cx + p[0] * size * s, cy + p[1] * size * s, p[2]]; });
@@ -105,10 +106,10 @@
       if (fc.n[2] > 0.45 && fc.label != null) {
         var c = fc.pts.reduce(function (a, p) { return [a[0] + p[0] / fc.pts.length, a[1] + p[1] / fc.pts.length]; }, [0, 0]);
         var strong = fc.hi && settle > 0.6;
-        ctx.globalAlpha = Math.min(1, (fc.n[2] - 0.45) * 3) * (strong ? 1 : settle > 0.6 ? 0.42 : 0.85);
+        ctx.globalAlpha = dim * Math.min(1, (fc.n[2] - 0.45) * 3) * (strong ? 1 : settle > 0.6 ? 0.42 : 0.85);
         ctx.fillStyle = tone.ink; ctx.font = (strong ? '800 ' : '600 ') + Math.round(size * (String(fc.label).length > 1 ? 0.42 : 0.5) * (strong ? 1.1 : 0.78) * (0.6 + 0.4 * fc.n[2])) + 'px system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(fc.label), c[0], c[1] + 1);
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = dim;
       }
     });
   }
@@ -195,6 +196,7 @@
       return { face: face, q0: qrand(), qT: faceUp(shape, face), axis: [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5], spins: 2 + Math.random() * 1.5, delay: i * 70,
         x: W / 2 + (i - (n - 1) / 2) * (size * 2.1), labels: labels };
     });
+    var dropIdx = r.keep != null && values.length === 2 ? (values[0] === r.keep ? 1 : 0) : -1;
     var reduce = false; try { reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
     var start = null, DUR = reduce ? 0 : 1100;
     cancelAnimationFrame(raf);
@@ -202,14 +204,16 @@
       if (start == null) start = ts;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
       var done = true;
-      dice.forEach(function (d) {
+      dice.forEach(function (d, di) {
         var t = DUR ? Math.min(1, Math.max(0, (ts - start - d.delay) / DUR)) : 1; if (t < 1) done = false;
         var e = 1 - Math.pow(1 - t, 3);
         var q = qmul(qaxis(d.axis, (1 - e) * d.spins * Math.PI * 2), qslerp(d.q0, d.qT, e));
         var bounce = Math.abs(Math.sin(t * Math.PI * 2.5)) * (1 - t) * 34;
         var slide = (1 - e) * 90;
         ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(d.x + slide, H - 18, size * 0.8, size * 0.18, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-        drawDie(ctx, shape, q, d.x + slide, H / 2 + 6 - bounce, size, d.labels, tone, d.face, e);
+        var dropped = di === dropIdx;   // advantage / disadvantage: the die that doesn't count fades once it lands
+        drawDie(ctx, shape, q, d.x + slide, H / 2 + 6 - bounce, size, d.labels, tone, d.face, e, dropped ? 1 - 0.65 * e : 1);
+        ctx.globalAlpha = 1;
       });
       if (!done) raf = requestAnimationFrame(frame);
       else { tot.textContent = r.total; tot.classList.add('in'); if (extra > 0) el.querySelector('.dc-detail').textContent = (r.detail || '') + ' (showing 4 of ' + (extra + 4) + ' dice)'; }

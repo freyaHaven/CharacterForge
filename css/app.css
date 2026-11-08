@@ -587,3 +587,21 @@ button.exh-pip:hover { border-color: var(--accent); }
 .ex-edit input { min-height: 34px; }
 .ex-ws-on { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 @media (max-width: 640px) { .ex-abil { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Advantage / disadvantage hexagons on skills, and the "Next roll" switch */
+.hexm { display: inline-flex; position: relative; width: 17px; height: 18px; margin-left: 6px; vertical-align: -3px; align-items: center; justify-content: center; }
+.hexm svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hexm b { position: relative; font-size: 10px; font-weight: 800; line-height: 1; color: #fff; }
+.hexm.adv svg path { fill: #2f8f4e; stroke: #2f8f4e; stroke-width: 1.5; }
+.hexm.dis svg path { fill: #c0392b; stroke: #c0392b; stroke-width: 1.5; }
+.hexm.soft svg path { fill: none; stroke-dasharray: 3 2; }
+.hexm.soft.adv b { color: #2f8f4e; }
+.hexm.soft.dis b { color: #c0392b; }
+.hexm.both { width: auto; padding: 0 4px; border-radius: 4px; font-size: 10px; font-weight: 700; background: var(--chip); color: var(--chip-ink); }
+.legend .hexm { margin-left: 0; margin-right: 4px; }
+.next-roll { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -2px 0 6px; font-size: 12px; color: var(--muted2); }
+.next-roll span { margin-right: 2px; }
+.next-roll button { min-height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--line2); background: var(--surface); color: var(--ink); font-size: 12px; }
+.next-roll button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.next-roll button.a[aria-pressed="true"] { background: #2f8f4e; border-color: #2f8f4e; color: #fff; }
+.next-roll button.d[aria-pressed="true"] { background: #c0392b; border-color: #c0392b; color: #fff; }

@@ -129,6 +129,44 @@
     });
     return out;
   };
+  /**
+   * Advantage / Disadvantage on checks.
+   * always: applies to every roll of that skill (armor, conditions, traits with no condition attached).
+   * sit: traits that apply only sometimes ("checks that rely on smell"): shown as a reminder, not applied.
+   */
+  var SITUATIONAL = /\b(that|to|when|while|during|using|involving|as part|until|your next|made to|in rocky|against|if|this turn|that turn)\b/i;
+  R.checkAdvantage = function (features, play, body) {
+    var out = { all: { adv: [], dis: [] }, init: { adv: [], dis: [], sit: [] }, skills: {} };
+    R.SKILLS.forEach(function (s) { out.skills[s.id] = { adv: [], dis: [], sit: [] }; });
+    var byName = {}; R.SKILLS.forEach(function (s) { byName[s.name.toLowerCase()] = s.id; });
+    (features || []).forEach(function (f) {
+      String(f.text || '').split(/\n/).forEach(function (line) {
+        line.split(/(?<=\.)\s+/).forEach(function (sent) {
+          var m = /\b(Advantage|Disadvantage) on (.*)\b(checks?|rolls?)\b(.*)$/i.exec(sent); if (!m) return;
+          var kind = /^adv/i.test(m[1]) ? 'adv' : 'dis';
+          var target = m[2], tail = m[4];
+          if (!/\(|initiative/i.test(target)) return;
+          var sit = SITUATIONAL.test(tail.replace(/\.$/, '')) || SITUATIONAL.test(target.replace(/\([^)]*\)/g, '')) || /attack rolls|saving throws/i.test(target) && !/\(/.test(target);
+          var src = f.name + (f.from ? ' (' + f.from + ')' : '');
+          var ids = [];
+          (target.match(/\(([^)]+)\)/g) || []).forEach(function (p) { p.slice(1, -1).split(/\s+(?:or|and)\s+|,\s*/).forEach(function (n) { var id = byName[n.trim().toLowerCase()]; if (id) ids.push(id); }); });
+          ids.forEach(function (id) { var e = out.skills[id]; if (sit) { if (e.sit.indexOf(sent) < 0) e.sit.push((kind === 'adv' ? 'Advantage' : 'Disadvantage') + ' · ' + f.name + ': ' + sent.trim()); } else e[kind].push(src); });
+          if (/initiative/i.test(target)) { if (sit) out.init.sit.push(f.name + ': ' + sent.trim()); else out.init[kind].push(src); }
+        });
+      });
+    });
+    if (body && body.def && body.def.stealthDisadvantage) out.skills.stealth.dis.push(body.def.name + ' (armor)');
+    var cond = (play && play.conditions) || [];
+    ['Poisoned', 'Frightened'].forEach(function (c) { if (cond.indexOf(c) >= 0) out.all.dis.push(c + ' condition'); });
+    return out;
+  };
+  /** The net state for a skill or check: 1 advantage, -1 disadvantage, 0 normal, plus the reasons. */
+  R.checkState = function (d, skillId, manual) {
+    var ca = d.checkAdv || { all: { adv: [], dis: [] }, skills: {} }, e = skillId === 'init' ? ca.init : skillId ? ca.skills[skillId] : null;
+    var adv = ca.all.adv.concat(e ? e.adv : []), dis = ca.all.dis.concat(e ? e.dis : []);
+    var mode = adv.length && !dis.length ? 1 : dis.length && !adv.length ? -1 : 0;
+    return { mode: mode, adv: adv, dis: dis, sit: e ? e.sit || [] : [], cancel: !!(adv.length && dis.length) };
+  };
   R.totalLevel = function (ch) { return (ch.classes || []).reduce(function (a, c) { return a + (c.level || 1); }, 0) || 1; };
 
   /** A new, empty character in the save format. */
@@ -693,7 +731,7 @@
       spell: spell, resources: resources, featureActions: featureActions, features: features, feats: feats,
       species: species, lineage: lineage, background: bg, backgroundPick: ch.background, mainClass: main,
       inventory: inv, totalLb: totalLb, capacity: capacity, currency: ch.currency || {},
-      play: play, exhaustion: exhaustion, rerolls: R.rerollRules(features)
+      play: play, exhaustion: exhaustion, rerolls: R.rerollRules(features), checkAdv: R.checkAdvantage(features, play, body)
     };
   };
 

@@ -34,26 +34,33 @@
   /* ---------- d20 rolls, with Exhaustion applied ---------- */
   var EX = null;
   /** kind: 'check' | 'save' | 'attack'. 2024: −2 per level. 2014: disadvantage from the step table. */
-  function d20(label, bonus, kind) {
-    var res = d20raw(label, bonus, kind === 'init' ? 'check' : kind);
+  /** A d20 roll. opt: { adv: [reasons], dis: [reasons] } from traits, armor or conditions; the "Next roll" switch adds to it. */
+  function d20(label, bonus, kind, opt) {
+    opt = { adv: ((opt && opt.adv) || []).slice(), dis: ((opt && opt.dis) || []).slice() };
+    if (app.nextMode === 1) opt.adv.push('chosen'); else if (app.nextMode === -1) opt.dis.push('chosen');
+    if (app.nextMode && !RR.quiet) app.nextMode = 0;   // the switch is for one roll (a reroll keeps it)
+    var res = d20raw(label, bonus, kind === 'init' ? 'check' : kind, opt);
     offerD20(kind, res.rolls[0]);
     return res;
   }
-  function d20raw(label, bonus, kind) {
-    var ex = EX || { level: 0 };
-    if (!ex.level) return app.roll(label, 1, 20, bonus);
-    if (!ex.old) {
-      var r = app.roll(label, 1, 20, bonus - ex.d20);
-      app.lastRoll.detail += ' · Exhaustion ' + ex.level + ' (−' + ex.d20 + ')';
+  function d20raw(label, bonus, kind, opt) {
+    var ex = EX || { level: 0 }, adv = opt.adv, dis = opt.dis, notes = [];
+    if (ex.level && !ex.old) { bonus = bonus - ex.d20; notes.push('Exhaustion ' + ex.level + ' (−' + ex.d20 + ')'); }
+    if (ex.level && ex.old && ((kind === 'check' && ex.disCheck) || ((kind === 'save' || kind === 'attack') && ex.disAttackSave))) dis = dis.concat(['Exhaustion ' + ex.level]);
+    var mode = adv.length && !dis.length ? 1 : dis.length && !adv.length ? -1 : 0;
+    var why = function (l) { return l.filter(function (x) { return x !== 'chosen'; }).join(', '); };
+    if (adv.length && dis.length) notes.push('Advantage and Disadvantage cancel out');
+    if (!mode) {
+      var r = app.roll(label, 1, 20, bonus);
+      if (notes.length) app.lastRoll.detail += ' · ' + notes.join(' · ');
       return r;
     }
-    var dis = (kind === 'check' && ex.disCheck) || ((kind === 'save' || kind === 'attack') && ex.disAttackSave);
-    if (!dis) return app.roll(label, 1, 20, bonus);
-    var a = 1 + Math.floor(Math.random() * 20), b = 1 + Math.floor(Math.random() * 20), face = Math.min(a, b);
-    var total = face + (bonus || 0);
-    app.lastRoll = { label: label + ' · disadvantage', total: total, nat: face === 20 || face === 1 ? face : 0,
-      detail: '[' + a + ', ' + b + '] keep ' + face + (bonus ? (bonus > 0 ? ' + ' + bonus : ' − ' + Math.abs(bonus)) : '') + ' · Exhaustion ' + ex.level + (face === 20 ? ' · Natural 20!' : face === 1 ? ' · Natural 1' : '') };
-    if (CF.dice) CF.dice.show(Object.assign({ sides: 20, rolls: [a, b] }, app.lastRoll));
+    var a = 1 + Math.floor(Math.random() * 20), b = 1 + Math.floor(Math.random() * 20), face = mode > 0 ? Math.max(a, b) : Math.min(a, b);
+    var total = face + (bonus || 0), reasons = why(mode > 0 ? adv : dis);
+    app.lastRoll = { label: label + (mode > 0 ? ' · advantage' : ' · disadvantage'), total: total, nat: face === 20 || face === 1 ? face : 0,
+      detail: '[' + a + ', ' + b + '] keep ' + face + (bonus ? (bonus > 0 ? ' + ' + bonus : ' − ' + Math.abs(bonus)) : '') + (reasons ? ' · ' + reasons : '') + (notes.length ? ' · ' + notes.join(' · ') : '') + (face === 20 ? ' · Natural 20!' : face === 1 ? ' · Natural 1' : ''),
+      adv: mode };
+    if (CF.dice) CF.dice.show(Object.assign({ sides: 20, rolls: [a, b], keep: face }, app.lastRoll));
     return { rolls: [face], total: total, nat: app.lastRoll.nat };
   }
 
@@ -119,7 +126,7 @@
       '<div class="row-wrap">' +
         '<div class="left-col"><div style="flex:1 1 240px;display:flex;flex-direction:column;gap:14px">' + savesPanel(d) + sensesPanel(d) + trainingPanel(d) + '</div>' + skillsPanel(d) + '</div>' +
         '<div class="stat-col"><div class="stat-grid">' +
-          act('box rollable mark', 'roll', 'init', 'Roll initiative, ' + sg(d.initiative), '<span class="k">Initiative</span><span class="v">' + sg(d.initiative) + '</span>', { style: 'position:relative' }) +
+          act('box rollable mark', 'roll', 'init', 'Roll initiative, ' + sg(d.initiative), '<span class="k">Initiative' + advMarks(d, 'init') + '</span><span class="v">' + sg(d.initiative) + '</span>', { style: 'position:relative' }) +
           '<div class="box"><span class="k">Armor</span><span class="v">' + d.ac + '</span><span class="k">Class</span>' + (d.acNote ? '<span style="font-size:10px;font-weight:600;color:var(--accent)">' + h(d.acNote) + '</span>' : '') + '</div>' +
           defenses(d) + conditions(ch, v) +
         '</div>' + tabsPanel(ch, d, v) + '</div>' +
@@ -248,13 +255,36 @@
       }).join('') + '</section>';
   }
 
+  /** A small hexagon: green A (advantage) or red D (disadvantage); outlined when it only applies sometimes. */
+  function hexMark(kind, soft, title) {
+    return '<span class="hexm ' + (kind > 0 ? 'adv' : 'dis') + (soft ? ' soft' : '') + '" title="' + h(title) + '" aria-label="' + h(title) + '"><svg viewBox="0 0 20 22" aria-hidden="true"><path d="M10 1 19 6v10l-9 5-9-5V6z"/></svg><b>' + (kind > 0 ? 'A' : 'D') + '</b></span>';
+  }
+  function advMarks(d, id) {
+    var st = R.checkState(d, id), ex = d.exhaustion && d.exhaustion.disCheck ? ['Exhaustion ' + d.exhaustion.level] : [];
+    var dis = st.dis.concat(ex), out = '';
+    if (st.adv.length && !dis.length) out += hexMark(1, false, 'Advantage: ' + st.adv.join(', '));
+    else if (dis.length && !st.adv.length) out += hexMark(-1, false, 'Disadvantage: ' + dis.join(', '));
+    else if (st.adv.length && dis.length) out += '<span class="hexm both" title="' + h('Advantage (' + st.adv.join(', ') + ') and Disadvantage (' + dis.join(', ') + ') cancel out') + '">A/D</span>';
+    var sitA = st.sit.filter(function (x) { return /^Advantage/.test(x); }), sitD = st.sit.filter(function (x) { return /^Disadvantage/.test(x); });
+    if (sitA.length && !out) out += hexMark(1, true, 'Sometimes: ' + sitA.map(function (x) { return x.replace(/^Advantage · /, ''); }).join(' | '));
+    if (sitD.length && !out) out += hexMark(-1, true, 'Sometimes: ' + sitD.map(function (x) { return x.replace(/^Disadvantage · /, ''); }).join(' | '));
+    return out;
+  }
+  function nextRollSwitch() {
+    var m = app.nextMode || 0;
+    return '<div class="next-roll" role="group" aria-label="Next roll"><span>Next roll</span>' + [[0, 'Normal'], [1, 'Advantage'], [-1, 'Disadvantage']].map(function (o) {
+      return '<button type="button" data-act="next-roll" data-arg="' + o[0] + '" aria-pressed="' + (m === o[0]) + '" class="' + (o[0] > 0 ? 'a' : o[0] < 0 ? 'd' : '') + '">' + o[1] + '</button>';
+    }).join('') + '</div>';
+  }
   function skillsPanel(d) {
     return '<section class="panel" aria-labelledby="h-skills" style="flex:1.3 1 280px;gap:4px"><h2 class="h-sec" id="h-skills" style="margin-bottom:6px">Skills</h2>' +
+      (P ? nextRollSwitch() : '') +
       d.skills.map(function (s) {
+        var marks = advMarks(d, s.id);
         return act('skill rollable', 'roll', 'skill:' + s.id, s.name + ' ' + sg(s.bonus) + (s.prof === 2 ? ', expertise' : s.prof ? ', proficient' : '') + '. Roll',
-          dot(s.prof) + '<span class="n">' + h(s.name) + ' <small>' + s.abbr + '</small></span><span class="b">' + sg(s.bonus) + '</span>');
+          dot(s.prof) + '<span class="n">' + h(s.name) + ' <small>' + s.abbr + '</small>' + marks + '</span><span class="b">' + sg(s.bonus) + '</span>');
       }).join('') +
-      '<div class="legend"><span>' + dot(0) + 'Not proficient</span><span>' + dot(1) + 'Proficient</span><span>' + dot(2) + 'Expertise</span></div></section>';
+      '<div class="legend"><span>' + dot(0) + 'Not proficient</span><span>' + dot(1) + 'Proficient</span><span>' + dot(2) + 'Expertise</span><span>' + hexMark(1, false, 'Advantage') + 'Advantage</span><span>' + hexMark(-1, false, 'Disadvantage') + 'Disadvantage</span><span>' + hexMark(1, true, 'Sometimes') + 'Sometimes (hover)</span></div></section>';
   }
 
   /* ---------- tabs ---------- */
@@ -764,10 +794,10 @@
     var d = R.derive(ch), p = arg.split(':'), kind = p[0], key = p.slice(1).join(':');
     EX = d.exhaustion;
     beginAction(function () { H.roll(arg); });
-    if (kind === 'init') d20('Initiative', d.initiative, 'init');
-    else if (kind === 'abil') { var a = R.ABILITIES.find(function (x) { return x.id === key; }); d20(a.name + ' check', d.mods[key], 'check'); }
+    if (kind === 'init') d20('Initiative', d.initiative, 'init', R.checkState(d, 'init'));
+    else if (kind === 'abil') { var a = R.ABILITIES.find(function (x) { return x.id === key; }); d20(a.name + ' check', d.mods[key], 'check', R.checkState(d, null)); }
     else if (kind === 'save') { var s = d.saves.find(function (x) { return x.id === key; }); d20(s.name + ' saving throw', s.bonus, 'save'); }
-    else if (kind === 'skill') { var sk = d.skills.find(function (x) { return x.id === key; }); d20(sk.name + ' check', sk.bonus, 'check'); }
+    else if (kind === 'skill') { var sk = d.skills.find(function (x) { return x.id === key; }); d20(sk.name + ' check', sk.bonus, 'check', R.checkState(d, key)); }
     else if (kind === 'spellatk') { var cst = key !== undefined && key !== '' && d.spell.casters ? d.spell.casters[+key] : null; attackRoll(cst ? cst.name + ' spell attack' : 'Spell attack', cst ? cst.attack : d.spell.attack, 20); }
     else if (kind === 'feat') {
       var fp = key.split('|'), fa = d.featureActions[+fp[0]], rr = fa && fa.rolls[+fp[1]];
@@ -1040,6 +1070,7 @@
     ch.details = ch.details || {}; ch.details.backstory = el.value;
     CF.store.putSoon(ch, function (ok) { if (!ok) { app.flash('Couldn’t save: storage is full or blocked.', true); app.render(); } });
   };
+  H['next-roll'] = function (m) { app.nextMode = +m || 0; app.render(); };
   H['reroll-no'] = function () { app.rerollOffer = null; app.render(); };
   H['reroll-yes'] = function () {
     var o = app.rerollOffer; app.rerollOffer = null; if (!o) return;
