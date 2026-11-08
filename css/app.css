@@ -615,3 +615,15 @@ button.exh-pip:hover { border-color: var(--accent); }
 .temp-in { justify-self: center; width: 100%; max-width: 46px; min-width: 0; box-sizing: border-box; min-height: 32px; padding: 0 2px; font-size: 19px; font-weight: 600; text-align: center; border: 1.5px dashed var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); -moz-appearance: textfield; }
 .temp-in::-webkit-outer-spin-button, .temp-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .temp-in:focus { border-style: solid; border-color: var(--accent); outline: none; }
+
+/* Import review */
+.imp-review { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 2px solid var(--accent); border-radius: 14px; background: var(--surface); }
+.imp-item { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--soft); border-radius: 10px; }
+.imp-head { display: flex; flex-direction: column; gap: 2px; }
+.imp-head .muted2 { font-size: 13px; }
+.imp-warn { font-size: 13px; color: var(--warn); }
+.imp-edit { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.imp-edit .b-field { flex: 1 1 180px; }
+.imp-packs { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
+.imp-pack { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.imp-pack small { margin-left: auto; }

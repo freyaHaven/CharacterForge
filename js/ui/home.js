@@ -41,9 +41,44 @@
   }
 
   function notice() {
-    var m = app.takeMessage();
-    return m ? '<div class="notice' + (m.error ? ' error' : '') + '" role="status">' + h(m.text) + '</div>' : '';
+    var m = app.takeMessage(), scr = app.route().screen;
+    return (m ? '<div class="notice' + (m.error ? ' error' : '') + '" role="status">' + h(m.text) + '</div>' : '') +
+      (IMP && (scr === 'home' || scr === 'modules') ? importReview() : '');
   }
+
+  /* ---------- import review: "import as is, or make changes first?" ---------- */
+  var IMP = null;   // { items: [{ kind, data, file, take, name, rules, dup }], edit }
+  function importReview() {
+    var on = CF.content.on(), installed = CF.store.modules().map(function (m) { return m.id; }).concat(['srd-5.2']);
+    var rows = IMP.items.map(function (it, i) {
+      if (it.kind === 'character') {
+        var ch = it.data, d; try { d = CF.rules.derive(ch); } catch (e) { d = { summary: '', level: 1 }; }
+        var existing = CF.store.get(ch.id);
+        var missing = (ch.modules || []).filter(function (id) { return installed.indexOf(id) < 0; });
+        var head = '<div class="imp-head"><b>' + h(it.name || ch.name) + '</b><span class="muted2">' + h(d.summary || '') + ' · Level ' + (d.level || 1) + ' · ' + (ch.rules === '2014' ? '5e (2014)' : '5.5e (2024)') + ' rules</span></div>';
+        var warn = (existing ? '<span class="imp-warn">You already have this character' + (existing.name !== ch.name ? ' (as “' + h(existing.name) + '”)' : '') + '.' + (IMP.edit ? '' : ' It will be added as a copy.') + '</span>' : '') +
+          (missing.length ? '<span class="imp-warn">Uses ' + missing.length + ' module' + (missing.length > 1 ? 's' : '') + ' you don’t have (' + h(missing.join(', ')) + '): those options won’t show until you import them.</span>' : '');
+        var edit = IMP.edit ? '<div class="imp-edit"><label class="b-field">Name<input type="text" data-act="imp-name" data-arg="' + i + '" data-key="imp-name-' + i + '" value="' + h(it.name != null ? it.name : ch.name) + '"></label>' +
+          '<label class="b-field">Rules edition<select data-act="imp-rules" data-arg="' + i + '"><option value="2024"' + (it.rules !== '2014' ? ' selected' : '') + '>5.5e (2024)</option><option value="2014"' + (it.rules === '2014' ? ' selected' : '') + '>5e (2014)</option></select></label>' +
+          (existing ? '<div class="seg" role="group" aria-label="Already on this device">' + [['copy', 'Keep both'], ['replace', 'Replace mine']].map(function (o) { return '<button type="button" data-act="imp-dup" data-arg="' + i + ':' + o[0] + '" aria-pressed="' + ((it.dup || 'copy') === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' : '') + '</div>' : '';
+        return '<div class="imp-item">' + head + warn + edit + '</div>';
+      }
+      var packs = it.kind === 'bundle' ? it.data.packs : [it.data];
+      return '<div class="imp-item"><div class="imp-head"><b>' + h(it.kind === 'bundle' ? (it.data.name || it.file) : packs[0].name) + '</b><span class="muted2">' + (it.kind === 'bundle' ? packs.length + ' modules' : 'Module') + ' · ' + h(it.file) + '</span></div>' +
+        (IMP.edit ? '<div class="imp-packs">' + packs.map(function (p, j) {
+          var has = installed.indexOf(p.id) >= 0, sel = it.take[j] !== false;
+          return '<label class="imp-pack"><input type="checkbox" data-act="imp-pack" data-arg="' + i + ':' + j + '"' + (sel ? ' checked' : '') + '> <span>' + h(p.name) + '</span><small class="muted2">' + (has ? 'updates your copy' : 'new') + '</small></label>';
+        }).join('') + '</div>' : '<span class="muted2" style="font-size:13px">' + packs.filter(function (p) { return installed.indexOf(p.id) >= 0; }).length + ' of these will update modules you already have.</span>') + '</div>';
+    }).join('');
+    var n = IMP.items.length;
+    return '<section class="imp-review" role="dialog" aria-label="Import">' +
+      '<b style="font-size:16px">Import ' + (n === 1 ? 'this file' : n + ' files') + '?</b>' +
+      '<span class="muted2" style="font-size:13px">' + (IMP.edit ? 'Make your changes, then press Import.' : 'Import as is, or make changes first.') + '</span>' + rows +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">' + (IMP.edit ? '<button class="btn btn-teal" data-act="imp-go">Import</button>'
+        : '<button class="btn btn-teal" data-act="imp-go">Import as is</button><button class="btn" data-act="imp-edit">Make changes first</button>') +
+      '<button class="btn" data-act="imp-cancel">Cancel</button></div></section>';
+  }
+
   CF.ui.notice = notice;
 
   /** In-page dialog (export). Pop-ups and some downloads are blocked in embedded previews, so everything stays in the page. */
@@ -143,26 +178,57 @@
     var ch = CF.store.get(id); if (!ch) return;
     CF.store.remove(id); app.view.confirmDelete = null; app.flash(ch.name + ' was deleted.'); app.render();
   };
+  /** Read the chosen files and show the review; nothing is saved until Import is pressed. */
   H.import = function (arg, input) {
     var files = Array.prototype.slice.call((input && input.files) || []); if (!files.length) return;
-    var done = [], errors = [], left = files.length, nMod = 0, nChar = 0;
+    var items = [], errors = [], left = files.length;
     files.forEach(function (f) {
       var reader = new FileReader();
       reader.onload = function () {
         try {
           var res = CF.store.parseImport(String(reader.result));
-          if (res.kind === 'character') { done.push(CF.store.importCharacter(res.data).name); nChar++; }
-          else if (res.kind === 'bundle') res.data.packs.forEach(function (p) { CF.store.saveModule(p); done.push('“' + p.name + '”'); nMod++; });
-          else { CF.store.saveModule(res.data); done.push('“' + res.data.name + '”'); nMod++; }
+          items.push({ kind: res.kind, data: res.data, file: f.name, take: {}, name: res.kind === 'character' ? res.data.name : null, rules: res.kind === 'character' ? (res.data.rules || '2024') : null, dup: 'copy' });
         } catch (e) { errors.push(f.name + ': ' + e.message); }
         if (--left) return;
         if (errors.length) app.flash(errors.join('\n'), true);
-        else app.flash(done.length === 1 ? done[0] + ' was added.' : [nMod ? nMod + ' modules' : '', nChar ? nChar + ' characters' : ''].filter(Boolean).join(' and ') + ' were added.');
+        IMP = items.length ? { items: items, edit: false } : null;
         if (input) try { input.value = ''; } catch (e) {}
         app.render();
+        try { root.scrollTo(0, 0); } catch (e) { /* ignore */ }
       };
       reader.readAsText(f);
     });
+  };
+  H['imp-cancel'] = function () { IMP = null; app.flash('Nothing was imported.'); app.render(); };
+  H['imp-edit'] = function () { if (IMP) IMP.edit = true; app.render(); };
+  H['imp-name'] = function (i, el) { if (IMP && IMP.items[+i]) IMP.items[+i].name = el.value; };
+  H['imp-rules'] = function (i, el) { if (IMP && IMP.items[+i]) { IMP.items[+i].rules = el.value; app.render(); } };
+  H['imp-dup'] = function (arg) { var p = arg.split(':'); if (IMP && IMP.items[+p[0]]) { IMP.items[+p[0]].dup = p[1]; app.render(); } };
+  H['imp-pack'] = function (arg, el) { var p = arg.split(':'); if (IMP && IMP.items[+p[0]]) { IMP.items[+p[0]].take[+p[1]] = !!el.checked; } };
+  H['imp-go'] = function () {
+    if (!IMP) return;
+    var done = [], errors = [], nMod = 0, nChar = 0, edit = IMP.edit;
+    IMP.items.forEach(function (it) {
+      try {
+        if (it.kind === 'character') {
+          var ch = U.clone(it.data);
+          if (edit) {
+            var nm = (it.name || '').trim(); if (nm) ch.name = nm;
+            ch.rules = it.rules === '2014' ? '2014' : '2024';
+            if (it.dup === 'replace' && CF.store.get(ch.id)) { ch.play = ch.play || CF.rules.freshPlayState(); CF.store.put(ch); done.push(ch.name + ' (replaced)'); nChar++; return; }
+          }
+          done.push(CF.store.importCharacter(ch).name); nChar++;
+        } else {
+          var packs = it.kind === 'bundle' ? it.data.packs : [it.data];
+          packs.forEach(function (p, j) { if (edit && it.take[j] === false) return; CF.store.saveModule(p); done.push('“' + p.name + '”'); nMod++; });
+        }
+      } catch (e) { errors.push(it.file + ': ' + e.message); }
+    });
+    IMP = null;
+    if (errors.length) app.flash(errors.join('\n'), true);
+    else if (!done.length) app.flash('Nothing was imported.');
+    else app.flash(done.length === 1 ? done[0] + ' was added.' : [nMod ? nMod + ' module' + (nMod > 1 ? 's' : '') : '', nChar ? nChar + ' character' + (nChar > 1 ? 's' : '') : ''].filter(Boolean).join(' and ') + ' were added.');
+    app.render();
   };
   H['remove-module'] = function (id) { app.view.confirmModule = id; app.render(); };
   H['remove-module-yes'] = function (id) { CF.store.removeModule(id); app.view.confirmModule = null; app.flash('Module removed.'); app.render(); };
