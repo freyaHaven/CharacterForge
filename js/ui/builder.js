@@ -148,7 +148,7 @@
     });
     if (!sp) miss.species.push('Choose a species');
     if (sp) {
-      if (sp.lineages && !ch.species.lineage) miss.species.push('Choose ' + (sp.lineageLabel || 'a lineage').toLowerCase());
+      if (sp.lineages && !sp.lineageOptional && !ch.species.lineage) miss.species.push('Choose ' + (sp.lineageLabel || 'a lineage').toLowerCase());
       if (sp.keenSenses && !ch.species.keenSense) miss.species.push('Choose a Keen Senses skill');
       if (skillfulOn(ch, sp) && !ch.species.skill) miss.species.push('Choose a skill' + (sp.skillful ? ' (Skillful)' : ''));
       if (sp.versatile && !ch.species.feat) miss.species.push('Choose an origin feat (Versatile)');
@@ -427,9 +427,12 @@
     if (R.isOld(ch)) gives.push(['Ability scores', '+2 / +1 or +1 / +1 / +1 to any scores (5e rules; you choose on the Ability scores step)']);
     out += sec('What you get', '', '<dl class="gives">' + gives.map(function (g) { return '<dt>' + g[0] + '</dt><dd>' + h(g[1]) + '</dd>'; }).join('') + '</dl>');
     out += sec(sp.name + ' traits', '', '<div style="display:flex;flex-direction:column;gap:8px">' + sp.traits.map(function (t) { return '<div><b style="font-size:14px">' + h(t.name) + '.</b> <span style="font-size:14px;color:var(--body2)">' + h(t.text) + '</span></div>'; }).join('') + '</div>');
-    if (sp.lineages) out += sec(sp.lineageLabel || 'Lineage', 'Choose one.', '<div class="opt-grid">' + sp.lineages.map(function (l) {
-      return '<button type="button" class="opt" data-act="b-lineage" data-arg="' + h(l.id) + '" aria-pressed="' + (ch.species.lineage === l.id) + '"><span class="nm" style="font-size:17px">' + h(l.name) + '</span><span class="p">' + h(l.text) + '</span></button>';
-    }).join('') + '</div>');
+    if (sp.lineages) out += sec(sp.lineageLabel || 'Lineage', sp.lineageOptional ? 'Your books add variants of the ' + h(sp.name) + '. Keep the standard ' + h(sp.name) + ', or choose one.' : 'Choose one.', '<div class="opt-grid">' +
+      (sp.lineageOptional ? '<button type="button" class="opt" data-act="b-lineage" data-arg="" aria-pressed="' + !ch.species.lineage + '"><span class="nm" style="font-size:17px">Standard ' + h(sp.name) + '</span><span class="p">Just the traits above.</span></button>' : '') +
+      sp.lineages.map(function (l) {
+        var tag = l.sourceName && l.sourceName !== sp.sourceName ? '<span class="tag">' + h(l.sourceName) + '</span>' : '';
+        return '<button type="button" class="opt" data-act="b-lineage" data-arg="' + h(l.id) + '" aria-pressed="' + (ch.species.lineage === l.id) + '"><span class="t"><span class="nm" style="font-size:17px">' + h(l.name) + '</span>' + tag + '</span><span class="p">' + h(l.text) + '</span></button>';
+      }).join('') + '</div>');
     if (sp.keenSenses) out += sec('Keen Senses', 'Choose the skill your sharp elven senses help with.', '<div class="pills">' + sp.keenSenses.map(function (s) { return pillToggle('b-keen', s, h(skillName(s)), ch.species.keenSense === s); }).join('') + '</div>');
     var hasCantrip = (sp.cantrips || []).length || (sp.lineages || []).some(function (l) { return (l.cantrips || []).length; });
     if (hasCantrip) out += sec('Spellcasting ability', 'Your species gives you a cantrip. Choose which ability powers it (usually the same as your class’s).', '<div class="seg">' + ['int', 'wis', 'cha'].map(function (a) { return '<button type="button" data-act="b-spability" data-arg="' + a + '" aria-pressed="' + (ch.species.spellAbility === a) + '">' + abName(a) + '</button>'; }).join('') + '</div>');
@@ -662,7 +665,7 @@
       ch.species = { id: id, lineage: null, keenSense: null, spellAbility: ab, size: null, skill: null, feat: null };
     });
   };
-  H['b-lineage'] = function (id) { bmut(function (ch) { ch.species.lineage = id; }); };
+  H['b-lineage'] = function (id) { bmut(function (ch) { ch.species.lineage = id || null; }); };
   H['b-keen'] = function (id) { bmut(function (ch) { ch.species.keenSense = id; }); };
   H['b-spability'] = function (a) { bmut(function (ch) { ch.species.spellAbility = a; }); };
   H['b-size'] = function (z) { bmut(function (ch) { ch.species.size = z; }); };
@@ -781,7 +784,7 @@
   /* ================= quick builder: everything on one page, for players who know the rules ================= */
   function opt(v, label, cur, dis) { return '<option value="' + h(v) + '"' + (cur === v ? ' selected' : '') + (dis ? ' disabled' : '') + '>' + h(label) + '</option>'; }
   function qsel(kind, label, options, cur, placeholder) {
-    return '<label class="b-field">' + h(label) + '<select data-act="q-sel" data-arg="' + h(kind) + '">' + (cur ? '' : '<option value="">' + h(placeholder || 'Choose…') + '</option>') +
+    return '<label class="b-field">' + h(label) + '<select data-act="q-sel" data-arg="' + h(kind) + '">' + (cur || cur === '' ? '' : '<option value="">' + h(placeholder || 'Choose…') + '</option>') +
       options.map(function (o) { return opt(o[0], o[1], cur, o[2]); }).join('') + '</select></label>';
   }
   function qsec(title, inner, right) {
@@ -810,7 +813,7 @@
     var out = '';
 
     /* basics */
-    var lineage = sp && sp.lineages ? qsel('lineage', sp.lineageLabel || 'Lineage', sp.lineages.map(function (l) { return [l.id, l.name]; }), ch.species.lineage) : '';
+    var lineage = sp && sp.lineages ? qsel('lineage', sp.lineageLabel || 'Lineage', (sp.lineageOptional ? [['', 'Standard ' + sp.name]] : []).concat(sp.lineages.map(function (l) { return [l.id, l.name]; })), ch.species.lineage || (sp.lineageOptional ? '' : null)) : '';
     out += qsec('Basics', rulesSwitch(ch) +
       '<div class="q-grid">' +
         '<label class="b-field">Name<input type="text" value="' + h(ch.name) + '" data-act="b-name" data-key="q-name" placeholder="Character name" autocomplete="off"></label>' +
@@ -969,7 +972,7 @@
     if (k[0] === 'miab') return H['b-mi-ability'](k[1] + ':' + v);
     if (k[0] === 'level') return H['q-level'](v);
     bmut(function (ch) {
-      if (k[0] === 'lineage') ch.species.lineage = v;
+      if (k[0] === 'lineage') ch.species.lineage = v || null;
       else if (k[0] === 'keen') ch.species.keenSense = v;
       else if (k[0] === 'spab') ch.species.spellAbility = v;
       else if (k[0] === 'size') ch.species.size = v;

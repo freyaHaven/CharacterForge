@@ -46,6 +46,7 @@
   /** A module can add a subclass to any class (its "subclasses" list, each with a "class" id). Merge them in. */
   function withSubclasses(section, cls, enabled) {
     if (section === 'spells') return withLists(cls, enabled);
+    if (section === 'species') return withLineages(cls, enabled);
     if (section !== 'classes') return cls;
     var extra = [];
     packs.forEach(function (p) {
@@ -55,6 +56,20 @@
     if (!extra.length) return cls;
     var own = (cls.subclasses || []).filter(function (sc) { return !extra.some(function (x) { return x.id === sc.id; }); });
     return Object.assign({}, cls, { subclasses: own.concat(extra) });
+  }
+  /** A module can add lineages to a species from another pack (its "lineages" list, each with a "species" id), e.g. Eladrin for the Elf. */
+  function withLineages(sp, enabled) {
+    var extra = [];
+    packs.forEach(function (p) {
+      if (enabled && enabled.indexOf(p.id) < 0) return;
+      (p.lineages || []).forEach(function (l) { if (l.species === sp.id) extra.push(Object.assign({ source: p.id, sourceName: p.name }, l)); });
+    });
+    if (!extra.length) return sp;
+    extra.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var own = (sp.lineages || []).filter(function (l) { return !extra.some(function (x) { return x.id === l.id; }); });
+    var out = Object.assign({}, sp, { lineages: own.concat(extra) });
+    if (!own.length) { out.lineageOptional = true; out.lineageLabel = 'Variant (optional)'; }   // a species with no lineages of its own: keep the standard version too
+    return out;
   }
   /** A module can put existing spells on a class list (its "spellLists": { listName: [spell ids] }), e.g. the Artificer list. */
   function withLists(sp, enabled) {
@@ -119,7 +134,7 @@
       if (pack.format !== 'character-forge/pack@1') problems.push('Missing or unknown "format" (expected character-forge/pack@1).');
       if (!pack.id || !/^[a-z0-9][a-z0-9-]*$/.test(pack.id)) problems.push('"id" must be lower-case letters, numbers and dashes.');
       if (!pack.name) problems.push('"name" is missing.');
-      ['classes', 'subclasses', 'species', 'backgrounds', 'backgroundFeatures', 'feats', 'spells', 'items'].forEach(function (k) {
+      ['classes', 'subclasses', 'species', 'lineages', 'backgrounds', 'backgroundFeatures', 'feats', 'spells', 'items'].forEach(function (k) {
         if (pack[k] !== undefined && !Array.isArray(pack[k])) problems.push('"' + k + '" must be a list.');
         (pack[k] || []).forEach(function (e, i) { if (!e || !e.id || !e.name) problems.push(k + ' #' + (i + 1) + ' needs an id and a name.'); });
       });
