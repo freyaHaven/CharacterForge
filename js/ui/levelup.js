@@ -171,9 +171,9 @@
     var titleCls = pl.isNew ? 'level ' + curL + ' → ' + pl.charL + ' · new class: ' + def.name + ' 1' : pl.multi ? 'level ' + curL + ' → ' + pl.charL + ' · ' + def.name + ' ' + (pl.L - 1) + ' → ' + pl.L : def.name + ' ' + curL + ' → ' + pl.L;
 
     var chain = base.quickChain && base.quickChain > curL ? base.quickChain : 0;
-    var body = '<div style="display:flex;flex-direction:column;gap:8px"><span class="b-kicker">' + (chain ? 'Quick build · level ' + pl.charL + ' of ' + chain + ' · <button class="link-btn" style="font-size:13px;padding:0" data-act="lu-stop">stop at level ' + curL + '</button>' : 'Level up') + '</span><h1 class="b-title">' + h(base.name) + ': ' + h(titleCls) + '</h1>' +
+    var body = '<div style="display:flex;flex-direction:column;gap:8px"><span class="b-kicker">' + (chain ? 'Building your hero · level ' + pl.charL + ' of ' + chain + ' · <button class="link-btn" style="font-size:13px;padding:0" data-act="lu-stop">stop at level ' + curL + '</button>' : 'Level up') + '</span><h1 class="b-title">' + h(base.name) + ': ' + h(titleCls) + '</h1>' +
       '<p class="b-lead">Here’s what your hero gains at level ' + pl.charL + '. Make the choices below, then confirm. Nothing is saved until you do.</p></div>';
-    if (!chain) body += classPickSection(base, pl, before);
+    body += classPickSection(base, pl, before);
     body += hpSection(pl, before, after);
     if (pl.mc) body += mcSection(pl, base);
     if (pl.needSub) body += subclassSection(pl);

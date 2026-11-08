@@ -189,7 +189,7 @@
       '<aside class="b-side" aria-label="Your hero so far">' + soFar(ch, miss) + helpBox(step) +
         '<div class="b-nav">' + (idx > 0 ? '<button class="btn" data-act="b-step" data-arg="' + STEPS[idx - 1][0] + '">Back</button>' : '<a class="btn" href="#/">Back</a>') +
         (idx < STEPS.length - 1 ? '<button class="btn btn-teal" data-act="b-step" data-arg="' + STEPS[idx + 1][0] + '">Continue</button>'
-          : '<button class="btn btn-teal" data-act="b-finish"' + (allDone ? '' : ' disabled') + '>Finish character</button>') + '</div>' +
+          : '<button class="btn btn-teal" data-act="b-finish"' + (allDone ? '' : ' disabled') + '>' + (((ch.builder && ch.builder.target) || 1) > 1 ? 'Finish, then level to ' + ch.builder.target : 'Finish character') + '</button>') + '</div>' +
       '</aside></div>';
   };
 
@@ -237,10 +237,20 @@
   }
 
   /* ---------- step 1: class ---------- */
+  /** Starting level: the hero is built at level 1, then the level-up screen walks through each level up to this one. */
+  function levelPicker(ch, compact) {
+    var c = cls(ch), max = Math.min(20, (c && c.maxLevel) || 20), target = (ch.builder && ch.builder.target) || 1;
+    var sel = '<select data-act="q-sel" data-arg="level" aria-label="Starting level">' + Array.apply(null, Array(max)).map(function (x, i) { return opt(String(i + 1), 'Level ' + (i + 1), String(target)); }).join('') + '</select>';
+    if (compact) return '<label class="b-field" style="max-width:260px">Starting level' + sel + '</label>';
+    return sec('Starting level', 'Does your campaign start above level 1? Choose the level here. You’ll finish your hero at level 1 first, then make the choices for each level after it (hit points, subclass, feats, new spells), one level at a time. Ask your DM whether higher-level heroes get extra gold or magic items.',
+      '<label class="b-field" style="max-width:260px">Starting level' + sel + '</label>' + (target > 1 ? '<div class="notice">After you press Finish, you’ll level up ' + (target - 1) + ' time' + (target > 2 ? 's' : '') + ' to reach level ' + target + '. You can stop early at any point.</div>' : ''));
+  }
+
   function stepClass(ch) {
     var v = bview(), cur = pick(ch).id;
     var list = C.all('classes', on(ch)).filter(function (c) { return v.filter === 'all' || (c.style || []).indexOf(v.filter) >= 0; });
     return header('What kind of hero do you want to play?', 'Your <strong>class</strong> is your hero’s job in the adventuring party. Not sure? Start with how you picture them in a fight.') +
+      levelPicker(ch, true) +
       '<div class="pills" role="group" aria-label="Filter by play style">' + STYLE_FILTERS.map(function (f) { return pillToggle('b-filter', f[0], h(f[1]), v.filter === f[0]); }).join('') + '</div>' +
       '<div class="opt-grid">' + list.map(function (c) {
         return '<button type="button" class="opt" data-act="b-class" data-arg="' + h(c.id) + '" aria-pressed="' + (cur === c.id) + '">' +
@@ -534,6 +544,7 @@
     var d = R.derive(ch), n = languageCount(ch);
     var chosenLang = (ch.languages || []).filter(function (l) { return l !== 'common'; });
     var out = header('Name your hero and review', 'Give your hero a name, pick languages, and check everything before you finish.');
+    out += levelPicker(ch);
     out += sec('Name', '', '<label class="b-field">Character name<input type="text" value="' + h(ch.name) + '" data-act="b-name" data-key="b-name" placeholder="e.g. Ilsa Thornwood" autocomplete="off"></label>');
     out += sec('Languages', 'Everyone speaks Common. Pick ' + n + ' more.', '<div class="pills">' + R.STANDARD_LANGUAGES.map(function (l) {
       var sel = chosenLang.indexOf(l) >= 0; return pillToggle('b-lang', l, h(R.LANGUAGES[l]), sel, !sel && chosenLang.length >= n);
