@@ -549,3 +549,41 @@ button.exh-pip:hover { border-color: var(--accent); }
 /* Reroll prompt (Halfling Luck, Survivor…), sits above the dice card */
 .reroll-offer { position: fixed; right: 18px; bottom: 262px; z-index: 61; width: 280px; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 14px; line-height: 1.45; color: var(--ink); }
 @media (max-width: 640px) { .reroll-offer { left: 12px; right: 12px; width: auto; bottom: 12px; } }
+
+/* Extras: companions, familiars, mounts, Wild Shape */
+.ex-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.ex-bar small { font-weight: 400; opacity: .8; }
+.ex-pick { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1.5px solid var(--line2); border-radius: 12px; background: var(--bg); }
+.ex-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.ex-filters input[type=search] { flex: 1 1 220px; min-height: 36px; padding: 4px 10px; border: 1.5px solid var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 14px; }
+.ex-filters select { min-height: 36px; border: 1.5px solid var(--line2); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 0 8px; }
+.ex-list { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow: auto; }
+.ex-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 8px 10px; border: 1px solid var(--soft); border-radius: 8px; background: var(--surface); color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; }
+.ex-row:hover:not([disabled]) { border-color: var(--accent); }
+.ex-row[disabled] { opacity: .5; cursor: not-allowed; }
+.ex-row b { font-size: 14px; min-width: 140px; }
+.ex-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--soft); border-radius: 12px; }
+.ex-card.on { border: 2px solid var(--accent); }
+.ex-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.ex-toggle { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: none; border: none; padding: 0; color: var(--ink); font-size: 15px; text-align: left; cursor: pointer; }
+.ex-quick { display: flex; gap: 14px; font-size: 14px; font-weight: 600; }
+.ex-quick small { font-weight: 500; color: var(--muted2); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.ex-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ex-amt { width: 64px; min-height: 30px; border: 1.5px solid var(--line2); border-radius: 6px; background: var(--surface); color: var(--ink); padding: 0 6px; }
+.ex-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.ex-block { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.ex-stats { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.ex-abil { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.ex-abil button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border: 1px solid var(--soft); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.ex-abil .k { font-size: 11px; font-weight: 700; letter-spacing: .05em; color: var(--muted2); }
+.ex-abil .v { font-size: 16px; font-weight: 700; }
+.ex-abil .m { font-size: 12px; }
+.ex-lines { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--body2); }
+.ex-sec p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--body2); }
+.ex-sec-h { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+.ex-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; border-top: 1px solid var(--soft); padding-top: 8px; }
+.ex-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.ex-atk-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; }
+.ex-edit input { min-height: 34px; }
+.ex-ws-on { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+@media (max-width: 640px) { .ex-abil { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

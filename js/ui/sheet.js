@@ -127,11 +127,16 @@
       '</main>';
   };
 
+  function wsChip(ch, d) {
+    var x = (ch.extras || []).find(function (e) { return e.id === ch.play.wildShape; }); if (!x) return '';
+    var c = R.extraCreature(ch, d, x);
+    return '<span class="badge" style="align-self:flex-start;margin-top:4px">Wild Shape: ' + h(x.nick || (c ? c.name : 'beast')) + ' · see Extras</span>';
+  }
   function box(k, val, k2) { return '<div class="box"><span class="k">' + h(k) + '</span><span class="v">' + h(val) + '</span><span class="k">' + h(k2) + '</span></div>'; }
 
   function identity(ch, d) {
     return '<section class="ident"><span class="avatar" style="width:60px;height:60px;font-size:26px">' + h(ch.name.charAt(0)) + '</span>' +
-      '<div style="display:flex;flex-direction:column;gap:2px;flex:1 1 260px"><h1>' + h(ch.name) + '</h1><span class="sum">' + h(d.summary) + '</span></div>' +
+      '<div style="display:flex;flex-direction:column;gap:2px;flex:1 1 260px"><h1>' + h(ch.name) + '</h1><span class="sum">' + h(d.summary) + '</span>' + (ch.play && ch.play.wildShape ? wsChip(ch, d) : '') + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">' +
         '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">' +
           '<div class="mode-switch" role="group" aria-label="Sheet mode"><button type="button" aria-pressed="' + !P + '" data-act="mode" data-arg="overview">Overview</button><button type="button" aria-pressed="' + P + '" data-act="mode" data-arg="play">Play</button></div>' +
@@ -256,7 +261,7 @@
   var TABS = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['background', 'Background'], ['notes', 'Notes'], ['extras', 'Extras']];
   function tabsPanel(ch, d, v) {
     var body = v.tab === 'actions' ? actionsTab(d, v) : v.tab === 'spells' ? spellsTab(d, v) : v.tab === 'inventory' ? inventoryTab(ch, d, v)
-      : v.tab === 'features' ? featuresTab(d, v) : v.tab === 'background' ? backgroundTab(d) : v.tab === 'notes' ? notesTab(ch, v) : extrasTab();
+      : v.tab === 'features' ? featuresTab(d, v) : v.tab === 'background' ? backgroundTab(d) : v.tab === 'notes' ? notesTab(ch, v) : CF.ui.extras.tab(ch, d, v);
     return '<section class="card" aria-label="Character details" style="display:flex;flex-direction:column;min-width:0">' +
       '<div class="tabs" role="tablist" aria-label="Sheet sections">' + TABS.map(function (t) {
         return '<button type="button" role="tab" aria-selected="' + (v.tab === t[0]) + '" data-act="tab" data-arg="' + t[0] + '">' + h(t[1]) + '</button>';

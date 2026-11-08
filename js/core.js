@@ -41,7 +41,7 @@
     round: function (n, d) { var p = Math.pow(10, d || 0); return Math.round(n * p) / p; }
   };
 
-  CF.version = '2026-11-08i';   // keep in step with the ?v= tags in index.html
+  CF.version = '2026-11-08k';   // keep in step with the ?v= tags in index.html
 
   /* ---------- content registry (packs = SRD + modules) ---------- */
   var packs = [];
@@ -161,7 +161,7 @@
       if (pack.format !== 'character-forge/pack@1') problems.push('Missing or unknown "format" (expected character-forge/pack@1).');
       if (!pack.id || !/^[a-z0-9][a-z0-9-]*$/.test(pack.id)) problems.push('"id" must be lower-case letters, numbers and dashes.');
       if (!pack.name) problems.push('"name" is missing.');
-      ['classes', 'subclasses', 'species', 'lineages', 'backgrounds', 'backgroundFeatures', 'feats', 'spells', 'items'].forEach(function (k) {
+      ['classes', 'subclasses', 'species', 'lineages', 'backgrounds', 'backgroundFeatures', 'feats', 'spells', 'items', 'creatures'].forEach(function (k) {
         if (pack[k] !== undefined && !Array.isArray(pack[k])) problems.push('"' + k + '" must be a list.');
         (pack[k] || []).forEach(function (e, i) { if (!e || !e.id || !e.name) problems.push(k + ' #' + (i + 1) + ' needs an id and a name.'); });
       });
