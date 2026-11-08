@@ -643,6 +643,7 @@
       : dd.holds || dd.notes || '';
     var removeLink = P ? ' <button class="link-btn" style="font-size:12px;padding:0 0 0 6px" data-act="inv-remove" data-arg="' + h(e.uid) + '">Remove</button>' : '';
     var unpack = dd.contents ? ' <button class="small-out" data-act="unpack" data-arg="' + h(e.uid) + '">Unpack</button>' : '';
+    if (dd.heal && P) unpack += ' <button class="small-out" data-act="inv-drink" data-arg="' + h(e.uid) + '" title="Bonus Action: drink it and regain ' + h(dd.heal) + ' HP">Drink (' + h(dd.heal.replace('+', ' + ')) + ')</button>';
     var eq = !equippable ? '<span class="muted2">--</span>' : P
       ? '<button type="button" class="eq' + (e.equipped ? ' on' : '') + '" data-act="equip" data-arg="' + h(e.uid) + '" aria-pressed="' + !!e.equipped + '" aria-label="' + (e.equipped ? 'Unequip ' : 'Equip ') + h(dd.name) + '"></button>'
       : '<span class="eq' + (e.equipped ? ' on' : '') + '" role="img" aria-label="' + (e.equipped ? 'Equipped' : 'Not equipped') + '"></span>';
@@ -1047,6 +1048,19 @@
       R.addItem(ch.inventory, id, 1, on, where, false);
       name = def.name;
       app.view.restNote = def.name + ' added to your ' + (where === 'backpack' ? 'backpack' : 'equipment') + (def.kind === 'weapon' || def.kind === 'armor' ? '. Tick “Active” to equip it.' : '.');
+    });
+  };
+  H['inv-drink'] = function (uid) {
+    mutate(function (ch, d) {
+      var i = ch.inventory.findIndex(function (x) { return x.uid === uid; }); if (i < 0) return;
+      var def = CF.content.get('items', ch.inventory[i].item, CF.content.on(ch)); if (!def || !def.heal) return;
+      var m = /^(\d+)d(\d+)(?:\+(\d+))?$/.exec(def.heal.replace(/\s+/g, '')); if (!m) return;
+      var r = app.roll(def.name, +m[1], +m[2], +(m[3] || 0));
+      var healed = Math.min(Math.max(0, r.total), ch.play.hpLost || 0);
+      ch.play.hpLost = Math.max(0, (ch.play.hpLost || 0) - r.total);
+      if (healed > 0 && ch.play.deathSaves) ch.play.deathSaves = { s: 0, f: 0 };
+      var e = ch.inventory[i]; e.qty = (e.qty || 1) - 1; if (e.qty <= 0) ch.inventory.splice(i, 1);
+      app.view.restNote = 'You drink the ' + def.name + ' and regain ' + r.total + ' HP' + (healed < r.total ? ' (' + healed + ' needed to reach full)' : '') + '.';
     });
   };
   H['inv-remove'] = function (uid) {
