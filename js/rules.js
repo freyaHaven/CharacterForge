@@ -80,6 +80,25 @@
     [4, 3, 3, 3, 2, 1, 1, 1, 1], [4, 3, 3, 3, 3, 1, 1, 1, 1], [4, 3, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 3, 2, 2, 1, 1]];
   /** Where a class's prepared spells are saved: the first class uses ch.spells.prepared, the others keep their own. */
   R.preparedOf = function (ch, i) { return i === 0 ? ((ch.spells && ch.spells.prepared) || []) : ((ch.classes[i] && ch.classes[i].prepared) || []); };
+  /** Exhaustion level 0–6. Old saves had "Exhaustion" as a plain condition: that counts as level 1. */
+  R.exhaustionLevel = function (play) {
+    play = play || {};
+    if (play.exhaustion != null) return Math.max(0, Math.min(6, play.exhaustion | 0));
+    return (play.conditions || []).indexOf('Exhaustion') >= 0 ? 1 : 0;
+  };
+  /** What each level does. 2024: −2 per level to every d20 test and −5 ft speed per level. 2014: the step table. */
+  R.exhaustionInfo = function (level, old) {
+    var lines = [];
+    if (!level) return { level: 0, old: old, d20: 0, lines: lines, dead: false };
+    if (old) {
+      var T = ['Disadvantage on ability checks', 'Speed halved', 'Disadvantage on attack rolls and saving throws', 'Hit point maximum halved', 'Speed reduced to 0', 'Death'];
+      lines = T.slice(0, level);
+    } else {
+      lines = level >= 6 ? ['Death'] : ['−' + 2 * level + ' to every d20 roll (ability checks, attacks, saving throws, initiative)', 'Speed −' + 5 * level + ' ft'];
+    }
+    return { level: level, old: old, d20: old ? 0 : 2 * level, lines: lines, dead: level >= 6,
+      disCheck: old && level >= 1, disAttackSave: old && level >= 3 };
+  };
   R.totalLevel = function (ch) { return (ch.classes || []).reduce(function (a, c) { return a + (c.level || 1); }, 0) || 1; };
 
   /** A new, empty character in the save format. */
@@ -329,6 +348,8 @@
     hpMax += grants.hpPerLevel;
     hpMax = Math.max(1, hpMax);
     var play = ch.play || R.freshPlayState();
+    var exhaustion = R.exhaustionInfo(R.exhaustionLevel(play), R.isOld(ch));
+    if (exhaustion.old && exhaustion.level >= 4) hpMax = Math.max(1, Math.floor(hpMax / 2));
     var hp = Math.max(0, hpMax - (play.hpLost || 0));
 
     /* speed & senses */
@@ -340,6 +361,12 @@
       speed += b.amount;
     }); });
     speed += grants.speed;
+    if (exhaustion.level) {
+      if (!exhaustion.old) speed -= 5 * exhaustion.level;
+      else if (exhaustion.level >= 5) speed = 0;
+      else if (exhaustion.level >= 2) speed = Math.floor(speed / 2);
+      speed = Math.max(0, speed);
+    }
     var darkvision = (lineage && lineage.senses && lineage.senses.darkvision) || (species && species.senses && species.senses.darkvision) || 0;
     var feats = (ch.feats || []).concat(levelFeats.map(function (l) { return l.feat; })).map(function (id) { return get('feats', id); }).filter(Boolean);
     var hasFeat = function (id) { return feats.some(function (f) { return f.id === id; }); };
@@ -636,7 +663,7 @@
       spell: spell, resources: resources, featureActions: featureActions, features: features, feats: feats,
       species: species, lineage: lineage, background: bg, backgroundPick: ch.background, mainClass: main,
       inventory: inv, totalLb: totalLb, capacity: capacity, currency: ch.currency || {},
-      play: play
+      play: play, exhaustion: exhaustion
     };
   };
 

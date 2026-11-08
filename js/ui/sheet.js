@@ -31,6 +31,27 @@
   }
   var STAR = '<svg class="star" role="img" aria-label="Weapon mastery" viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.8 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.8 6.9-1z"/></svg>';
 
+  /* ---------- d20 rolls, with Exhaustion applied ---------- */
+  var EX = null;
+  /** kind: 'check' | 'save' | 'attack'. 2024: −2 per level. 2014: disadvantage from the step table. */
+  function d20(label, bonus, kind) {
+    var ex = EX || { level: 0 };
+    if (!ex.level) return app.roll(label, 1, 20, bonus);
+    if (!ex.old) {
+      var r = app.roll(label, 1, 20, bonus - ex.d20);
+      app.lastRoll.detail += ' · Exhaustion ' + ex.level + ' (−' + ex.d20 + ')';
+      return r;
+    }
+    var dis = (kind === 'check' && ex.disCheck) || ((kind === 'save' || kind === 'attack') && ex.disAttackSave);
+    if (!dis) return app.roll(label, 1, 20, bonus);
+    var a = 1 + Math.floor(Math.random() * 20), b = 1 + Math.floor(Math.random() * 20), face = Math.min(a, b);
+    var total = face + (bonus || 0);
+    app.lastRoll = { label: label + ' · disadvantage', total: total, nat: face === 20 || face === 1 ? face : 0,
+      detail: '[' + a + ', ' + b + '] keep ' + face + (bonus ? (bonus > 0 ? ' + ' + bonus : ' − ' + Math.abs(bonus)) : '') + ' · Exhaustion ' + ex.level + (face === 20 ? ' · Natural 20!' : face === 1 ? ' · Natural 1' : '') };
+    if (CF.dice) CF.dice.show(Object.assign({ sides: 20, rolls: [a, b] }, app.lastRoll));
+    return { rolls: [face], total: total, nat: app.lastRoll.nat };
+  }
+
   function view() {
     var v = app.view;
     if (!v.init) Object.assign(v, { init: true, tab: 'actions', sub: 'all', spellSub: 'all', spellOpen: null, actHover: null, invFilter: 'all', invQuery: '', collapsed: {}, picker: false, amt: 1 });
@@ -44,6 +65,7 @@
     if (!ch) return CF.ui.topbar() + '<main class="page"><div class="empty"><b>Character not found</b><a class="btn" href="#/">Back to characters</a></div></main>';
     P = !!route.play;
     var d = R.derive(ch), v = view();
+    EX = d.exhaustion;
 
     return CF.ui.topbar('<a class="btn btn-sm btn-ghost" href="#/" style="border:none">← Characters</a><span class="grow muted2" style="font-size:13px">' + (P ? 'Play mode · saved on this device' : 'Overview') + '</span>') +
       '<main class="page ' + (P ? 'play' : 'static') + '">' +
@@ -131,16 +153,29 @@
     }).join('') : '<span class="muted2">None</span>') + '</div>';
   }
 
+  function exhaustionRow(ch, d) {
+    var ex = d.exhaustion, n = ex.level;
+    if (!P && !n) return '';
+    var pips = '';
+    for (var i = 1; i <= 6; i++) pips += P ? '<button type="button" class="exh-pip' + (i <= n ? ' on' : '') + '" data-act="exh" data-arg="' + (i === n ? i - 1 : i) + '" aria-label="Exhaustion level ' + i + '" aria-pressed="' + (i <= n) + '">' + i + '</button>' : '<span class="exh-pip' + (i <= n ? ' on' : '') + '" aria-hidden="true">' + i + '</span>';
+    return '<div class="exh"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:13px">Exhaustion' + (n ? ' ' + n : '') + '</b>' +
+      (P ? '<span style="display:flex;gap:4px"><button class="small-out" data-act="exh" data-arg="' + Math.max(0, n - 1) + '"' + (n ? '' : ' disabled') + ' aria-label="Remove a level of Exhaustion">−</button><button class="small-out" data-act="exh" data-arg="' + Math.min(6, n + 1) + '"' + (n < 6 ? '' : ' disabled') + ' aria-label="Add a level of Exhaustion">+</button></span>' : '') + '</span>' +
+      '<div class="exh-pips" role="group" aria-label="Exhaustion level">' + pips + '</div>' +
+      (n ? '<span class="exh-fx' + (ex.dead ? ' dead' : '') + '">' + (ex.dead ? 'Level 6: your character dies.' : h(ex.lines.join(' · ')) + '. Applied to your rolls' + (ex.old ? ' and stats' : ' and speed') + ' automatically.') + '</span>'
+        : '<span class="muted2" style="font-size:12px">' + (ex.old ? 'Each level adds a worse effect; level 6 is death.' : 'Each level: −2 to d20 rolls and −5 ft speed. Level 6 is death.') + ' A long rest removes one level.</span>') + '</div>';
+  }
+
   function conditions(ch, v) {
-    var list = (ch.play && ch.play.conditions) || [];
+    var list = ((ch.play && ch.play.conditions) || []).filter(function (c) { return c !== 'Exhaustion'; });
+    var dd = R.derive(ch);
     return '<div class="defs wide"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="t">Conditions</span>' +
       (P ? '<button class="small-out" data-act="picker" aria-expanded="' + v.picker + '">' + (v.picker ? 'Done' : '+ Add') + '</button>' : '') + '</span>' +
       (list.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px">' + list.map(function (c) {
         return P ? '<button class="cond-chip" data-act="cond" data-arg="' + h(c) + '" aria-label="Remove ' + h(c) + '">' + h(c) + ' <span aria-hidden="true">×</span></button>' : '<span class="cond-chip">' + h(c) + '</span>';
       }).join('') + '</div>' : '<span class="muted2">None active</span>') +
-      (P && v.picker ? '<div class="picker">' + R.CONDITIONS.filter(function (c) { return list.indexOf(c) < 0; }).map(function (c) {
+      (P && v.picker ? '<div class="picker">' + R.CONDITIONS.filter(function (c) { return c !== 'Exhaustion' && list.indexOf(c) < 0; }).map(function (c) {
         return '<button data-act="cond" data-arg="' + h(c) + '">' + h(c) + '</button>';
-      }).join('') + '</div>' : '') + '</div>';
+      }).join('') + '</div>' : '') + exhaustionRow(ch, dd) + '</div>';
   }
 
   function dot(p) { return '<span class="dot" aria-hidden="true">' + (p === 2 ? '<b></b>' : '<i class="' + (p ? 'on' : '') + '"></i>') + '</span>'; }
@@ -609,16 +644,26 @@
   H['inv-filter'] = function (f) { app.view.invFilter = f; app.view.resetScroll = true; app.render(); };
   H['inv-q'] = function (a, el) { app.view.invQuery = el.value; app.render(); };
   H['inv-collapse'] = function (g) { app.view.collapsed[g] = !app.view.collapsed[g]; app.render(); };
+  H.exh = function (n) {
+    mutate(function (ch, d) {
+      var before = d.exhaustion.level;
+      ch.play.exhaustion = Math.max(0, Math.min(6, +n || 0));
+      ch.play.conditions = (ch.play.conditions || []).filter(function (c) { return c !== 'Exhaustion'; });
+      var after = R.derive(ch);
+      app.flash(ch.play.exhaustion > before ? 'Exhaustion ' + ch.play.exhaustion + (after.exhaustion.dead ? ': your character dies.' : ': ' + after.exhaustion.lines.join(' · ') + '.') : ch.play.exhaustion ? 'Exhaustion down to ' + ch.play.exhaustion + '.' : 'No more Exhaustion.');
+    });
+  };
   H.picker = function () { app.view.picker = !app.view.picker; app.render(); };
   H.amt = function (a, el) { app.view.amt = el.value; };
 
   H.roll = function (arg) {
     var ch = cur(); if (!ch) return;
     var d = R.derive(ch), p = arg.split(':'), kind = p[0], key = p.slice(1).join(':');
-    if (kind === 'init') app.roll('Initiative', 1, 20, d.initiative);
-    else if (kind === 'abil') { var a = R.ABILITIES.find(function (x) { return x.id === key; }); app.roll(a.name + ' check', 1, 20, d.mods[key]); }
-    else if (kind === 'save') { var s = d.saves.find(function (x) { return x.id === key; }); app.roll(s.name + ' saving throw', 1, 20, s.bonus); }
-    else if (kind === 'skill') { var sk = d.skills.find(function (x) { return x.id === key; }); app.roll(sk.name + ' check', 1, 20, sk.bonus); }
+    EX = d.exhaustion;
+    if (kind === 'init') d20('Initiative', d.initiative, 'check');
+    else if (kind === 'abil') { var a = R.ABILITIES.find(function (x) { return x.id === key; }); d20(a.name + ' check', d.mods[key], 'check'); }
+    else if (kind === 'save') { var s = d.saves.find(function (x) { return x.id === key; }); d20(s.name + ' saving throw', s.bonus, 'save'); }
+    else if (kind === 'skill') { var sk = d.skills.find(function (x) { return x.id === key; }); d20(sk.name + ' check', sk.bonus, 'check'); }
     else if (kind === 'spellatk') { var cst = key !== undefined && key !== '' && d.spell.casters ? d.spell.casters[+key] : null; attackRoll(cst ? cst.name + ' spell attack' : 'Spell attack', cst ? cst.attack : d.spell.attack, 20); }
     else if (kind === 'feat') {
       var fp = key.split('|'), fa = d.featureActions[+fp[0]], rr = fa && fa.rolls[+fp[1]];
@@ -666,10 +711,11 @@
 
   /** An attack roll: a natural 20 (or the Champion's lower range) turns on critical damage until the next attack. */
   function attackRoll(label, bonus, range) {
-    var r = app.roll(label, 1, 20, bonus), face = r.rolls[0];
+    var r = d20(label, bonus, 'attack'), face = r.rolls[0];
     if (face >= (range || 20)) {
       app.critActive = { label: label };
-      app.lastRoll.detail = '[' + face + ']' + (bonus ? (bonus > 0 ? ' + ' + bonus : ' − ' + Math.abs(bonus)) : '') + (face === 20 ? ' · Natural 20! Critical hit' : ' · Critical hit (' + range + '–20)');
+      var exTxt = EX && EX.level ? ' · Exhaustion ' + EX.level + (EX.d20 ? ' (−' + EX.d20 + ')' : '') : '';
+      app.lastRoll.detail = '[' + face + ']' + (bonus ? (bonus > 0 ? ' + ' + bonus : ' − ' + Math.abs(bonus)) : '') + exTxt + (face === 20 ? ' · Natural 20! Critical hit' : ' · Critical hit (' + range + '–20)');
       app.lastRoll.nat = 20;
     } else {
       app.critActive = null;
@@ -767,12 +813,14 @@
   };
   H['death-roll'] = function () {
     mutate(function (ch, d) {
-      var r = app.roll('Death saving throw', 1, 20, 0).rolls[0], ds = ch.play.deathSaves;
+      EX = d.exhaustion;
+      var rr = d20('Death saving throw', 0, 'save'), r = rr.rolls[0], ds = ch.play.deathSaves, tot = rr.total;
+      var exNote = d.exhaustion.level ? ' · Exhaustion ' + d.exhaustion.level + (d.exhaustion.d20 ? ' (−' + d.exhaustion.d20 + ', total ' + tot + ')' : '') : '';
       if (r === 20) { ch.play.hpLost = d.hpMax - 1; ch.play.deathSaves = { s: 0, f: 0 }; app.lastRoll.detail = '[20] · Natural 20! Back up with 1 HP'; }
       else if (r === 1) { ds.f = Math.min(3, ds.f + 2); app.lastRoll.detail = '[1] · Natural 1 · two failures' + (ds.f >= 3 ? ' · Dead' : ''); }
-      else if (r >= 10) { ds.s = Math.min(3, ds.s + 1); app.lastRoll.detail = '[' + r + '] · Success (10 or higher)' + (ds.s >= 3 ? ' · Stable!' : '');
+      else if (tot >= 10) { ds.s = Math.min(3, ds.s + 1); app.lastRoll.detail = '[' + r + ']' + exNote + ' · Success (10 or higher)' + (ds.s >= 3 ? ' · Stable!' : '');
         if (ds.s >= 3) { ds.f = 0; app.view.restNote = 'Stable: still at 0 HP and Unconscious, but no more death saves. You regain 1 HP after 1d4 hours (use Wake up), or sooner if healed.'; } }
-      else { ds.f = Math.min(3, ds.f + 1); app.lastRoll.detail = '[' + r + '] · Failure (under 10)' + (ds.f >= 3 ? ' · Dead' : ''); }
+      else { ds.f = Math.min(3, ds.f + 1); app.lastRoll.detail = '[' + r + ']' + exNote + ' · Failure (under 10)' + (ds.f >= 3 ? ' · Dead' : ''); }
     });
   };
   H.wake = function () {
@@ -821,8 +869,10 @@
   };
   H['long-rest'] = function () {
     mutate(function (ch) {
+      var exB = R.exhaustionLevel(ch.play);
       app.view.restNote = ''; ch.play.hpLost = 0; ch.play.temp = 0; ch.play.slotsUsed = {}; ch.play.resourcesUsed = {}; ch.play.hdUsed = 0; ch.play.deathSaves = { s: 0, f: 0 };
-      app.view.restNote = 'Long rest taken. HP, spell slots, Hit Dice and limited uses restored.';
+      if (exB && exB < 6) { ch.play.exhaustion = exB - 1; ch.play.conditions = (ch.play.conditions || []).filter(function (c) { return c !== 'Exhaustion'; }); }
+      app.view.restNote = 'Long rest taken. HP, spell slots, Hit Dice and limited uses restored.' + (exB && exB < 6 ? ' Exhaustion ' + exB + ' → ' + (exB - 1) + (R.isOld(ch) ? ' (if you ate and drank).' : '.') : '');
     });
   };
   H.pool = function (arg) {
