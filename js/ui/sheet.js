@@ -73,7 +73,7 @@
         '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">' +
           '<div class="mode-switch" role="group" aria-label="Sheet mode"><button type="button" aria-pressed="' + !P + '" data-act="mode" data-arg="overview">Overview</button><button type="button" aria-pressed="' + P + '" data-act="mode" data-arg="play">Play</button></div>' +
           (P ? '<button class="btn" data-act="short-rest">Short rest</button><button class="btn" data-act="long-rest">Long rest</button>' : '') +
-          (d.classLevel < ((d.mainClass && d.mainClass.def.maxLevel) || 1) ? '<a class="btn btn-teal" href="#/levelup/' + encodeURIComponent(ch.id) + '">Level up</a>' : '<a class="btn" href="#/levelup/' + encodeURIComponent(ch.id) + '" title="Levels above ' + d.classLevel + ' aren’t in yet">Level ' + d.classLevel + '</a>') +
+          (d.level < 20 ? '<a class="btn btn-teal" href="#/levelup/' + encodeURIComponent(ch.id) + '">Level up</a>' : '<a class="btn" href="#/levelup/' + encodeURIComponent(ch.id) + '" title="Level 20 is the highest level">Level ' + d.level + '</a>') +
           '<button class="btn btn-icon" data-act="export" data-arg="' + h(ch.id) + '" aria-label="Export character file">' + CF.ui.icons.down + '</button>' +
         '</div>' +
         (P && app.view.restNote ? '<span role="status" class="muted2" style="font-size:12px">' + h(app.view.restNote) + '</span>' : '') +
@@ -336,7 +336,7 @@
         : pipRow(res.name + (res.shortRest ? ' (1 back on a short rest)' : ''), 'res', res.id, res.max, res.used)) : '';
       var rolls = (f.rolls || []).map(function (r, j) {
         var label = r[1] === 'unarmed' ? 'Unarmed Strike ' + sg(d.attacks[d.attacks.length - 1].hit)
-          : r[0].replace(/ \+ level/, ' +' + d.classLevel).replace(/ \+ (STR|DEX|CON|INT|WIS|CHA)/, function (m, a) { return ' ' + sg(d.mods[a.toLowerCase()]); });
+          : r[0].replace(/ \+ level/, ' +' + (f.classLevel || d.classLevel)).replace(/ \+ (STR|DEX|CON|INT|WIS|CHA)/, function (m, a) { return ' ' + sg(d.mods[a.toLowerCase()]); });
         return act('mini-roll rollable', 'roll', 'feat:' + i + '|' + j, 'Roll ' + label, h(label));
       }).join('');
       out.push(itemCard(f.name, f.from, f.text, rolls, pips));
@@ -359,10 +359,11 @@
     return out + '</span></div>';
   }
 
+  function slotName(x, sp) { return ordinal(x.level) + '-level ' + (x.pact && sp && !sp.pact ? 'Pact slots' : 'slots'); }
   function spellItem(d, s) {
     var res = d.resources.find(function (r) { return r.spell === s.id; });
     var slot = d.spell.slots.find(function (x) { return x.level === s.level; });
-    var pipsHtml = (res ? pipRow('Free casts (long rest)', 'res', res.id, res.max, res.used) : '') + (slot && s.level > 0 ? pipRow(ordinal(s.level) + '-level slots', 'slot', slot.level, slot.max, slot.used) : '');
+    var pipsHtml = (res ? pipRow('Free casts (long rest)', 'res', res.id, res.max, res.used) : '') + (slot && s.level > 0 ? pipRow(slotName(slot, d.spell), 'slot', slot.key, slot.max, slot.used) : '');
     var m = /^(\d+)d(\d+)$/.exec((s.effect && s.effect.dice) || '');
     var rolls = (m && s.effect.second ? act('mini-roll rollable', 'roll', 'spell2:' + s.id, 'Roll ' + s.name + ' ' + s.effect.second.type, h(s.effect.second.dice + ' ' + s.effect.second.type)) : '') + (m ? act('mini-roll rollable', 'roll', 'spell:' + s.id, 'Roll ' + s.name, (s.effect.addMod ? h(s.effect.dice) + ' ' + sg(s.castMod) : (s.id === 'hunters-mark' ? '+' : '') + h(s.effect.dice)) + ' ' + h(s.effect.type || '')) : '');
     var text = s.text.replace(/against your spell save DC/g, '(DC ' + s.dc + ')').replace('DC (DC', '(DC');
@@ -404,7 +405,7 @@
     var res = d.resources.find(function (r) { return r.spell === s.id; });
     var btns = d.spell.slots.filter(function (x) { return x.level >= s.level; }).map(function (x) {
       var upPart = (s.upcast && s.upcast.part) || 'main', left = x.max - x.used, dice = upcastDice(s, x.level, upPart);
-      return '<button type="button" class="small-out" data-act="cast" data-arg="' + h(s.id + '|' + x.level) + '"' + (left ? '' : ' disabled') + ' title="' + h(left + ' of ' + x.max + ' left' + (dice ? ' · ' + dice : '')) + '">' + ordinal(x.level) + (dice && x.level > s.level && dice !== (upPart === 'second' ? s.effect.second.dice : s.effect.dice) ? ' <small>' + h(dice) + '</small>' : '') + '</button>';
+      return '<button type="button" class="small-out" data-act="cast" data-arg="' + h(s.id + '|' + x.key) + '"' + (left ? '' : ' disabled') + ' title="' + h(left + ' of ' + x.max + ' ' + (x.pact && !d.spell.pact ? 'Pact slots ' : '') + 'left' + (dice ? ' · ' + dice : '')) + '">' + ordinal(x.level) + (x.pact && !d.spell.pact ? ' Pact' : '') + (dice && x.level > s.level && dice !== (upPart === 'second' ? s.effect.second.dice : s.effect.dice) ? ' <small>' + h(dice) + '</small>' : '') + '</button>';
     });
     if (res) btns.unshift('<button type="button" class="small-out" data-act="cast" data-arg="' + h(s.id + '|free') + '"' + (res.max - res.used ? '' : ' disabled') + '>Free cast (' + (res.max - res.used) + ')</button>');
     if (!btns.length) return '';
@@ -426,14 +427,19 @@
       return { title: l === 0 ? 'Cantrips' : ordinal(l) + ' level', hint: l === 0 ? 'At will, no slot needed' : slot ? slot.max + ' slots' : '', list: sp.spells.filter(function (s) { return s.level === l; }) };
     });
 
-    var out = '<div class="spell-stats">' +
+    var out = sp.casters && sp.casters.length > 1 ? '<div class="spell-stats">' + sp.casters.map(function (c, ci) {
+      return '<div><span class="v">' + h(c.abbr) + '</span><span class="k">' + h(c.name) + '</span></div>' +
+        act('rollable mark', 'roll', 'spellatk:' + ci, 'Roll ' + c.name + ' spell attack, ' + sg(c.attack), '<span class="v">' + sg(c.attack) + '</span><span class="k">' + h(c.name) + ' attack</span>') +
+        '<div><span class="v">' + c.dc + '</span><span class="k">' + h(c.name) + ' save DC</span></div>';
+    }).join('') + '</div>' : '<div class="spell-stats">' +
       '<div><span class="v">' + sp.abbr + '</span><span class="k">Spellcasting ability</span></div>' +
       '<div><span class="v">' + sg(sp.mod) + '</span><span class="k">Modifier</span></div>' +
       act('rollable mark', 'roll', 'spellatk', 'Roll spell attack, ' + sg(sp.attack), '<span class="v">' + sg(sp.attack) + '</span><span class="k">Spell attack</span>') +
       '<div><span class="v">' + sp.dc + '</span><span class="k">Save DC</span></div></div>';
-    if (sp.slots.length || d.resources.some(function (r) { return r.spell; })) out += '<div class="res-strip">' + sp.slots.map(function (s) { return '<div class="r"><span><b>' + ordinal(s.level) + '-level slots</b><small>' + (s.max - s.used) + ' of ' + s.max + ' left</small></span>' + pipRow('', 'slot', s.level, s.max, s.used).replace('<span class="k"></span>', '') + '</div>'; }).join('') +
+    if (sp.slots.length || d.resources.some(function (r) { return r.spell; })) out += '<div class="res-strip">' + sp.slots.map(function (s) { return '<div class="r"><span><b>' + slotName(s, sp) + '</b><small>' + (s.max - s.used) + ' of ' + s.max + ' left' + (s.pact && !sp.pact ? ' · back on a Short Rest' : '') + '</small></span>' + pipRow('', 'slot', s.key, s.max, s.used).replace('<span class="k"></span>', '') + '</div>'; }).join('') +
       d.resources.filter(function (r) { return r.spell; }).map(function (r) { return '<div class="r"><span><b>' + h(r.name) + '</b><small>Recharges on a ' + (r.recharge === 'long' ? 'long' : 'short') + ' rest</small></span>' + pipRow('', 'res', r.id, r.max, r.used).replace('<span class="k"></span>', '') + '</div>'; }).join('') + '</div>';
     if (sp.pact) out += '<span class="muted2" style="font-size:12px;margin-top:-6px">Pact Magic: your spell slots come back on a Short or Long Rest.</span>';
+    else if (sp.hasPact) out += '<span class="muted2" style="font-size:12px;margin-top:-6px">Multiclass: your Pact Magic slots come back on a Short Rest, the others on a Long Rest. Any of your spells can use either kind.</span>';
     out += '<div style="display:flex;align-items:center;gap:8px;font-size:12px" class="muted"><span class="conc"><i aria-hidden="true"></i></span>Needs concentration: only one at a time, and taking damage can break it (DC 10 CON save, or half the damage if higher)</div>';
     out += '<span class="muted2" style="font-size:12px;margin-top:-6px">Hover or tap a spell to read its full description.</span>';
     out += pills(subs, v.spellSub, 'spell-sub', 'Spell levels');
@@ -613,13 +619,13 @@
     else if (kind === 'abil') { var a = R.ABILITIES.find(function (x) { return x.id === key; }); app.roll(a.name + ' check', 1, 20, d.mods[key]); }
     else if (kind === 'save') { var s = d.saves.find(function (x) { return x.id === key; }); app.roll(s.name + ' saving throw', 1, 20, s.bonus); }
     else if (kind === 'skill') { var sk = d.skills.find(function (x) { return x.id === key; }); app.roll(sk.name + ' check', 1, 20, sk.bonus); }
-    else if (kind === 'spellatk') attackRoll('Spell attack', d.spell.attack, 20);
+    else if (kind === 'spellatk') { var cst = key !== undefined && key !== '' && d.spell.casters ? d.spell.casters[+key] : null; attackRoll(cst ? cst.name + ' spell attack' : 'Spell attack', cst ? cst.attack : d.spell.attack, 20); }
     else if (kind === 'feat') {
       var fp = key.split('|'), fa = d.featureActions[+fp[0]], rr = fa && fa.rolls[+fp[1]];
       if (!rr) return;
       if (rr[1] === 'unarmed') { var ua = d.attacks[d.attacks.length - 1]; attackRoll('Unarmed Strike', ua.hit, d.critRange); }
       else {
-        var mm = typeof rr[3] === 'string' ? rr[3].split('+').reduce(function (t, part) { return t + (part === 'level' ? d.classLevel : d.mods[part] || 0); }, 0) : rr[3];
+        var mm = typeof rr[3] === 'string' ? rr[3].split('+').reduce(function (t, part) { return t + (part === 'level' ? (fa.classLevel || d.classLevel) : d.mods[part] || 0); }, 0) : rr[3];
         var critOk = app.critActive && /sneak|frenzy|brutal|radiant|necrotic|psychic|palm|strike/i.test(fa.name + ' ' + rr[0]) && !/heal|temp|luck|check|deflect/i.test(fa.name + ' ' + rr[0]);
         if (critOk) app.rollCrit(fa.name + ' · ' + rr[0], rr[1], rr[2], mm); else app.roll(fa.name + ' · ' + rr[0], rr[1], rr[2], mm);
       }
@@ -695,10 +701,10 @@
       ch.play.resourcesUsed = ch.play.resourcesUsed || {}; ch.play.resourcesUsed[res.id] = (ch.play.resourcesUsed[res.id] || 0) + 1;
       note = s.name + ' cast without a slot (' + (res.max - res.used - 1) + ' free cast' + (res.max - res.used - 1 === 1 ? '' : 's') + ' left).';
     } else {
-      lvl = +how;
-      var slot = d.spell.slots.find(function (x) { return x.level === lvl; }); if (!slot || slot.used >= slot.max) return null;
-      ch.play.slotsUsed = ch.play.slotsUsed || {}; ch.play.slotsUsed[lvl] = (ch.play.slotsUsed[lvl] || 0) + 1;
-      note = s.name + ' cast with a ' + ordinal(lvl) + '-level slot (' + (slot.max - slot.used - 1) + ' left).';
+      var slot = d.spell.slots.find(function (x) { return x.key === String(how); }); if (!slot || slot.used >= slot.max) return null;
+      lvl = slot.level;
+      ch.play.slotsUsed = ch.play.slotsUsed || {}; ch.play.slotsUsed[slot.key] = (ch.play.slotsUsed[slot.key] || 0) + 1;
+      note = s.name + ' cast with a ' + ordinal(lvl) + '-level ' + (slot.pact && !d.spell.pact ? 'Pact ' : '') + 'slot (' + (slot.max - slot.used - 1) + ' left).';
     }
     if (s.concentration && how !== 'none') note += ' Concentrating' + (s.concDuration ? ' for up to ' + s.concDuration : '') + '.';
     app.lastCast = { id: s.id, level: lvl };
@@ -784,7 +790,7 @@
   H.pip = function (arg) {
     var p = arg.split(':'), kind = p[0], id = p[1], i = +p[2];
     mutate(function (ch, d) {
-      var max = kind === 'slot' ? d.spell.slots.find(function (s) { return String(s.level) === id; }).max : d.resources.find(function (r) { return r.id === id; }).max;
+      var max = kind === 'slot' ? d.spell.slots.find(function (s) { return s.key === id; }).max : d.resources.find(function (r) { return r.id === id; }).max;
       var bag = kind === 'slot' ? (ch.play.slotsUsed = ch.play.slotsUsed || {}) : (ch.play.resourcesUsed = ch.play.resourcesUsed || {});
       var used = bag[id] || 0, available = max - used;
       bag[id] = i < available ? max - i : max - (i + 1);   // tap a filled pip to spend down to it, an empty one to restore up to it
@@ -794,18 +800,23 @@
     mutate(function (ch, d) {
       var extra = [];
       if (d.spell && d.spell.pact && Object.keys(ch.play.slotsUsed || {}).length) { ch.play.slotsUsed = {}; extra.push('Pact slots restored.'); }
+      else if (d.spell && d.spell.hasPact) { var pk = Object.keys(ch.play.slotsUsed || {}).filter(function (k) { return k.charAt(0) === 'p' && ch.play.slotsUsed[k]; }); if (pk.length) { pk.forEach(function (k) { delete ch.play.slotsUsed[k]; }); extra.push('Pact slots restored.'); } }
       d.resources.forEach(function (r) {
         var used = (ch.play.resourcesUsed || {})[r.id] || 0;
         if (r.recharge === 'short' && used) { ch.play.resourcesUsed[r.id] = 0; extra.push(r.name + ' restored.'); }
         else if (r.shortRest && used) { ch.play.resourcesUsed[r.id] = Math.max(0, used - r.shortRest); extra.push(r.shortRest + ' ' + r.name + (r.shortRest > 1 ? ' back.' : ' use back.')); }
       });
       app.view.restExtra = extra.join(' ');
-      var main = d.mainClass, used = ch.play.hdUsed || 0, lv = main ? main.pick.level || 1 : 1;
-      if (used >= lv || d.hp >= d.hpMax) { app.view.restNote = (d.hp >= d.hpMax ? 'Short rest taken. Already at full HP.' : 'Short rest taken. No Hit Dice left to spend.') + ' ' + app.view.restExtra; return; }
-      var r = app.roll('Short rest · Hit Die', 1, main.def.hitDie, d.mods.con);
+      var pools = d.hdPools || [], left = pools.reduce(function (t, p) { return t + p.max - p.used; }, 0);
+      var pool = pools.find(function (p) { return p.used < p.max; });   // biggest die first
+      if (!pool || d.hp >= d.hpMax) { app.view.restNote = (d.hp >= d.hpMax ? 'Short rest taken. Already at full HP.' : 'Short rest taken. No Hit Dice left to spend.') + ' ' + app.view.restExtra; return; }
+      var r = app.roll('Short rest · Hit Die (d' + pool.die + ')', 1, pool.die, d.mods.con);
       var healed = Math.min(Math.max(0, r.total), ch.play.hpLost || 0);
-      ch.play.hpLost = Math.max(0, (ch.play.hpLost || 0) - healed); ch.play.hdUsed = used + 1;
-      app.view.restNote = 'Short rest: spent 1 Hit Die, healed ' + healed + ' HP (' + (lv - used - 1) + ' left). ' + app.view.restExtra;
+      ch.play.hpLost = Math.max(0, (ch.play.hpLost || 0) - healed);
+      if (pools.length > 1 || typeof ch.play.hdUsed === 'object') {
+        var map = {}; pools.forEach(function (p) { if (p.used) map['d' + p.die] = p.used; }); map['d' + pool.die] = pool.used + 1; ch.play.hdUsed = map;
+      } else ch.play.hdUsed = pool.used + 1;
+      app.view.restNote = 'Short rest: spent 1 Hit Die (d' + pool.die + '), healed ' + healed + ' HP (' + (left - 1) + ' left). ' + app.view.restExtra;
     });
   };
   H['long-rest'] = function () {

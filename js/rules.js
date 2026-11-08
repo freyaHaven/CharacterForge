@@ -11,6 +11,77 @@
 
   R.profBonus = function (level) { return 2 + Math.floor((level - 1) / 4); };
 
+  /* ---------- multiclassing (PHB 2024) ---------- */
+  /** What each class asks for and gives when it is not your first class. A class can override this with def.multiclass. */
+  R.MULTICLASS = {
+    barbarian: { req: { all: { str: 13 } }, armor: ['shield'], weapons: ['martial'] },
+    bard: { req: { all: { cha: 13 } }, armor: ['light'], weapons: [], skills: { count: 1, from: 'any' }, toolChoice: { count: 1, group: 'musical-instrument', label: 'Musical instrument' } },
+    cleric: { req: { all: { wis: 13 } }, armor: ['light', 'medium', 'shield'], weapons: [] },
+    druid: { req: { all: { wis: 13 } }, armor: ['light', 'shield'], weapons: [] },
+    fighter: { req: { any: { str: 13, dex: 13 } }, armor: ['light', 'medium', 'shield'], weapons: ['martial'] },
+    monk: { req: { all: { dex: 13, wis: 13 } }, armor: [], weapons: [] },
+    paladin: { req: { all: { str: 13, cha: 13 } }, armor: ['light', 'medium', 'shield'], weapons: ['martial'] },
+    ranger: { req: { all: { dex: 13, wis: 13 } }, armor: ['light', 'medium', 'shield'], weapons: ['martial'], skills: { count: 1, from: 'class' } },
+    rogue: { req: { all: { dex: 13 } }, armor: ['light'], weapons: [], skills: { count: 1, from: 'class' }, tools: ['thieves-tools'] },
+    sorcerer: { req: { all: { cha: 13 } }, armor: [], weapons: [] },
+    warlock: { req: { all: { cha: 13 } }, armor: ['light'], weapons: [] },
+    wizard: { req: { all: { int: 13 } }, armor: [], weapons: [] },
+    artificer: { req: { all: { int: 13 } }, armor: ['light', 'medium', 'shield'], weapons: [], tools: ['thieves-tools', 'tinkers-tools'] }
+  };
+  R.mcInfo = function (def) {
+    var m = def.multiclass || R.MULTICLASS[def.id];
+    if (!m) { var all = {}; (def.primary || []).forEach(function (a) { all[a] = 13; }); m = { req: { all: all }, armor: [], weapons: [] }; }
+    var sk = m.skills ? { count: m.skills.count, from: m.skills.from === 'class' ? ((def.skillChoices && def.skillChoices.from) || 'any') : m.skills.from } : null;
+    return { req: m.req || {}, armor: m.armor || [], weapons: m.weapons || [], tools: m.tools || [], skills: sk, toolChoice: m.toolChoice || null };
+  };
+  /** "light armor, shields, 1 skill…" — what a class gives when you multiclass into it. */
+  R.mcGainsText = function (def, on) {
+    var m = R.mcInfo(def);
+    var bits = m.armor.map(function (a) { return a === 'shield' ? 'shields' : a + ' armor'; }).concat(m.weapons.map(function (w) { return w + ' weapons'; }),
+      m.skills ? [m.skills.count + ' skill' + (m.skills.from === 'any' ? ' of your choice' : ' from the ' + def.name + ' list')] : [],
+      m.tools.map(function (t) { var td = C.get('items', t, on); return td ? td.name : t; }), m.toolChoice ? ['1 ' + m.toolChoice.label.toLowerCase()] : []);
+    return bits.join(', ') || 'no extra training';
+  };
+  R.mcReqText = function (def) {
+    var r = R.mcInfo(def).req, any = r.any, all = r.all || {};
+    var part = function (o, k) { return k.toUpperCase() + ' ' + o[k]; };
+    if (any) return Object.keys(any).map(function (k) { return part(any, k); }).join(' or ');
+    return Object.keys(all).map(function (k) { return part(all, k); }).join(' and ') || 'None';
+  };
+  R.mcMeets = function (def, scores) {
+    var r = R.mcInfo(def).req;
+    if (r.any) return Object.keys(r.any).some(function (k) { return (scores[k] || 0) >= r.any[k]; });
+    return Object.keys(r.all || {}).every(function (k) { return (scores[k] || 0) >= r.all[k]; });
+  };
+  /** Can this character take a level in a new class? You need the scores for the new class and for every class you already have. */
+  R.mcCheck = function (ch, newDef) {
+    var d = R.derive(ch), on = C.on(ch), problems = [];
+    var defs = (ch.classes || []).map(function (c) { return C.get('classes', c.id, on); }).filter(Boolean);
+    if (!R.mcMeets(newDef, d.scores)) problems.push(newDef.name + ' needs ' + R.mcReqText(newDef));
+    defs.forEach(function (def) { if (!R.mcMeets(def, d.scores)) problems.push('to leave ' + def.name + ' you need ' + R.mcReqText(def)); });
+    return { ok: !problems.length, problems: problems };
+  };
+
+  /** How a class (or subclass) counts toward multiclass spell slots. */
+  var FULL_IDS = ['bard', 'cleric', 'druid', 'sorcerer', 'wizard'], HALF_IDS = ['paladin', 'ranger', 'artificer'];
+  R.casterType = function (def, sub, sc) {
+    if (sc.casterType) return sc.casterType;
+    if (sc.pact) return 'pact';
+    if (!def.spellcasting && sub && sub.spellcasting) return 'third';
+    if (FULL_IDS.indexOf(def.id) >= 0) return 'full';
+    if (HALF_IDS.indexOf(def.id) >= 0) return 'half';
+    var r3 = sc.slots[2] || [], r1 = sc.slots[0] || [];
+    return r3.length >= 2 ? 'full' : r1.some(function (n) { return n > 0; }) ? 'half' : 'third';
+  };
+  R.casterLevel = function (type, lv) { return type === 'full' ? lv : type === 'half' ? Math.ceil(lv / 2) : type === 'third' ? Math.floor(lv / 3) : 0; };
+  /** The Multiclass Spellcaster table: spell slots by combined caster level. */
+  R.MC_SLOTS = [[2], [3], [4, 2], [4, 3], [4, 3, 2], [4, 3, 3], [4, 3, 3, 1], [4, 3, 3, 2], [4, 3, 3, 3, 1], [4, 3, 3, 3, 2],
+    [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1, 1], [4, 3, 3, 3, 2, 1, 1], [4, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 2, 1, 1, 1],
+    [4, 3, 3, 3, 2, 1, 1, 1, 1], [4, 3, 3, 3, 3, 1, 1, 1, 1], [4, 3, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 3, 2, 2, 1, 1]];
+  /** Where a class's prepared spells are saved: the first class uses ch.spells.prepared, the others keep their own. */
+  R.preparedOf = function (ch, i) { return i === 0 ? ((ch.spells && ch.spells.prepared) || []) : ((ch.classes[i] && ch.classes[i].prepared) || []); };
+  R.totalLevel = function (ch) { return (ch.classes || []).reduce(function (a, c) { return a + (c.level || 1); }, 0) || 1; };
+
   /** A new, empty character in the save format. */
   /** 5e (2014) rule options: ability bonuses from species, no origin feat from the background, background features. */
   R.isOld = function (ch) { return !!ch && ch.rules === '2014'; };
@@ -207,7 +278,7 @@
     (ch.skilled || []).concat(ch.skilledBg || []).forEach(function (s) { if (SKILL_BY_ID[s]) addSkill(s, 'Skilled'); else skilledTools.push(s); });
     cls.forEach(function (c) { (c.pick.extraSkills || []).forEach(function (s) { addSkill(s, c.def.name); }); });
     levelFeats.forEach(function (f) { f.skills.forEach(function (s) { if (SKILL_BY_ID[s]) addSkill(s, 'Skilled'); else skilledTools.push(s); }); });
-    var jack = main && main.def.jackOfAllTrades && main.lv >= main.def.jackOfAllTrades ? Math.floor(pb / 2) : 0;
+    var jack = cls.some(function (c) { return c.def.jackOfAllTrades && c.lv >= c.def.jackOfAllTrades; }) ? Math.floor(pb / 2) : 0;
     var expertise = (ch.expertise || []).concat(cls.reduce(function (a, c) { return a.concat(c.pick.expertise || []); }, []));
     expertise.forEach(function (s) { if (skillProf[s]) skillProf[s] = 2; });
     var skills = R.SKILLS.map(function (s) {
@@ -225,13 +296,16 @@
     var equipped = inv.filter(function (e) { return e.equipped; });
 
     /* armor class */
-    var armorProf = (main ? main.def.armor || [] : []).concat(grants.armor);
+    /* proficiencies: all of your first class, the multiclass share of the others */
+    var classProf = function (key) { return cls.reduce(function (a, c, i) { return a.concat(i === 0 ? c.def[key] || [] : R.mcInfo(c.def)[key]); }, []); };
+    var armorProf = classProf('armor').concat(grants.armor);
     var body = equipped.find(function (e) { return e.def.kind === 'armor' && e.def.armor !== 'shield'; });
     var shield = equipped.find(function (e) { return e.def.armor === 'shield'; });
     var ac, acNote = '';
-    var ud = (main && main.def.unarmoredDefense) || grants.unarmoredDefense;
+    var udCls = cls.find(function (c) { return c.def.unarmoredDefense; });   // you only ever get the first one you took
+    var ud = (udCls && udCls.def.unarmoredDefense) || grants.unarmoredDefense;
     if (!body) {
-      if (ud && !(ud === 'wis' && shield)) { ac = 10 + mods.dex + mods[ud]; acNote = main.def.unarmoredDefense ? 'Unarmored Defense' : 'Draconic Resilience'; }
+      if (ud && !(ud === 'wis' && shield)) { ac = 10 + mods.dex + mods[ud]; acNote = udCls ? 'Unarmored Defense' : 'Draconic Resilience'; }
       else { ac = 10 + mods.dex; acNote = 'Unarmored'; }
     } else {
       if (body.def.armor === 'light') ac = body.def.ac + mods.dex;
@@ -259,23 +333,24 @@
 
     /* speed & senses */
     var speed = (lineage && lineage.speed) || (species && species.speed) || 30;
-    if (main) (main.def.speedBonus || []).forEach(function (b) {
-      if (main.lv < b.level) return;
+    cls.forEach(function (c) { (c.def.speedBonus || []).forEach(function (b) {
+      if (c.lv < b.level) return;
       if (b.unless === 'heavy' && body && body.def.armor === 'heavy') return;
       if (b.unless === 'armor' && (body || shield)) return;
       speed += b.amount;
-    });
+    }); });
     speed += grants.speed;
     var darkvision = (lineage && lineage.senses && lineage.senses.darkvision) || (species && species.senses && species.senses.darkvision) || 0;
     var feats = (ch.feats || []).concat(levelFeats.map(function (l) { return l.feat; })).map(function (id) { return get('feats', id); }).filter(Boolean);
     var hasFeat = function (id) { return feats.some(function (f) { return f.id === id; }); };
 
     /* weapons & attacks */
-    var weaponProf = (main ? main.def.weapons || [] : []).concat(grants.weapons);
+    var weaponProf = classProf('weapons').concat(grants.weapons);
     var masteries = cls.reduce(function (a, c) { return a.concat(c.pick.masteries || []); }, []);
-    var martialArts = main && main.def.martialArts;
-    var scaleOf = function (key) { var t = main && ((main.def.scaling && main.def.scaling[key]) || (main.sub && main.sub.scaling && main.sub.scaling[key])); return t ? t[Math.min(t.length, main.lv) - 1] : null; };
-    var maDie = martialArts ? (scaleOf('martial') || [1, martialArts.die])[1] : 0;
+    var maCls = cls.find(function (c) { return c.def.martialArts; });
+    var martialArts = maCls && maCls.def.martialArts;
+    var scaleOf = function (key, c) { c = c || main; var t = c && ((c.def.scaling && c.def.scaling[key]) || (c.sub && c.sub.scaling && c.sub.scaling[key])); return t ? t[Math.min(t.length, c.lv) - 1] : null; };
+    var maDie = martialArts ? (scaleOf('martial', maCls) || [1, martialArts.die])[1] : 0;
     var monkWeapon = function (d) { return martialArts && (d.category === 'simple' || (d.props || []).indexOf('light') >= 0) && d.attack === 'melee'; };
     var attackFor = function (w, opts) {
       opts = opts || {};
@@ -344,16 +419,26 @@
       return null;
     };
 
-    /* spellcasting */
+    /* spellcasting: every class that casts adds its own spells; slots combine (Pact Magic stays separate) */
     var spell = null;
-    var sc = main && (main.def.spellcasting || (main.sub && main.sub.spellcasting));   // a subclass can bring its own (Profane Soul, Eldritch Knight…)
-    var lv1 = main ? main.lv : 1;
+    var casters = cls.map(function (c, i) {
+      var sc0 = c.def.spellcasting || (c.sub && c.sub.spellcasting);   // a subclass can bring its own (Eldritch Knight…)
+      return sc0 ? { c: c, i: i, sc: sc0, type: R.casterType(c.def, c.sub, sc0) } : null;
+    }).filter(Boolean);
+    var multiCast = casters.length > 1;
+    var sc = casters[0] ? casters[0].sc : null;
     var lineageCantrips = ((species && species.cantrips) || []).concat((lineage && lineage.cantrips) || []);
     var miPicks = ch.magicInitiate || [];
-    var classCantrips = (main && main.pick.cantrips) || [];
-    var always = main ? (main.def.alwaysPrepared || []).concat((main.sub && main.sub.alwaysPrepared) || [], grants.spells).filter(function (a) { return a.level <= lv1; }).map(function (a) { return a.spell; }) : [];
-    var prepared = (ch.spells && ch.spells.prepared) || [];
-    var anySpells = (sc && (classCantrips.length || prepared.length || always.length || Object.keys((main && main.pick.arcanum) || {}).length)) || lineageCantrips.length || miPicks.length || featInst.some(function (fi) { return fi.def.spells; });
+    var ARC = { 6: 11, 7: 13, 8: 15, 9: 17 };
+    casters.forEach(function (x) {
+      x.cantrips = x.c.pick.cantrips || [];
+      x.prepared = R.preparedOf(ch, x.i);
+      x.always = (x.c.def.alwaysPrepared || []).concat((x.c.sub && x.c.sub.alwaysPrepared) || []).filter(function (a) { return a.level <= x.c.lv; }).map(function (a) { return a.spell; });
+      x.tag = multiCast ? ' (' + x.c.def.name + ')' : '';
+    });
+    var grantSpells = grants.spells.map(function (a) { return a.spell; });
+    var anySpells = casters.some(function (x) { return x.cantrips.length || x.prepared.length || x.always.length || Object.keys(x.c.pick.arcanum || {}).length; }) ||
+      (sc && grantSpells.length) || lineageCantrips.length || miPicks.length || featInst.some(function (fi) { return fi.def.spells; });
     if (anySpells) {
       var highestMental = ['int', 'wis', 'cha'].sort(function (a, b) { return mods[b] - mods[a]; })[0];
       var ab = sc ? sc.ability : (ch.species && ch.species.spellAbility) || highestMental;
@@ -375,11 +460,14 @@
         if (grants.cantripMod && s.level === 0 && e.effect && e.effect.dice && e.effect.type !== 'healing' && /cantrip$/.test(origin)) e.effect.addMod = true;
         list.push(e);
       };
-      classCantrips.forEach(function (id) { add(id, main.def.name + ' cantrip'); });
-      Object.keys((main && main.pick.arcanum) || {}).forEach(function (L) { if (main.lv >= ({ 6: 11, 7: 13, 8: 15, 9: 17 })[L]) add(main.pick.arcanum[L], 'Mystic Arcanum · once per Long Rest', null, { freeCast: 'arcanum-' + L }); });
+      casters.forEach(function (x) {
+        x.cantrips.forEach(function (id) { add(id, x.c.def.name + ' cantrip', x.sc.ability); });
+        Object.keys(x.c.pick.arcanum || {}).forEach(function (L) { if (x.c.lv >= ARC[L]) add(x.c.pick.arcanum[L], 'Mystic Arcanum · once per Long Rest', x.sc.ability, { freeCast: 'arcanum-' + L }); });
+      });
       lineageCantrips.forEach(function (id) { add(id, (lineage ? lineage.name : species.name) + ' (species)', (ch.species && ch.species.spellAbility) || ab); });
-      always.forEach(function (id) { add(id, 'Always prepared'); });
-      prepared.forEach(function (id) { add(id, 'Prepared'); });
+      casters.forEach(function (x) { x.always.forEach(function (id) { add(id, 'Always prepared' + x.tag, x.sc.ability); }); });
+      if (sc) grantSpells.forEach(function (id) { add(id, 'Always prepared', ab); });
+      casters.forEach(function (x) { x.prepared.forEach(function (id) { add(id, 'Prepared' + x.tag, x.sc.ability); }); });
       featInst.forEach(function (fi) {
         (fi.def.spells || []).forEach(function (b, bi) {
           var ids = b.fixed ? b.fixed : ((fi.picks.spells || {})[bi] || []);
@@ -394,10 +482,26 @@
         (mi.cantrips || []).forEach(function (id) { add(id, 'Magic Initiate (' + mi.list + ')', mi.ability); });
         if (mi.spell) add(mi.spell, 'Magic Initiate · 1 free cast per Long Rest', mi.ability, { freeCast: 'mi-' + (mi.source || 'feat') });
       });
-      var slotRow = sc ? (sc.slots[lv1 - 1] || []) : [];
+      /* slots */
+      var su = play.slotsUsed || {};
+      var normal = casters.filter(function (x) { return x.type !== 'pact'; });
+      var pactC = casters.find(function (x) { return x.type === 'pact'; });
+      var slotRow = [], casterLv = 0;
+      if (normal.length === 1) slotRow = normal[0].sc.slots[normal[0].c.lv - 1] || [];
+      else if (normal.length > 1) {
+        casterLv = normal.reduce(function (t, x) { return t + R.casterLevel(x.type, x.c.lv); }, 0);
+        slotRow = casterLv ? R.MC_SLOTS[Math.min(20, casterLv) - 1] : [];
+      }
+      var slots = slotRow.map(function (n, i) { var k = String(i + 1); return { level: i + 1, key: k, max: n, used: Math.min(n, su[k] || 0) }; }).filter(function (s) { return s.max > 0; });
+      if (pactC) (pactC.sc.slots[pactC.c.lv - 1] || []).forEach(function (n, i) {
+        if (!n) return;
+        var k = normal.length ? 'p' + (i + 1) : String(i + 1);   // a warlock on their own keeps the plain keys
+        slots.push({ level: i + 1, key: k, max: n, used: Math.min(n, su[k] || 0), pact: true });
+      });
       spell = Object.assign(base, {
-        pact: !!(sc && sc.pact),
-        slots: slotRow.map(function (n, i) { return { level: i + 1, max: n, used: Math.min(n, (play.slotsUsed || {})[i + 1] || 0) }; }).filter(function (s) { return s.max > 0; }),
+        pact: !!pactC && !normal.length, hasPact: !!pactC, casterLevel: casterLv,
+        casters: casters.map(function (x) { return Object.assign(mk(x.sc.ability), { name: x.c.def.name, level: x.c.lv, type: x.type }); }),
+        slots: slots,
         spells: list.sort(function (a, b) { return a.level - b.level || a.name.localeCompare(b.name); })
       });
     }
@@ -415,10 +519,10 @@
         resources.push({ id: r.id, name: r.name, spell: r.spell || null, recharge: recharge, shortRest: sr, max: max, used: Math.min(max, (play.resourcesUsed || {})[r.id] || 0) });
       });
     });
-    if (main) Object.keys(main.pick.arcanum || {}).forEach(function (L) {
-      var asp = get('spells', main.pick.arcanum[L]), rid = 'arcanum-' + L;
-      if (asp && main.lv >= ({ 6: 11, 7: 13, 8: 15, 9: 17 })[L]) resources.push({ id: rid, name: asp.name + ' (Mystic Arcanum)', spell: asp.id, recharge: 'long', max: 1, used: Math.min(1, (play.resourcesUsed || {})[rid] || 0) });
-    });
+    cls.forEach(function (c) { Object.keys(c.pick.arcanum || {}).forEach(function (L) {
+      var asp = get('spells', c.pick.arcanum[L]), rid = 'arcanum-' + L;
+      if (asp && c.lv >= ({ 6: 11, 7: 13, 8: 15, 9: 17 })[L]) resources.push({ id: rid, name: asp.name + ' (Mystic Arcanum)', spell: asp.id, recharge: 'long', max: 1, used: Math.min(1, (play.resourcesUsed || {})[rid] || 0) });
+    }); });
     if (breath) resources.push({ id: 'breath-weapon', name: 'Breath Weapon', recharge: 'long', max: pb, used: Math.min(pb, (play.resourcesUsed || {})['breath-weapon'] || 0) });
     featInst.forEach(function (fi) {
       (fi.def.spells || []).forEach(function (b, bi) {
@@ -443,17 +547,18 @@
       R.classFeatures(c.def, c.sub, c.lv).filter(function (f) { return f.action; }).forEach(function (f) {
         var rolls = (f.action.rolls || []).map(function (r) {
           if (typeof r[1] === 'string' && r[1].indexOf('scale:') === 0) {
-            var sc2 = scaleOf(r[1].slice(6)) || [1, 6];
+            var sc2 = scaleOf(r[1].slice(6), c) || [1, 6];
             return [r[0].replace('{n}', sc2[0]).replace('{d}', sc2[1]), sc2[0], sc2[1], r[2]];
           }
           return r;
         });
-        featureActions.push({ name: f.name, from: f.from, text: f.text, time: f.action.time, resource: f.action.resource || null, rolls: rolls, note: f.action.text || '' });
+        featureActions.push({ name: f.name, from: f.from, text: f.text, time: f.action.time, resource: f.action.resource || null, rolls: rolls, note: f.action.text || '', classLevel: c.lv });
       });
     });
 
     /* proficiencies & training */
-    var toolNames = (ch.tools || []).concat(skilledTools.filter(function (t) { return (ch.tools || []).indexOf(t) < 0; })).filter(function (t, i, a) { return a.indexOf(t) === i; }).map(function (t) { var d = get('items', t); return d ? d.name : t; });
+    var classTools = cls.slice(1).reduce(function (a, c) { return a.concat(c.pick.tools || []); }, []);
+    var toolNames = (ch.tools || []).concat(classTools, skilledTools.filter(function (t) { return (ch.tools || []).indexOf(t) < 0; })).filter(function (t, i, a) { return a.indexOf(t) === i; }).map(function (t) { var d = get('items', t); return d ? d.name : t; });
     var cap = function (s) { return s.replace(/^./, function (c) { return c.toUpperCase(); }); };
     var wpText = weaponProf.filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (w) {
       return w === 'martial-light' ? 'martial weapons with the Light property' : w === 'martial-finesse-light' ? 'martial weapons with the Finesse or Light property' : w + ' weapons';
@@ -484,6 +589,7 @@
       });
     });
     choiceInfo.forEach(function (x) { features.push(Object.assign({ source: main.def.sourceName }, x)); });
+    if (cls.length > 1) features.push({ name: 'Multiclass', from: cls.map(function (c) { return c.def.name + ' ' + c.lv; }).join(' / '), text: 'Your proficiency bonus uses your total character level (' + level + '). Saving throw proficiencies come only from your first class (' + main.def.name + '). Later classes gave you only part of their training: ' + cls.slice(1).map(function (c) { return c.def.name + ' (' + R.mcGainsText(c.def, on) + ')'; }).join('; ') + '.' + (spell && spell.casterLevel ? ' Your spell slots come from the Multiclass Spellcaster table at caster level ' + spell.casterLevel + '.' : '') + (spell && spell.hasPact && spell.slots.some(function (x) { return !x.pact; }) ? ' Pact Magic slots are kept separate and come back on a Short Rest; you can use either kind of slot for any of your spells.' : '') });
     var bgFeature = R.backgroundFeature(ch, bg, on);
     if (bgFeature) features.push({ name: bgFeature.name, from: bg.name + ' (background feature)', text: bgFeature.text, source: bgFeature.sourceName || bg.sourceName });
     if (species) species.traits.forEach(function (t) { features.push({ name: t.name, from: species.name, text: t.text, source: species.sourceName }); });
@@ -498,16 +604,26 @@
     var totalLb = inv.reduce(function (a, e) { return a + (e.def.w || 0) * (e.qty || 1); }, 0);
     var capacity = scores.str * 15 * ((species && species.carryMultiplier) || 1);
 
+    /* hit dice, pooled by size; old saves keep a plain number (all spent from the first class's die) */
+    var hdPools = [];
+    cls.forEach(function (c) { var p = hdPools.find(function (x) { return x.die === c.def.hitDie; }); if (p) p.max += c.lv; else hdPools.push({ die: c.def.hitDie, max: c.lv, used: 0 }); });
+    hdPools.sort(function (a, b) { return b.die - a.die; });
+    var hdu = play.hdUsed || 0;
+    if (typeof hdu === 'number') { var p0 = main && hdPools.find(function (x) { return x.die === main.def.hitDie; }); if (p0) p0.used = Math.min(p0.max, hdu); }
+    else hdPools.forEach(function (p) { p.used = Math.min(p.max, hdu['d' + p.die] || 0); });
+    var classText = cls.map(function (c) { return c.def.name + ' ' + c.lv + (c.sub ? ' (' + c.sub.name + ')' : ''); }).join(' / ');
+
     var defenses = ((species && species.defenses) || []).concat((lineage && lineage.defenses) || [], grants.defenses);
 
     return {
       name: ch.name || 'Unnamed hero', level: level, pb: pb,
-      summary: [lineage && species && lineage.name.indexOf(species.name) >= 0 ? lineage.name : species ? species.name : '', main ? main.def.name + ' ' + main.lv + (main.sub ? ' (' + main.sub.name + ')' : '') : '', bg ? bg.name + ' background' : ''].filter(Boolean).join(' · '),
+      summary: [lineage && species && lineage.name.indexOf(species.name) >= 0 ? lineage.name : species ? species.name : '', classText, bg ? bg.name + ' background' : ''].filter(Boolean).join(' · '),
+      classText: classText, classes: cls.map(function (c) { return { id: c.def.id, name: c.def.name, level: c.lv, sub: c.sub, def: c.def }; }),
       scores: scores, mods: mods, saves: saves, skills: skills, skillBonus: skillBonus,
       ac: ac, acNote: acNote, hpMax: hpMax, hp: hp, temp: play.temp || 0, speed: speed, size: (ch.species && ch.species.size) || (species && species.size) || 'Medium',
       initiative: mods.dex + (hasFeat('alert') ? pb : jack),
-      hitDie: main ? '1d' + main.def.hitDie : '1d8', hitDice: main ? main.lv + 'd' + main.def.hitDie : '1d8',
-      attacksPerAction: Math.max(grants.attacks, (main && main.def.extraAttack && main.lv >= main.def.extraAttack) || grants.extraAttack ? 2 : 1),
+      hitDie: main ? '1d' + main.def.hitDie : '1d8', hitDice: hdPools.length ? hdPools.map(function (p) { return p.max + 'd' + p.die; }).join(' + ') : '1d8', hdPools: hdPools,
+      attacksPerAction: Math.max(grants.attacks, cls.some(function (c) { return c.def.extraAttack && c.lv >= c.def.extraAttack; }) || grants.extraAttack ? 2 : 1),
       critRange: grants.critRange, subclass: main ? main.sub : null, classLevel: main ? main.lv : 1,
       senses: [
         { value: 10 + skillBonus('perception'), label: 'Passive Perception' },

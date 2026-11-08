@@ -15,7 +15,26 @@
   function lview() { var v = app.view; v.lu = v.lu || { hover: null }; return v.lu; }
 
   function freshSel(base) {
-    return { hpMode: 'avg', hpRoll: null, subclass: null, feat: null, asi: {}, asiMode: 'two', featSkills: [], featPicks: {}, choices: {}, picks: {}, masteries: [], cantrips: [], prepared: null };
+    return { target: defaultTarget(base), hpMode: 'avg', hpRoll: null, subclass: null, feat: null, asi: {}, asiMode: 'two', featSkills: [], featPicks: {}, choices: {}, picks: {}, masteries: [], cantrips: [], prepared: null, mcSkills: [], mcTool: null };
+  }
+  /** Which class gains the level: "c:<index>" for a class you have, "new:<id>" to multiclass. */
+  function defaultTarget(base) {
+    var i = (base.classes || []).findIndex(function (c) { var d = get(base, 'classes', c.id); return d && (c.level || 1) < (d.maxLevel || 1); });
+    if (i < 0) { var nd = C.all('classes', on(base)).find(function (d) { return !base.classes.some(function (c) { return c.id === d.id; }) && R.mcCheck(base, d).ok; }); if (nd) return 'new:' + nd.id; }
+    return 'c:' + Math.max(0, i);
+  }
+  function target(base) {
+    var t = (LU && LU.sel.target) || 'c:0';
+    if (t.indexOf('new:') === 0) return { isNew: true, id: t.slice(4), idx: base.classes.length };
+    var i = +t.slice(2) || 0;
+    return { isNew: false, id: base.classes[i] && base.classes[i].id, idx: i };
+  }
+  function allCantrips(ch) { return (ch.classes || []).reduce(function (a, c) { return a.concat(c.cantrips || []); }, []); }
+  /** Spells another of your classes already has: shown as known in this class's pickers. */
+  function otherClassSpells(ch, idx) {
+    var out = [];
+    (ch.classes || []).forEach(function (c, i) { if (i !== idx) out = out.concat(c.cantrips || [], R.preparedOf(ch, i)); });
+    return out;
   }
   function start(id) {
     var ch = CF.store.get(id); if (!ch) { LU = null; return; }
@@ -25,9 +44,17 @@
 
   /** The character as it will be after this level up, built from the saved character plus the current choices. */
   function build() {
-    var ch = U.clone(LU.base), s = LU.sel, p = ch.classes[0], def = get(ch, 'classes', p.id);
-    var L = (p.level || 1) + 1;
+    var ch = U.clone(LU.base), s = LU.sel, t = target(ch), p;
+    if (t.isNew) { p = { id: t.id, level: 0, multiclass: true, skills: [], tools: [], choices: {}, masteries: [], cantrips: [], expertise: [], prepared: [] }; ch.classes.push(p); }
+    else p = ch.classes[t.idx];
+    var def = get(ch, 'classes', p.id);
+    var L = (t.isNew ? 0 : p.level || 1) + 1;
     p.level = L;
+    if (t.isNew) {
+      var mc = R.mcInfo(def);
+      p.skills = s.mcSkills.slice();
+      p.tools = mc.tools.concat(s.mcTool ? [s.mcTool] : []);
+    }
     p.hp = Object.assign({}, p.hp || {}); p.hp[L] = s.hpMode === 'roll' && s.hpRoll != null ? s.hpRoll : null;
     if (L === def.subclassLevel && s.subclass) p.subclass = s.subclass;
     if ((def.asiLevels || []).indexOf(L) >= 0 && s.feat) {
@@ -53,7 +80,7 @@
     });
     p.masteries = (p.masteries || []).concat(s.masteries);
     p.cantrips = (p.cantrips || []).concat(s.cantrips);
-    if (s.prepared) ch.spells = Object.assign({}, ch.spells, { prepared: s.prepared.slice() });
+    if (s.prepared) { if (t.idx === 0) ch.spells = Object.assign({}, ch.spells, { prepared: s.prepared.slice() }); else p.prepared = s.prepared.slice(); }
     return ch;
   }
   function subDef(def, id, L) { return id && L >= (def.subclassLevel || 3) ? (def.subclasses || []).find(function (x) { return x.id === id; }) || null : null; }
@@ -61,9 +88,10 @@
 
   /** Everything this level asks for. */
   function plan() {
-    var base = LU.base, s = LU.sel, p = base.classes[0], def = get(base, 'classes', p.id), L = (p.level || 1) + 1;
+    var base = LU.base, s = LU.sel, t = target(base), p = t.isNew ? { id: t.id, level: 0 } : base.classes[t.idx], def = get(base, 'classes', p.id), L = (t.isNew ? 0 : p.level || 1) + 1;
     var subId = p.subclass || s.subclass, sub = subDef(def, subId, L);
-    var out = { def: def, L: L, sub: sub, needSub: L === def.subclassLevel && !p.subclass, asi: (def.asiLevels || []).indexOf(L) >= 0, choices: [], picks: [], masteries: 0, cantrips: 0, prepared: 0, maxSpell: 0 };
+    var out = { def: def, L: L, idx: t.idx, isNew: t.isNew, p: p, charL: R.totalLevel(base) + 1, multi: base.classes.length > 1 || t.isNew, mc: t.isNew ? R.mcInfo(def) : null,
+      sub: sub, needSub: L === def.subclassLevel && !p.subclass, asi: (def.asiLevels || []).indexOf(L) >= 0, choices: [], picks: [], masteries: 0, cantrips: 0, prepared: 0, maxSpell: 0 };
     R.classChoices(def, sub, L).forEach(function (q) {
       var now = R.choiceCount(q, L), had = (q.level || 1) === L ? 0 : asList((p.choices || {})[q.id]).length;
       if (now - had > 0) out.choices.push({ q: q, need: now - had, had: asList((p.choices || {})[q.id]).filter(function () { return (q.level || 1) < L; }) });
@@ -83,10 +111,19 @@
     return out;
   }
 
+  /** Expertise can only go on skills you're proficient in; a multiclass hero may have none of the listed ones. */
+  function pickNeed(lp, draft) {
+    if (lp.kind !== 'expertise') return lp.count;
+    var d = R.derive(draft);
+    var pool = (lp.from || R.SKILLS.map(function (x) { return x.id; })).filter(function (id) { var sk = d.skills.find(function (x) { return x.id === id; }); return sk && sk.prof > 0; });
+    return Math.min(lp.count, pool.length);
+  }
   /** What's still missing. */
   function status(pl, draft) {
     var s = LU.sel, miss = [];
     if (s.hpMode === 'roll' && s.hpRoll == null) miss.push('Roll your hit points (or take the average)');
+    if (pl.mc && pl.mc.skills && s.mcSkills.length < pl.mc.skills.count) miss.push('Choose ' + pl.mc.skills.count + ' ' + pl.def.name + ' skill');
+    if (pl.mc && pl.mc.toolChoice && !s.mcTool) miss.push('Choose a ' + pl.mc.toolChoice.label.toLowerCase());
     if (pl.needSub && !s.subclass) miss.push('Choose your ' + (pl.def.subclassLabel || 'subclass'));
     if (pl.asi) {
       if (!s.feat) miss.push('Choose an Ability Score Improvement or a feat');
@@ -99,11 +136,12 @@
       }
     }
     pl.choices.forEach(function (c) { if ((s.choices[c.q.id] || []).length < c.need) miss.push('Choose ' + (c.need > 1 ? c.need + ' ' : '') + c.q.name + (c.need > 1 ? ' options' : '')); });
-    pl.picks.forEach(function (lp, i) { if ((s.picks[lp.kind + i] || []).length < lp.count) miss.push('Choose ' + lp.label); });
+    pl.picks.forEach(function (lp, i) { if ((s.picks[lp.kind + i] || []).length < pickNeed(lp, draft)) miss.push('Choose ' + lp.label); });
     if (pl.masteries && s.masteries.length < pl.masteries) miss.push('Choose ' + pl.masteries + ' more weapon mastery');
     if (pl.cantrips && s.cantrips.length < pl.cantrips) miss.push('Choose ' + pl.cantrips + ' new cantrip' + (pl.cantrips > 1 ? 's' : ''));
     var pt = pl.prepared ? preparedTarget(pl, draft) : 0;
-    if (pl.prepared && (draft.spells.prepared || []).length !== pt) miss.push('Prepare ' + pt + ' spells (' + (draft.spells.prepared || []).length + ' chosen)');
+    var nowPrep = R.preparedOf(draft, pl.idx).length;
+    if (pl.prepared && nowPrep !== pt) miss.push('Prepare ' + pt + ' ' + (pl.multi ? pl.def.name + ' ' : '') + 'spells (' + nowPrep + ' chosen)');
     return miss;
   }
 
@@ -111,26 +149,33 @@
   CF.ui.levelup = function (route) {
     start(route.id);
     if (!LU) return CF.ui.topbar() + '<main class="page"><div class="empty"><b>Character not found</b><a class="btn" href="#/">Back to characters</a></div></main>';
-    var base = LU.base, p = base.classes[0], def = p && get(base, 'classes', p.id);
+    var base = LU.base, p0 = base.classes[0], def0 = p0 && get(base, 'classes', p0.id);
     var back = '<a class="btn" href="#/c/' + encodeURIComponent(base.id) + '">Back to sheet</a>';
-    if (!def) return CF.ui.topbar() + '<main class="page"><div class="empty"><b>This character has no class yet</b>' + back + '</div></main>';
-    var maxL = def.maxLevel || 1, curL = p.level || 1;
+    if (!def0) return CF.ui.topbar() + '<main class="page"><div class="empty"><b>This character has no class yet</b>' + back + '</div></main>';
+    var curL = R.totalLevel(base);
+    var canGrow = curL < 20 && (base.classes.some(function (c) { var d = get(base, 'classes', c.id); return d && (c.level || 1) < (d.maxLevel || 1); }) ||
+      C.all('classes', on(base)).some(function (d) { return !base.classes.some(function (c) { return c.id === d.id; }) && R.mcCheck(base, d).ok; }));
+    var maxL = canGrow ? curL + 1 : curL;
     var undo = (base.levelHistory || []).length ? '<button class="btn" data-act="lu-undo">Undo the last level up (back to level ' + (curL - 1) + ')</button>' : '';
     var confirmBox = lview().confirmUndo && undo ? '<div class="notice" role="alertdialog" aria-label="Undo level up" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px"><span style="flex:1 1 300px">Go back to level ' + (curL - 1) + '? The choices made at level ' + curL + ' are removed. Inventory, notes and current HP stay as they are.</span>' +
       '<button class="btn" data-act="lu-undo-no">Cancel</button><button class="btn btn-teal" data-act="lu-undo-yes">Yes, undo</button></div>' : '';
     if (curL >= maxL) {
       return CF.ui.topbar() + '<main class="page" style="max-width:720px;display:flex;flex-direction:column;gap:14px">' + CF.ui.notice() + confirmBox +
-        '<h1 class="b-title">' + h(base.name) + ' is level ' + curL + '</h1><p class="b-lead">That’s the highest level in Character Forge for now. Levels ' + (maxL + 1) + '–20 are coming in a later update.</p>' +
+        '<h1 class="b-title">' + h(base.name) + ' is level ' + curL + '</h1><p class="b-lead">' + (curL >= 20 ? 'Level 20 is the highest level a character can reach. Congratulations!' : 'None of your classes can go higher with the content you have turned on, and your scores don’t allow a new class yet.') + '</p>' +
         '<div style="display:flex;flex-wrap:wrap;gap:10px">' + back + undo + '</div></main>';
     }
+    if (!get(base, 'classes', target(base).id)) LU.sel.target = defaultTarget(base);
     if (!LU.sel.prepared && plan().sc) LU.sel.prepared = validPrepared(base, plan());
     var pl = plan(), draft = build(), miss = status(pl, draft);
-    var before = R.derive(base), after = R.derive(draft);
+    var before = R.derive(base), after = R.derive(draft), def = pl.def;
+    var titleCls = pl.isNew ? 'level ' + curL + ' → ' + pl.charL + ' · new class: ' + def.name + ' 1' : pl.multi ? 'level ' + curL + ' → ' + pl.charL + ' · ' + def.name + ' ' + (pl.L - 1) + ' → ' + pl.L : def.name + ' ' + curL + ' → ' + pl.L;
 
     var chain = base.quickChain && base.quickChain > curL ? base.quickChain : 0;
-    var body = '<div style="display:flex;flex-direction:column;gap:8px"><span class="b-kicker">' + (chain ? 'Quick build · level ' + pl.L + ' of ' + chain + ' · <button class="link-btn" style="font-size:13px;padding:0" data-act="lu-stop">stop at level ' + curL + '</button>' : 'Level up') + '</span><h1 class="b-title">' + h(base.name) + ': ' + h(def.name) + ' ' + curL + ' → ' + pl.L + '</h1>' +
-      '<p class="b-lead">Here’s what your hero gains at level ' + pl.L + '. Make the choices below, then confirm. Nothing is saved until you do.</p></div>';
+    var body = '<div style="display:flex;flex-direction:column;gap:8px"><span class="b-kicker">' + (chain ? 'Quick build · level ' + pl.charL + ' of ' + chain + ' · <button class="link-btn" style="font-size:13px;padding:0" data-act="lu-stop">stop at level ' + curL + '</button>' : 'Level up') + '</span><h1 class="b-title">' + h(base.name) + ': ' + h(titleCls) + '</h1>' +
+      '<p class="b-lead">Here’s what your hero gains at level ' + pl.charL + '. Make the choices below, then confirm. Nothing is saved until you do.</p></div>';
+    if (!chain) body += classPickSection(base, pl, before);
     body += hpSection(pl, before, after);
+    if (pl.mc) body += mcSection(pl, base);
     if (pl.needSub) body += subclassSection(pl);
     body += featuresSection(pl, draft);
     if (pl.asi) body += asiSection(pl, draft, before);
@@ -144,7 +189,7 @@
       '<div class="b-wrap"><main class="b-main" style="flex-basis:640px">' + CF.ui.notice() + confirmBox + body + '</main>' +
       '<aside class="b-side" aria-label="Changes at this level">' + changes(before, after, pl, miss) +
         '<section class="help"><h2>Your choices are safe</h2><p>Leveling up only changes your sheet when you press the button below. If you change your mind afterwards, open Level up again and use Undo.</p></section>' +
-        '<div class="b-nav">' + back + '<button class="btn btn-teal" data-act="lu-finish"' + (miss.length ? ' disabled' : '') + '>Become level ' + pl.L + '</button></div>' +
+        '<div class="b-nav">' + back + '<button class="btn btn-teal" data-act="lu-finish"' + (miss.length ? ' disabled' : '') + '>Become level ' + pl.charL + '</button></div>' +
         (undo ? '<div>' + undo.replace('class="btn"', 'class="link-btn" style="font-size:13px;padding:0"') + '</div>' : '') +
       '</aside></div>';
   };
@@ -162,6 +207,48 @@
   }
 
   /* ---------- sections ---------- */
+  function classPickSection(base, pl, before) {
+    var s = LU.sel, mine = base.classes.map(function (c) { return c.id; });
+    var have = base.classes.map(function (c, i) {
+      var d = get(base, 'classes', c.id); if (!d) return '';
+      var lvN = c.level || 1, full = lvN >= (d.maxLevel || 1);
+      var sub = c.subclass && (d.subclasses || []).find(function (x) { return x.id === c.subclass; });
+      var next = (d.features || []).filter(function (f) { return f.level === lvN + 1; }).map(function (f) { return f.name; }).join(' · ');
+      return optCard('lu-target', 'c:' + i, d.name + ' ' + lvN + ' → ' + (lvN + 1), full ? 'This class is at the highest level Character Forge has for it.' : (next ? 'Next: ' + next : 'Keep growing as a ' + d.name + '.'), s.target === 'c:' + i, full, sub ? sub.name : (i === 0 && base.classes.length > 1 ? 'First class' : ''));
+    }).join('');
+    var open = lview().mcOpen || pl.isNew;
+    var others = C.all('classes', on(base)).filter(function (d) { return mine.indexOf(d.id) < 0; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var mcCards = others.map(function (d) {
+      var chk = R.mcCheck(base, d);
+      var txt = 'Needs ' + R.mcReqText(d) + '. You gain ' + R.mcGainsText(d, on(base)) + ', d' + d.hitDie + ' hit dice' + (d.spellcasting ? ' and its spells' : '') + '.' + (chk.ok ? '' : ' Not yet: ' + chk.problems.join('; ') + '.');
+      return optCard('lu-target', 'new:' + d.id, d.name, txt, s.target === 'new:' + d.id, !chk.ok, chk.ok ? (/System Reference/.test(d.sourceName || '') ? '' : d.sourceName || '') : 'Scores too low');
+    }).join('');
+    var inner = '<div class="opt-grid">' + have + '</div>' +
+      '<div><button type="button" class="link-btn" data-act="lu-mcopen" aria-expanded="' + !!open + '">' + (open ? '▾' : '▸') + ' Take a level in a new class instead (multiclass)</button></div>' +
+      (open ? '<p class="why">Multiclassing is an optional rule, so check with your DM first. You need a score of 13 in the main abilities of your new class <em>and</em> of the classes you already have. A new class gives its level-1 features but only part of its training, and no new saving throws or starting gear.</p><div class="opt-grid">' + mcCards + '</div>' : '');
+    return sec('Which class gains this level?', base.classes.length > 1 ? 'Your character level is the total of all your classes. Each class keeps its own features, spells and level.' : '', inner);
+  }
+
+  function mcSection(pl, base) {
+    var s = LU.sel, mc = pl.mc, d0 = R.derive(base), inner = '<p class="tx" style="margin:0">From ' + h(pl.def.name) + ' you gain: <strong>' + h(R.mcGainsText(pl.def, on(base))) + '</strong>. Saving throws stay the same as your first class.</p>';
+    if (mc.skills) {
+      var from = mc.skills.from === 'any' ? R.SKILLS.map(function (x) { return x.id; }) : mc.skills.from;
+      inner += '<div><b style="font-size:14px">Choose ' + mc.skills.count + ' skill</b> ' + counter(s.mcSkills.length, mc.skills.count) + '</div><div class="pills">' + from.map(function (id) {
+        var have = d0.skills.find(function (x) { return x.id === id; }).prof > 0, sel = s.mcSkills.indexOf(id) >= 0, sk = R.skill(id);
+        return pill('lu-mcskill', id, h(sk.name) + ' <small>' + sk.ability.toUpperCase() + '</small>', have || sel, have || (!sel && s.mcSkills.length >= mc.skills.count), have ? ' <small>(have it)</small>' : '');
+      }).join('') + '</div>';
+    }
+    if (mc.toolChoice) {
+      var tools = C.all('items', on(base)).filter(function (i) { return i.kind === 'tool' && i.toolGroup === mc.toolChoice.group; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var known = (base.tools || []).concat(base.classes.reduce(function (a, c) { return a.concat(c.tools || []); }, []));
+      inner += '<div><b style="font-size:14px">Choose a ' + h(mc.toolChoice.label.toLowerCase()) + '</b></div><div class="pills">' + tools.map(function (t) {
+        var have = known.indexOf(t.id) >= 0;
+        return pill('lu-mctool', t.id, h(t.name), have || s.mcTool === t.id, have, have ? ' <small>(have it)</small>' : '');
+      }).join('') + '</div>';
+    }
+    return sec('Training from ' + pl.def.name, '', inner);
+  }
+
   function hpSection(pl, before, after) {
     var s = LU.sel, hd = pl.def.hitDie, avg = hd / 2 + 1, con = after.mods.con;
     var die = s.hpMode === 'roll' ? s.hpRoll : avg;
@@ -186,7 +273,7 @@
     var feats = R.classFeatures(pl.def, pl.sub, pl.L).filter(function (f) { return f.level === pl.L && f.name !== 'Ability Score Improvement' && f.name !== 'Epic Boon'; });
     var d = R.derive(draft);
     var extra = [];
-    if (R.profBonus(pl.L) > R.profBonus(pl.L - 1)) extra.push(['Proficiency bonus', 'Your proficiency bonus rises to ' + sg(R.profBonus(pl.L)) + '. Every proficient skill, save, attack and your spell DC go up by 1.']);
+    if (R.profBonus(pl.charL) > R.profBonus(pl.charL - 1)) extra.push(['Proficiency bonus', 'Your proficiency bonus rises to ' + sg(R.profBonus(pl.charL)) + '. Every proficient skill, save, attack and your spell DC go up by 1.']);
     if (pl.newSpellLevel) extra.push([ordinal(pl.newSpellLevel) + '-level spells', 'You can now prepare and cast ' + ordinal(pl.newSpellLevel) + '-level spells.']);
     var mainS = d.resources.filter(function (r) { return !r.spell; });
     if (!feats.length && !extra.length) return '';
@@ -199,7 +286,7 @@
 
   function asiSection(pl, draft, before) {
     var s = LU.sel;
-    var taken = (draft.feats || []).concat(Object.keys(draft.classes[0].asi || {}).filter(function (L) { return +L !== pl.L; }).map(function (L) { return draft.classes[0].asi[L].feat; }));
+    var taken = (draft.feats || []).concat(draft.classes.reduce(function (a, c, ci) { return a.concat(Object.keys(c.asi || {}).filter(function (L) { return ci !== pl.idx || +L !== pl.L; }).map(function (L) { return c.asi[L].feat; })); }, []));
     var list = C.all('feats', on(draft)).filter(function (f) {
       if (f.id === 'magic-initiate') return false;
       if (f.category === 'epic') { if (pl.L < 19) return false; }
@@ -245,8 +332,8 @@
 
   function choiceSection(c, pl, draft) {
     var s = LU.sel, q = c.q, chosen = s.choices[q.id] || [];
-    var cantrips = draft.classes[0].cantrips || [];
-    var allNow = asList(draft.classes[0].choices[q.id]);
+    var cantrips = allCantrips(draft);
+    var allNow = asList((draft.classes[pl.idx].choices || {})[q.id]);
     var opts = q.options.filter(function (o) { return (o.minLevel || 1) <= pl.L; });
     var why = h(q.help || '') + (c.had.length ? ' You already know ' + c.had.map(function (id) { var o = q.options.find(function (x) { return x.id === id; }); return o ? o.name : id; }).join(', ') + '.' : '');
     var cards = opts.map(function (o) {
@@ -282,13 +369,13 @@
       inner = pool.length ? '<div class="pills">' + pool.map(function (id) {
         var has = already.indexOf(id) >= 0, sel = chosen.indexOf(id) >= 0;
         return pill('lu-pick', key + ':' + id, h(R.skill(id).name), has || sel, has || (!sel && chosen.length >= lp.count), has ? ' <small>(expertise)</small>' : '');
-      }).join('') + '</div>' : '<span class="muted2">You aren’t proficient in any of these skills yet' + (lp.from ? ' (' + lp.from.map(function (id) { return R.skill(id).name; }).join(', ') + ')' : '') + '.</span>';
+      }).join('') + '</div>' : '<span class="muted2">You aren’t proficient in any of these skills yet' + (lp.from ? ' (' + lp.from.map(function (id) { return R.skill(id).name; }).join(', ') + ')' : '') + ', so there’s nothing to choose here. You can level up without it.</span>';
     }
     return sec(lp.label, h(lp.help || ''), inner, counter(chosen.length, lp.count));
   }
 
   function masterySection(pl, base, draft) {
-    var s = LU.sel, d = R.derive(draft), had = base.classes[0].masteries || [];
+    var s = LU.sel, d = R.derive(draft), had = base.classes.reduce(function (a, c) { return a.concat(c.masteries || []); }, []);
     var ws = C.all('items', on(draft)).filter(function (i) { return i.kind === 'weapon' && i.mastery && R.weaponAllowed(d.weaponProf, i) && (pl.def.id !== 'barbarian' || i.attack === 'melee'); });
     return sec('Weapon masteries', 'You can use the mastery trick of ' + pl.masteries + ' more kind of weapon. Your current ones are marked.',
       '<div class="pills">' + ws.map(function (w) {
@@ -314,13 +401,13 @@
   }
   function alwaysIds(draft, pl) {
     var d = R.derive(draft);
-    return d.spell ? d.spell.spells.filter(function (s) { return s.origin === 'Always prepared'; }).map(function (s) { return s.id; }) : [];
+    return d.spell ? d.spell.spells.filter(function (s) { return /^Always prepared/.test(s.origin); }).map(function (s) { return s.id; }) : [];
   }
   function validPrepared(base, pl) {
     var L = listsAt(pl);
     var ok = [];
     for (var l = 1; l <= pl.maxSpell; l++) ok = ok.concat(spellsFor(base, L, l).map(function (s) { return s.id; }));
-    return (base.spells.prepared || []).filter(function (id) { return ok.indexOf(id) >= 0; });
+    return (pl.isNew ? [] : R.preparedOf(base, pl.idx)).filter(function (id) { return ok.indexOf(id) >= 0; });
   }
 
   function pl0() { return plan(); }
@@ -342,7 +429,7 @@
   }
 
   function cantripSection(pl, base, draft) {
-    var s = LU.sel, L = pl.sc.list, known = (base.classes[0].cantrips || []).concat(alwaysIds(base, pl), otherSpellIds(base));
+    var s = LU.sel, L = pl.sc.list, known = allCantrips(base).concat(alwaysIds(base, pl), otherSpellIds(base));
     return sec('New cantrip' + (pl.cantrips > 1 ? 's' : ''), 'You learn ' + pl.cantrips + ' more cantrip' + (pl.cantrips > 1 ? 's' : '') + '. Cantrips you already know are marked.',
       spellPicker(draft, spellsFor(draft, L, 0), s.cantrips, pl.cantrips, 'lu-cantrip', known) + spellDetail(draft, 'lu-cantrip'), counter(s.cantrips.length, pl.cantrips));
   }
@@ -354,29 +441,30 @@
     return Math.min(pl.prepared, n);
   }
   function preparedSection(pl, draft) {
-    var L = listsAt(pl), chosen = draft.spells.prepared || [], always = alwaysIds(draft, pl), target = preparedTarget(pl, draft);
+    var L = listsAt(pl), chosen = R.preparedOf(draft, pl.idx), always = alwaysIds(draft, pl), target = preparedTarget(pl, draft), locked = otherSpellIds(draft).concat(otherClassSpells(draft, pl.idx));
     var groups = '';
     for (var l = 1; l <= pl.maxSpell; l++) {
       var list = spellsFor(draft, L, l).filter(function (s) { return always.indexOf(s.id) < 0; });
-      groups += '<div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:14px">' + ordinal(l) + '-level spells' + (l === pl.newSpellLevel ? ' <span class="badge" style="font-size:12px">New</span>' : '') + '</b>' + spellPicker(draft, list, chosen, target, 'lu-prep', otherSpellIds(draft)) + '</div>';
+      groups += '<div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:14px">' + ordinal(l) + '-level spells' + (l === pl.newSpellLevel ? ' <span class="badge" style="font-size:12px">New</span>' : '') + '</b>' + spellPicker(draft, list, chosen, target, 'lu-prep', locked) + '</div>';
     }
-    var why = (target < pl.prepared ? 'You can prepare ' + pl.prepared + ' spells, but Character Forge has only ' + target + ' for you so far (more come with the full SRD), so pick them all for now. ' : 'You can prepare ' + pl.prepared + ' spells at level ' + pl.L) + (target < pl.prepared ? '' : '') + (pl.sc.pact ? ' (your Pact slots cast them at ' + ordinal(pl.maxSpell) + ' level)' : '') + '. You can also swap any spell you had for another.' +
+    var why = (pl.multi ? 'These are your ' + h(pl.def.name) + ' spells, prepared by your ' + h(pl.def.name) + ' level (' + pl.L + '). Spells from your other classes are marked as known. ' : '') + (target < pl.prepared ? 'You can prepare ' + pl.prepared + ' spells, but Character Forge has only ' + target + ' for you so far (more come with the full SRD), so pick them all for now. ' : 'You can prepare ' + pl.prepared + ' spells at level ' + pl.L) + (target < pl.prepared ? '' : '') + (pl.sc.pact ? ' (your Pact slots cast them at ' + ordinal(pl.maxSpell) + ' level)' : '') + '. You can also swap any spell you had for another.' +
       (L.length > 1 ? ' Magical Secrets: you can pick from the Bard, Cleric, Druid and Wizard lists.' : '') + (always.length ? ' Always prepared, not counted: ' + always.map(function (id) { var s = get(draft, 'spells', id); return s ? s.name : id; }).join(', ') + '.' : '');
     return sec('Prepared spells', why, groups + spellDetail(draft, 'lu-prep'), counter(chosen.length, target));
   }
 
   function changes(before, after, pl, miss) {
     var rows = [
-      ['Level', before.classLevel, after.classLevel],
+      ['Level', before.level, after.level]].concat(pl.multi ? [['Classes', before.classText, after.classText]] : []).concat([
       ['Hit points', before.hpMax, after.hpMax],
       ['Proficiency', sg(before.pb), sg(after.pb)],
       ['Armor Class', before.ac, after.ac],
       ['Speed', before.speed + ' ft', after.speed + ' ft'],
       ['Attacks per action', before.attacksPerAction, after.attacksPerAction]
-    ];
+    ]);
+    if (after.hitDice !== before.hitDice) rows.splice(2, 0, ['Hit dice', before.hitDice, after.hitDice]);
     R.ABILITIES.forEach(function (a) { if (before.scores[a.id] !== after.scores[a.id]) rows.push([a.name, before.scores[a.id], after.scores[a.id]]); });
     if (after.spell) {
-      var slotTxt = function (d) { return d.spell ? d.spell.slots.map(function (s) { return s.max + '×' + ordinal(s.level); }).join(', ') || '—' : '—'; };
+      var slotTxt = function (d) { return d.spell ? d.spell.slots.map(function (s) { return s.max + '×' + ordinal(s.level) + (s.pact && d.spell.hasPact && !d.spell.pact ? ' pact' : ''); }).join(', ') || '—' : '—'; };
       rows.push(['Spell slots', slotTxt(before), slotTxt(after)]);
       if (before.spell && before.spell.dc !== after.spell.dc) rows.push(['Spell save DC', before.spell.dc, after.spell.dc]);
     }
@@ -391,7 +479,7 @@
       }).join('') + '</dl>' +
       (miss.length ? '<div style="border-top:1px solid var(--soft);padding-top:10px"><span class="muted2" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Still to choose (' + miss.length + ')</span><ul class="check-list" style="margin-top:6px">' +
         miss.map(function (m) { return '<li><span class="no">•</span>' + h(m) + '</li>'; }).join('') + '</ul></div>'
-        : '<div class="notice">All set. Press “Become level ' + pl.L + '” to save.</div>') + '</section>';
+        : '<div class="notice">All set. Press “Become level ' + pl.charL + '” to save.</div>') + '</section>';
   }
 
   /* ---------- handlers ---------- */
@@ -403,6 +491,10 @@
     var id = String(arg).split(':').pop(), ctx = (el && el.getAttribute('data-ctx')) || '';   // arcanum buttons carry "arcanum0:spell"
     if (lview().hover !== id || lview().hoverCtx !== ctx) { lview().hover = id; lview().hoverCtx = ctx; app.render(); }
   };
+  H['lu-target'] = function (t) { if (!LU || LU.sel.target === t) return; LU.sel = freshSel(LU.base); LU.sel.target = t; lview().hover = null; app.render(); };
+  H['lu-mcopen'] = function () { lview().mcOpen = !lview().mcOpen; app.render(); };
+  H['lu-mcskill'] = function (id) { lmut(function (s, pl) { s.mcSkills = toggleIn(s.mcSkills, id, pl.mc.skills.count); }); };
+  H['lu-mctool'] = function (id) { lmut(function (s) { s.mcTool = s.mcTool === id ? null : id; }); };
   H['lu-hp'] = function (mode) {
     lmut(function (s, pl) {
       s.hpMode = mode;
@@ -457,26 +549,26 @@
     if (!LU) return;
     var pl = plan(), draft = build();
     if (status(pl, draft).length) { app.flash('A few choices are still missing. See the list on the right.', true); app.render(); return; }
-    var snap = { level: LU.base.classes[0].level || 1, classes: U.clone(LU.base.classes), spells: U.clone(LU.base.spells), languages: (LU.base.languages || []).slice() };
+    var snap = { level: R.totalLevel(LU.base), classes: U.clone(LU.base.classes), spells: U.clone(LU.base.spells), languages: (LU.base.languages || []).slice() };
     draft.levelHistory = (LU.base.levelHistory || []).concat([snap]);
     if (!CF.store.put(draft)) { app.flash('Couldn’t save: this browser’s storage is full or blocked.', true); app.render(); return; }
     var d = R.derive(draft), name = draft.name || 'Your hero';
     LU = null; app.view.lu = null;
-    if (draft.quickChain && draft.quickChain > pl.L) {
+    if (draft.quickChain && draft.quickChain > pl.charL) {
       CF.store.put(draft);
-      app.flash('Level ' + pl.L + ' done. Now level ' + (pl.L + 1) + '.');
+      app.flash('Level ' + pl.charL + ' done. Now level ' + (pl.charL + 1) + '.');
       app.view = {}; app.go('#/levelup/' + encodeURIComponent(draft.id)); app.render();
       try { root.scrollTo(0, 0); } catch (e) { /* ignore */ }
       return;
     }
     if (draft.quickChain) { delete draft.quickChain; CF.store.put(draft); }
-    app.flash(name + ' is now level ' + pl.L + '! Maximum HP is ' + d.hpMax + '. Changed your mind? Open Level up again to undo it.');
+    app.flash(name + ' is now level ' + pl.charL + (pl.multi ? ' (' + d.classText + ')' : '') + '! Maximum HP is ' + d.hpMax + '. Changed your mind? Open Level up again to undo it.');
     app.go('#/c/' + encodeURIComponent(draft.id));
   };
   H['lu-stop'] = function () {
     if (!LU) return;
     var ch = CF.store.get(LU.id); delete ch.quickChain; CF.store.put(ch); LU = null;
-    app.flash(ch.name + ' stays at level ' + (ch.classes[0].level || 1) + '. Use Level up on the sheet whenever you’re ready.');
+    app.flash(ch.name + ' stays at level ' + R.totalLevel(ch) + '. Use Level up on the sheet whenever you’re ready.');
     app.go('#/c/' + encodeURIComponent(ch.id));
   };
   H['lu-undo'] = function () { lview().confirmUndo = true; app.render(); try { root.scrollTo(0, 0); } catch (e) { /* ignore */ } };
@@ -491,10 +583,10 @@
       ch.classes = snap.classes; ch.spells = snap.spells; ch.languages = snap.languages; ch.levelHistory = hist;
       var d = R.derive(ch);
       ch.play.hpLost = Math.min(ch.play.hpLost || 0, d.hpMax);
-      ch.play.hdUsed = Math.min(ch.play.hdUsed || 0, ch.classes[0].level || 1);
+      if (typeof ch.play.hdUsed !== 'object') ch.play.hdUsed = Math.min(ch.play.hdUsed || 0, ch.classes[0].level || 1);
       CF.store.put(ch);
       LU = null;
-      app.flash(ch.name + ' is back to level ' + (ch.classes[0].level || 1) + '.');
+      app.flash(ch.name + ' is back to level ' + R.totalLevel(ch) + '.');
       app.go('#/c/' + encodeURIComponent(ch.id));
     })();
   };
