@@ -104,6 +104,31 @@
     return { level: level, old: old, d20: old ? 0 : 2 * level, lines: lines, dead: level >= 6,
       disCheck: old && level >= 1, disAttackSave: old && level >= 3 };
   };
+  /**
+   * "Reroll if the die shows N or lower" rules, read from the character's features (species traits, lineages, feats, class features).
+   * scope: d20 (attack, check, save) · init · unarmed-dmg · spell-fire (each die) · hd (Hit Die on a short rest).
+   */
+  var REROLL_PATTERNS = [
+    [/when you roll a 1 on (?:the d20 of a d20 test|an attack(?: roll)?,? (?:an )?(?:ability )?check,? or (?:a )?sav)/i, 'd20', 1],
+    [/roll initiative, you can reroll the d20 if the number rolled is (\d+) or lower/i, 'init'],
+    [/damage die for your unarmed strike, you can reroll the die if it rolls a 1/i, 'unarmed-dmg', 1],
+    [/roll fire damage for a spell you cast, you can reroll any roll of 1/i, 'spell-fire', 1],
+    [/roll a 1 or 2 on any (?:hd|hit di)/i, 'hd', 2]
+  ];
+  R.rerollRules = function (features) {
+    var out = [];
+    (features || []).forEach(function (f) {
+      String(f.text || '').split('\n').forEach(function (line) {
+        REROLL_PATTERNS.forEach(function (pt) {
+          var m = pt[0].exec(line); if (!m) return;
+          if (out.some(function (o) { return o.scope === pt[1]; })) return;
+          var part = /^([A-Z][^.]{1,40})\.\s/.exec(line);
+          out.push({ scope: pt[1], max: pt[2] || +m[1], name: f.name + (part && part[1] !== f.name ? ' (' + part[1] + ')' : ''), must: /must use the new roll|must use the result/i.test(line) });
+        });
+      });
+    });
+    return out;
+  };
   R.totalLevel = function (ch) { return (ch.classes || []).reduce(function (a, c) { return a + (c.level || 1); }, 0) || 1; };
 
   /** A new, empty character in the save format. */
@@ -668,7 +693,7 @@
       spell: spell, resources: resources, featureActions: featureActions, features: features, feats: feats,
       species: species, lineage: lineage, background: bg, backgroundPick: ch.background, mainClass: main,
       inventory: inv, totalLb: totalLb, capacity: capacity, currency: ch.currency || {},
-      play: play, exhaustion: exhaustion
+      play: play, exhaustion: exhaustion, rerolls: R.rerollRules(features)
     };
   };
 

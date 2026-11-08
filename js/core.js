@@ -41,7 +41,7 @@
     round: function (n, d) { var p = Math.pow(10, d || 0); return Math.round(n * p) / p; }
   };
 
-  CF.version = '2026-11-08h';   // keep in step with the ?v= tags in index.html
+  CF.version = '2026-11-08i';   // keep in step with the ?v= tags in index.html
 
   /* ---------- content registry (packs = SRD + modules) ---------- */
   var packs = [];

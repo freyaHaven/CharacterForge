@@ -35,6 +35,11 @@
   var EX = null;
   /** kind: 'check' | 'save' | 'attack'. 2024: −2 per level. 2014: disadvantage from the step table. */
   function d20(label, bonus, kind) {
+    var res = d20raw(label, bonus, kind === 'init' ? 'check' : kind);
+    offerD20(kind, res.rolls[0]);
+    return res;
+  }
+  function d20raw(label, bonus, kind) {
     var ex = EX || { level: 0 };
     if (!ex.level) return app.roll(label, 1, 20, bonus);
     if (!ex.old) {
@@ -50,6 +55,42 @@
       detail: '[' + a + ', ' + b + '] keep ' + face + (bonus ? (bonus > 0 ? ' + ' + bonus : ' − ' + Math.abs(bonus)) : '') + ' · Exhaustion ' + ex.level + (face === 20 ? ' · Natural 20!' : face === 1 ? ' · Natural 1' : '') };
     if (CF.dice) CF.dice.show(Object.assign({ sides: 20, rolls: [a, b] }, app.lastRoll));
     return { rolls: [face], total: total, nat: app.lastRoll.nat };
+  }
+
+  /* ---------- reroll offers (Halfling Luck, Survivor, Tavern Brawler…) ---------- */
+  var RR = { snap: null, replay: null, quiet: false };
+  /** Remember how to redo the current action, and the play state before it, in case a reroll is taken. */
+  function beginAction(replay) {
+    if (RR.quiet) return;
+    var ch = cur(); RR.snap = ch ? JSON.stringify(ch.play || {}) : null; RR.replay = replay; app.rerollOffer = null;
+  }
+  function ruleFor(scope) { var ch = cur(); if (!ch) return null; return (R.derive(ch).rerolls || []).find(function (r) { return r.scope === scope; }) || null; }
+  /** After a d20 roll: offer the reroll when the face qualifies. */
+  function offerD20(kind, face) {
+    if (RR.quiet || !RR.replay) return;
+    var rule = (kind === 'init' && ruleFor('init')) || ruleFor('d20');
+    if (!rule || face > rule.max) return;
+    app.rerollOffer = { mode: 'replay', snap: RR.snap, replay: RR.replay,
+      text: 'You rolled a ' + face + '. ' + rule.name + ': you can reroll' + (rule.must ? ', and you must use the new roll' : '') + '.' };
+  }
+  /** After a damage or Hit Die roll: offer to reroll the dice at or under the rule's number. */
+  function offerDice(scope, res, label, sides, mod) {
+    if (RR.quiet || !res || !res.rolls) return;
+    var rule = ruleFor(scope); if (!rule) return;
+    var low = res.rolls.filter(function (x) { return x <= rule.max; });
+    if (!low.length) return;
+    app.rerollOffer = { mode: 'dice', label: label, rolls: res.rolls.slice(), sides: sides, mod: mod || 0, max: rule.max,
+      text: 'You rolled ' + (low.length === 1 ? 'a ' + low[0] : low.length + ' dice of ' + rule.max + ' or lower') + '. ' + rule.name + ': you can reroll ' + (low.length === 1 ? 'it' : 'them') + (rule.must ? ', and you must use the new roll' : '') + '.' };
+  }
+  function dmgRoll(label, dice, mod, crit, scope) {
+    var res = app.rollDice(label, dice, mod, crit), m = /^(\d+)d(\d+)$/.exec(dice || '');
+    if (scope && m) offerDice(scope, res, label, +m[2], mod);
+    return res;
+  }
+  function rerollPrompt() {
+    var o = app.rerollOffer; if (!o) return '';
+    return '<div class="reroll-offer" role="alertdialog" aria-label="Reroll?"><span>' + h(o.text) + '</span><span style="display:flex;gap:8px;justify-content:flex-end">' +
+      '<button type="button" class="btn btn-sm" data-act="reroll-no">Keep</button><button type="button" class="btn btn-sm btn-teal" data-act="reroll-yes">Reroll</button></span></div>';
   }
 
   function view() {
@@ -70,7 +111,7 @@
     return CF.ui.topbar('<a class="btn btn-sm btn-ghost" href="#/" style="border:none">← Characters</a><span class="grow muted2" style="font-size:13px">' + (P ? 'Play mode · saved on this device' : 'Overview') + '</span>') +
       '<main class="page ' + (P ? 'play' : 'static') + '">' +
       CF.ui.notice() +
-      identity(ch, d) +
+      identity(ch, d) + rerollPrompt() +
       (P ? rollbar() : '') +
       '<section class="core" aria-label="Core stats">' + abilities(d) +
         '<div class="stat-col"><div class="stat-grid">' + box('Proficiency', sg(d.pb), 'Bonus') + box('Walking', d.speed + ' ft', 'Speed') + inspiration(d) + hpBox(d, v) + '</div></div>' +
@@ -717,7 +758,8 @@
     var ch = cur(); if (!ch) return;
     var d = R.derive(ch), p = arg.split(':'), kind = p[0], key = p.slice(1).join(':');
     EX = d.exhaustion;
-    if (kind === 'init') d20('Initiative', d.initiative, 'check');
+    beginAction(function () { H.roll(arg); });
+    if (kind === 'init') d20('Initiative', d.initiative, 'init');
     else if (kind === 'abil') { var a = R.ABILITIES.find(function (x) { return x.id === key; }); d20(a.name + ' check', d.mods[key], 'check'); }
     else if (kind === 'save') { var s = d.saves.find(function (x) { return x.id === key; }); d20(s.name + ' saving throw', s.bonus, 'save'); }
     else if (kind === 'skill') { var sk = d.skills.find(function (x) { return x.id === key; }); d20(sk.name + ' check', sk.bonus, 'check'); }
@@ -735,16 +777,16 @@
     else if (kind === 'spell2') {
       var sp2 = d.spell.spells.find(function (x) { return x.id === key; });
       var lc2 = app.lastCast && app.lastCast.id === sp2.id && app.lastCast.level > sp2.level ? app.lastCast.level : 0;
-      app.rollDice(sp2.name + (lc2 ? ' at ' + ordinal(lc2) + ' level' : '') + ' (' + sp2.effect.second.type + ', ' + sp2.effect.second.save.toUpperCase() + ' save)', lc2 ? upcastDice(sp2, lc2, 'second') : sp2.effect.second.dice, 0);
+      dmgRoll(sp2.name + (lc2 ? ' at ' + ordinal(lc2) + ' level' : '') + ' (' + sp2.effect.second.type + ', ' + sp2.effect.second.save.toUpperCase() + ' save)', lc2 ? upcastDice(sp2, lc2, 'second') : sp2.effect.second.dice, 0, false, sp2.effect.second.type === 'fire' ? 'spell-fire' : null);
     }
     else if (kind === 'spell') {
       var spl = d.spell.spells.find(function (x) { return x.id === key; });
       var lc = app.lastCast && app.lastCast.id === spl.id && app.lastCast.level > spl.level ? app.lastCast.level : 0;
-      app.rollDice(spl.name + (lc ? ' at ' + ordinal(lc) + ' level' : '') + (spl.effect.type ? ' (' + spl.effect.type + ')' : ''), lc ? upcastDice(spl, lc) : spl.effect.dice, spl.effect.addMod ? spl.castMod : 0, app.critActive && spl.effect.type !== 'healing' && !!(spl.attack || spl.trigger || /on hits/.test(spl.effect.text || '')));
+      dmgRoll(spl.name + (lc ? ' at ' + ordinal(lc) + ' level' : '') + (spl.effect.type ? ' (' + spl.effect.type + ')' : ''), lc ? upcastDice(spl, lc) : spl.effect.dice, spl.effect.addMod ? spl.castMod : 0, app.critActive && spl.effect.type !== 'healing' && !!(spl.attack || spl.trigger || /on hits/.test(spl.effect.text || '')), spl.effect.type === 'fire' ? 'spell-fire' : null);
     } else if (kind === 'dmg2') {
       var A2 = actionData(d).keyed[key]; if (!A2 || !A2.second) return;
       var l2 = A2.spellDef && app.lastCast && app.lastCast.id === A2.spellDef.id ? app.lastCast.level : 0;
-      app.rollDice(A2.name + (l2 > A2.spellDef.level ? ' at ' + ordinal(l2) + ' level' : '') + ' (' + A2.second.type + ', on a failed save)', l2 ? upcastDice(A2.spellDef, l2, 'second') : A2.second.dice, 0);
+      dmgRoll(A2.name + (l2 > A2.spellDef.level ? ' at ' + ordinal(l2) + ' level' : '') + ' (' + A2.second.type + ', on a failed save)', l2 ? upcastDice(A2.spellDef, l2, 'second') : A2.second.dice, 0, false, A2.second.type === 'fire' ? 'spell-fire' : null);
     } else if (kind === 'hit' || kind === 'dmg') {
       var A = actionData(d).keyed[key]; if (!A) return;
       var sd = A.spellDef;
@@ -752,17 +794,18 @@
         app.view.castAsk = { id: sd.id, kind: kind, key: key }; app.render(); return;
       }
       if (sd && kind === 'dmg' && app.lastCast && app.lastCast.id === sd.id && app.lastCast.level > sd.level) {
-        app.rollDice(A.name + ' at ' + ordinal(app.lastCast.level) + ' level (' + A.type + ')', upcastDice(sd, app.lastCast.level), A.mod, !!app.critActive && A.hit != null);
+        dmgRoll(A.name + ' at ' + ordinal(app.lastCast.level) + ' level (' + A.type + ')', upcastDice(sd, app.lastCast.level), A.mod, !!app.critActive && A.hit != null, A.type === 'fire' ? 'spell-fire' : null);
         app.render(); return;
       }
       if (kind === 'hit') attackRoll(A.name + ' attack', A.hit, A.kind === 'weapon' || A.kind === 'unarmed' || key === 'oa' || key === 'nick' || key === 'ma' ? d.critRange : 20);
-      else app.rollDice(A.name + ' damage (' + A.type + ')', A.dice, A.mod, !!app.critActive && A.hit != null);
+      else dmgRoll(A.name + ' damage (' + A.type + ')', A.dice, A.mod, !!app.critActive && A.hit != null, A.kind === 'unarmed' || key === 'ma' ? 'unarmed-dmg' : sd && A.type === 'fire' ? 'spell-fire' : null);
     } else if (kind === 'raw') {
       var r = key.split('|');
       if (+r[2] === 20) attackRoll(r[0], +r[3], d.critRange);
       else if (app.critActive && /damage/i.test(r[0])) app.rollCrit(r[0], +r[1], +r[2], +r[3]);
       else app.roll(r[0], +r[1], +r[2], +r[3]);
     }
+    RR.replay = null;
     app.render();
   };
 
@@ -790,8 +833,10 @@
     CF.store.put(ch);
     app.view.restNote = spent.note;
     var d2 = R.derive(ch), A = actionData(d2).keyed[ask.key];
-    if (A && ask.kind === 'hit') attackRoll(A.name + ' attack' + (spent.lvl > s.level ? ' (' + ordinal(spent.lvl) + ' level)' : ''), A.hit, 20);
-    else if (A) app.rollDice(A.name + (spent.lvl > s.level ? ' at ' + ordinal(spent.lvl) + ' level' : '') + ' (' + A.type + ')', upcastDice(s, spent.lvl) || A.dice, A.mod, !!app.critActive && A.hit != null);
+    var atkLabel = A && A.name + ' attack' + (spent.lvl > s.level ? ' (' + ordinal(spent.lvl) + ' level)' : '');
+    if (A && ask.kind === 'hit') { beginAction(function () { attackRoll(atkLabel, A.hit, 20); }); RR.snap = null; attackRoll(atkLabel, A.hit, 20); }   // a reroll only redoes the attack, the slot stays spent
+    else if (A) dmgRoll(A.name + (spent.lvl > s.level ? ' at ' + ordinal(spent.lvl) + ' level' : '') + ' (' + A.type + ')', upcastDice(s, spent.lvl) || A.dice, A.mod, !!app.critActive && A.hit != null, A.type === 'fire' ? 'spell-fire' : null);
+    RR.replay = null;
     app.render();
   };
   H['crit-done'] = function () { app.critActive = null; app.render(); };
@@ -815,6 +860,7 @@
   }
   H.cast = function (arg) {
     var p = arg.split('|');
+    app.rerollOffer = null;
     mutate(function (ch, d) {
       var s = d.spell && d.spell.spells.find(function (x) { return x.id === p[0]; }); if (!s) return;
       var spent = spendCast(ch, d, s, p[1]); if (!spent) return;
@@ -824,7 +870,7 @@
         var r1 = app.rollDice(s.name, dice, s.effect.addMod ? s.castMod : 0), r2 = app.rollDice(s.name, dice2, 0);
         app.lastRoll = { label: s.name + (lvl > s.level ? ' at ' + ordinal(lvl) + ' level' : '') + ' · ' + s.effect.type + ' on a hit', total: r1.total, nat: 0,
           detail: dice + ' [' + r1.rolls.join(', ') + '] · then ' + dice2 + ' ' + s.effect.second.type + ' [' + r2.rolls.join(', ') + '] = ' + r2.total + ' on a failed ' + s.effect.second.save.toUpperCase() + ' save' };
-      } else if (dice) app.rollDice(s.name + (lvl > s.level ? ' at ' + ordinal(lvl) + ' level' : '') + (s.effect.type ? ' (' + s.effect.type + ')' : ''), dice, s.effect.addMod ? s.castMod : 0, app.critActive && s.effect.type !== 'healing' && !!(s.attack || s.trigger));
+      } else if (dice) dmgRoll(s.name + (lvl > s.level ? ' at ' + ordinal(lvl) + ' level' : '') + (s.effect.type ? ' (' + s.effect.type + ')' : ''), dice, s.effect.addMod ? s.castMod : 0, app.critActive && s.effect.type !== 'healing' && !!(s.attack || s.trigger), s.effect.type === 'fire' ? 'spell-fire' : null);
       app.view.restNote = note;
     });
   };
@@ -869,6 +915,7 @@
     mutate(function (ch) { var ds = ch.play.deathSaves; ds[p[0]] = ds[p[0]] === i + 1 ? i : i + 1; });
   };
   H['death-roll'] = function () {
+    beginAction(function () { H['death-roll'](); });
     mutate(function (ch, d) {
       EX = d.exhaustion;
       var rr = d20('Death saving throw', 0, 'save'), r = rr.rolls[0], ds = ch.play.deathSaves, tot = rr.total;
@@ -879,6 +926,7 @@
         if (ds.s >= 3) { ds.f = 0; app.view.restNote = 'Stable: still at 0 HP and Unconscious, but no more death saves. You regain 1 HP after 1d4 hours (use Wake up), or sooner if healed.'; } }
       else { ds.f = Math.min(3, ds.f + 1); app.lastRoll.detail = '[' + r + ']' + exNote + ' · Failure (under 10)' + (ds.f >= 3 ? ' · Dead' : ''); }
     });
+    RR.replay = null;
   };
   H.wake = function () {
     mutate(function (ch, d) {
@@ -902,6 +950,7 @@
     });
   };
   H['short-rest'] = function () {
+    beginAction(function () { H['short-rest'](); });
     mutate(function (ch, d) {
       var extra = [];
       if (d.spell && d.spell.pact && Object.keys(ch.play.slotsUsed || {}).length) { ch.play.slotsUsed = {}; extra.push('Pact slots restored.'); }
@@ -916,6 +965,10 @@
       var pool = pools.find(function (p) { return p.used < p.max; });   // biggest die first
       if (!pool || d.hp >= d.hpMax) { app.view.restNote = (d.hp >= d.hpMax ? 'Short rest taken. Already at full HP.' : 'Short rest taken. No Hit Dice left to spend.') + ' ' + app.view.restExtra; return; }
       var r = app.roll('Short rest · Hit Die (d' + pool.die + ')', 1, pool.die, d.mods.con);
+      if (!RR.quiet && d.rerolls.some(function (x) { return x.scope === 'hd' && r.rolls[0] <= x.max; })) {
+        var hr = d.rerolls.find(function (x) { return x.scope === 'hd'; });
+        app.rerollOffer = { mode: 'replay', snap: RR.snap, replay: RR.replay, text: 'You rolled a ' + r.rolls[0] + ' on your Hit Die. ' + hr.name + ': you can reroll' + (hr.must ? ', and you must use the new roll' : '') + '.' };
+      }
       var healed = Math.min(Math.max(0, r.total), ch.play.hpLost || 0);
       ch.play.hpLost = Math.max(0, (ch.play.hpLost || 0) - healed);
       if (pools.length > 1 || typeof ch.play.hdUsed === 'object') {
@@ -923,6 +976,7 @@
       } else ch.play.hdUsed = pool.used + 1;
       app.view.restNote = 'Short rest: spent 1 Hit Die (d' + pool.die + '), healed ' + healed + ' HP (' + (left - 1) + ' left). ' + app.view.restExtra;
     });
+    RR.replay = null;
   };
   H['long-rest'] = function () {
     mutate(function (ch) {
@@ -980,6 +1034,23 @@
     var ch = cur(); if (!ch) return;
     ch.details = ch.details || {}; ch.details.backstory = el.value;
     CF.store.putSoon(ch, function (ok) { if (!ok) { app.flash('Couldn’t save: storage is full or blocked.', true); app.render(); } });
+  };
+  H['reroll-no'] = function () { app.rerollOffer = null; app.render(); };
+  H['reroll-yes'] = function () {
+    var o = app.rerollOffer; app.rerollOffer = null; if (!o) return;
+    if (o.mode === 'dice') {
+      var rolls = o.rolls.map(function (x) { return x <= o.max ? 1 + Math.floor(Math.random() * o.sides) : x; });
+      var total = rolls.reduce(function (a, b) { return a + b; }, 0) + o.mod;
+      app.lastRoll = { label: o.label + ' · rerolled', total: total, nat: 0, detail: '[' + o.rolls.join(', ') + '] → [' + rolls.join(', ') + ']' + (o.mod ? (o.mod > 0 ? ' + ' + o.mod : ' − ' + Math.abs(o.mod)) : '') };
+      if (CF.dice) CF.dice.show(Object.assign({ sides: o.sides, rolls: rolls }, app.lastRoll));
+      app.render(); return;
+    }
+    var ch = cur();
+    if (ch && o.snap != null) { ch.play = JSON.parse(o.snap); CF.store.put(ch); }
+    RR.quiet = true;
+    try { o.replay(); } finally { RR.quiet = false; }
+    if (app.lastRoll) app.lastRoll.label += ' · rerolled';
+    app.render();
   };
   H['note-sub'] = function (s) { app.view.noteSub = s; app.view.resetScroll = true; app.render(); };
   H['jn-add'] = function (k) {
