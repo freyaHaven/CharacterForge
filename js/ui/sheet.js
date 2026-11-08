@@ -215,7 +215,7 @@
   var TABS = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['background', 'Background'], ['notes', 'Notes'], ['extras', 'Extras']];
   function tabsPanel(ch, d, v) {
     var body = v.tab === 'actions' ? actionsTab(d, v) : v.tab === 'spells' ? spellsTab(d, v) : v.tab === 'inventory' ? inventoryTab(ch, d, v)
-      : v.tab === 'features' ? featuresTab(d) : v.tab === 'background' ? backgroundTab(d) : v.tab === 'notes' ? notesTab(ch) : extrasTab();
+      : v.tab === 'features' ? featuresTab(d, v) : v.tab === 'background' ? backgroundTab(d) : v.tab === 'notes' ? notesTab(ch) : extrasTab();
     return '<section class="card" aria-label="Character details" style="display:flex;flex-direction:column;min-width:0">' +
       '<div class="tabs" role="tablist" aria-label="Sheet sections">' + TABS.map(function (t) {
         return '<button type="button" role="tab" aria-selected="' + (v.tab === t[0]) + '" data-act="tab" data-arg="' + t[0] + '">' + h(t[1]) + '</button>';
@@ -580,10 +580,32 @@
   }
 
   /* ---------- other tabs ---------- */
-  function featuresTab(d) {
-    return d.features.map(function (f) {
+  var FEAT_SUBS = [['all', 'All'], ['class', 'Class Features'], ['species', 'Species Traits'], ['feat', 'Feats']];
+  function featuresTab(d, v) {
+    var sub = v.featSub || 'all';
+    var count = function (k) { return d.features.filter(function (f) { return k === 'all' || f.kind === k; }).length; };
+    var list = d.features.filter(function (f) { return sub === 'all' || f.kind === sub; });
+    var empty = { 'class': 'No class features yet.', species: 'No species chosen yet.', feat: 'No feats yet. You gain feats from your background, some species, and at certain class levels.' }[sub];
+    return pills(FEAT_SUBS.map(function (p) { return [p[0], p[1] + ' <small>' + count(p[0]) + '</small>', p[1] + ', ' + count(p[0])]; }), sub, 'feat-sub', 'Feature types') +
+      (list.length ? '' : '<div class="empty">' + h(empty || 'Nothing here yet.') + '</div>') +
+      list.map(function (f) {
       return '<div style="display:flex;flex-direction:column;gap:3px;padding-bottom:10px;border-bottom:1px solid var(--soft)"><span style="display:flex;flex-wrap:wrap;align-items:center;gap:8px"><b style="font-size:15px">' + h(f.name) + '</b><span class="tag">' + h(f.from) + (f.source ? ' · ' + h(f.source.replace('System Reference Document ', 'SRD ')) : '') + '</span></span><div style="font-size:14px;color:var(--body2);line-height:1.45">' + CF.util.rich(f.text) + '</div></div>';
     }).join('');
+  }
+
+  /** Alignment, gender, eyes… a grid like a printed sheet. Size comes from the species; the rest is written by the player. */
+  function characteristics(ch, d) {
+    var det = ch.details || {}, edit = !!app.view.charEdit;
+    var cells = R.CHAR_FIELDS.map(function (f) {
+      var k = f[0], val = k === 'size' ? d.size : det[k];
+      var input = k === 'size' ? '<span class="cv">' + h(d.size) + '</span>'
+        : k === 'alignment' ? '<select data-act="char-detail" data-arg="alignment" aria-label="Alignment"><option value="">—</option>' + R.ALIGNMENTS.map(function (x) { return '<option' + (det.alignment === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>'
+        : '<input type="text" data-act="char-detail" data-arg="' + k + '" data-key="char-' + k + '" value="' + h(det[k] || '') + '" placeholder="' + h(f[2] || '') + '" aria-label="' + h(f[1]) + '" autocomplete="off">';
+      return '<div class="char-cell"><span class="ck">' + h(f[1]) + '</span>' + (edit ? input : '<span class="cv">' + (val ? h(val) : '<span class="muted2">—</span>') + '</span>') + '</div>';
+    }).join('');
+    return '<div style="display:flex;flex-direction:column;gap:10px"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Characteristics</b>' +
+      '<button type="button" class="small-out" data-act="char-edit" aria-pressed="' + edit + '">' + (edit ? 'Done' : 'Edit') + '</button></span>' +
+      '<div class="char-grid">' + cells + '</div></div>';
   }
 
   function backgroundTab(d) {
@@ -608,6 +630,7 @@
         var txt = typeof bg.equipment[k] === 'string' ? bg.equipment[k] : bg.equipment[k].text;
         return '<span style="font-size:13px;line-height:1.5;' + (chosen ? '' : 'color:var(--muted2)') + '">' + (chosen ? '<span class="badge" style="font-size:11px;margin-right:6px">Chosen</span>' : '') + '<strong>' + k + ':</strong> ' + h(txt) + '</span>';
       }).join('') + '</div></div>' : '') +
+      characteristics(cur(), d) +
       '<div style="display:flex;flex-direction:column;gap:10px"><b>Personality</b>' + (P ? CF.ui.personality.editor(cur(), bg) : CF.ui.personality.view(cur())) + '</div>' +
       '<span class="muted2" style="font-size:12px">Source: ' + h(bg.sourceName) + '</span>';
   }
@@ -635,6 +658,13 @@
   H.mode = function (m) { app.go('#/c/' + encodeURIComponent(CUR_ID) + (m === 'play' ? '/play' : '')); };
   H.tab = function (t) { app.view.tab = t; app.view.resetScroll = true; app.render(); };
   H.sub = function (s) { app.view.sub = s; app.view.resetScroll = true; app.render(); };
+  H['char-edit'] = function () { app.view.charEdit = !app.view.charEdit; app.render(); };
+  H['char-detail'] = function (k, el) {
+    var ch = cur(); if (!ch) return;
+    ch.details = ch.details || {}; ch.details[k] = String(el.value).slice(0, 60);
+    CF.store.putSoon(ch, function (ok) { if (!ok) { app.flash('Couldn’t save: storage is full or blocked.', true); app.render(); } });
+  };
+  H['feat-sub'] = function (s) { app.view.featSub = s; app.view.resetScroll = true; app.render(); };
   H['spell-sub'] = function (s) { app.view.spellSub = s; app.view.resetScroll = true; app.render(); };
   H['spell-open'] = function (id) { app.view.spellOpen = id; app.render(); };
   H['act-show'] = function (n) { app.view.actHover = n; app.render(); };

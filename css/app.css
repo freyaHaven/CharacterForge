@@ -530,3 +530,12 @@ button.exh-pip:hover { border-color: var(--accent); }
 .exh-pip.on:nth-child(6) { background: var(--danger); border-color: var(--danger); }
 .exh-fx { font-size: 12px; line-height: 1.4; color: var(--ink); }
 .exh-fx.dead { color: var(--danger); font-weight: 600; }
+
+/* Characteristics grid (Background tab, builder) */
+.char-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 14px; }
+.char-grid.wide { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+@media (max-width: 640px) { .char-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.char-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.char-cell .ck { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.char-cell .cv { font-size: 14px; color: var(--body2); overflow-wrap: anywhere; }
+.char-cell input, .char-cell select { width: 100%; min-height: 34px; padding: 4px 8px; font-size: 14px; border: 1px solid var(--line2); border-radius: 6px; background: var(--surface); color: var(--ink); }

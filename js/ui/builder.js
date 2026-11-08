@@ -551,7 +551,10 @@
     }).join('') + '</div>', counter(chosenLang.length, n));
     var det = ch.details || {};
     out += sec('About your hero (optional)', '', '<label class="b-field">Alignment<select data-act="b-detail" data-arg="alignment"><option value="">Not decided</option>' +
-      ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'].map(function (x) { return '<option' + (det.alignment === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
+      R.ALIGNMENTS.map(function (x) { return '<option' + (det.alignment === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
+      '<div class="char-grid wide">' + R.CHAR_FIELDS.filter(function (f) { return f[0] !== 'alignment' && f[0] !== 'size'; }).map(function (f) {
+        return '<label class="b-field">' + h(f[1]) + '<input type="text" data-act="b-detail" data-arg="' + f[0] + '" data-key="b-' + f[0] + '" value="' + h(det[f[0]] || '') + '" placeholder="' + h(f[2] || '') + '" autocomplete="off"></label>';
+      }).join('') + '</div>' +
       '<label class="b-field">Appearance<textarea data-act="b-detail" data-arg="appearance" data-key="b-app" placeholder="Hair, eyes, clothes, scars…">' + h(det.appearance || '') + '</textarea></label>' +
       '<label class="b-field">Backstory<textarea data-act="b-detail" data-arg="backstory" data-key="b-story" placeholder="Where do they come from? What do they want?">' + h(det.backstory || '') + '</textarea></label>');
     var all = STEPS.map(function (s) { return [s, miss[s[0]]]; });

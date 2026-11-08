@@ -9,6 +9,11 @@
   R.LANGUAGES.druidic = 'Druidic';
   R.LANGUAGES['thieves-cant'] = 'Thieves’ Cant';
 
+  /** Characteristics shown on the Background tab (size comes from the species). */
+  R.ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'];
+  R.CHAR_FIELDS = [['alignment', 'Alignment'], ['gender', 'Gender', 'e.g. Female'], ['eyes', 'Eyes', 'e.g. Light purple'], ['size', 'Size'], ['height', 'Height', 'e.g. 5 ft 8 in'],
+    ['faith', 'Faith', 'e.g. Corellon'], ['hair', 'Hair', 'e.g. White'], ['skin', 'Skin', 'e.g. Pale'], ['age', 'Age', 'e.g. 120'], ['weight', 'Weight', 'e.g. 130 lb']];
+
   R.profBonus = function (level) { return 2 + Math.floor((level - 1) / 4); };
 
   /* ---------- multiclassing (PHB 2024) ---------- */
@@ -608,23 +613,23 @@
           var x = (c.pick.asi || {})[f.level], fd = x && x.feat && get('feats', x.feat);
           if (fd) {
             var inc = Object.keys(x.asi || {}).map(function (k) { return k.toUpperCase() + ' +' + x.asi[k]; }).join(', ');
-            features.push({ name: fd.name, from: f.from, text: R.featPickText(fd, x).replace(/^\n/, '') + (R.featPickText(fd, x) ? '\n' : '') + (inc ? inc + '. ' : '') + (fd.id === 'ability-score-improvement' ? '' : fd.text) + (x.skills && x.skills.length ? ' Chosen: ' + x.skills.map(function (s) { if (SKILL_BY_ID[s]) return SKILL_BY_ID[s].name; var t = get('items', s); return t ? t.name : s; }).join(', ') + '.' : ''), source: c.def.sourceName });
+            features.push({ name: fd.name, from: f.from, text: R.featPickText(fd, x).replace(/^\n/, '') + (R.featPickText(fd, x) ? '\n' : '') + (inc ? inc + '. ' : '') + (fd.id === 'ability-score-improvement' ? '' : fd.text) + (x.skills && x.skills.length ? ' Chosen: ' + x.skills.map(function (s) { if (SKILL_BY_ID[s]) return SKILL_BY_ID[s].name; var t = get('items', s); return t ? t.name : s; }).join(', ') + '.' : ''), source: c.def.sourceName, kind: 'feat' });
             return;
           }
         }
-        features.push({ name: f.name, from: f.from, text: f.text, source: f.fromSub && c.sub && c.sub.sourceName ? c.sub.sourceName : c.def.sourceName });
+        features.push({ name: f.name, from: f.from, text: f.text, source: f.fromSub && c.sub && c.sub.sourceName ? c.sub.sourceName : c.def.sourceName, kind: 'class' });
       });
     });
-    choiceInfo.forEach(function (x) { features.push(Object.assign({ source: main.def.sourceName }, x)); });
-    if (cls.length > 1) features.push({ name: 'Multiclass', from: cls.map(function (c) { return c.def.name + ' ' + c.lv; }).join(' / '), text: 'Your proficiency bonus uses your total character level (' + level + '). Saving throw proficiencies come only from your first class (' + main.def.name + '). Later classes gave you only part of their training: ' + cls.slice(1).map(function (c) { return c.def.name + ' (' + R.mcGainsText(c.def, on) + ')'; }).join('; ') + '.' + (spell && spell.casterLevel ? ' Your spell slots come from the Multiclass Spellcaster table at caster level ' + spell.casterLevel + '.' : '') + (spell && spell.hasPact && spell.slots.some(function (x) { return !x.pact; }) ? ' Pact Magic slots are kept separate and come back on a Short Rest; you can use either kind of slot for any of your spells.' : '') });
+    choiceInfo.forEach(function (x) { features.push(Object.assign({ source: main.def.sourceName, kind: 'class' }, x)); });
+    if (cls.length > 1) features.push({ kind: 'class', name: 'Multiclass', from: cls.map(function (c) { return c.def.name + ' ' + c.lv; }).join(' / '), text: 'Your proficiency bonus uses your total character level (' + level + '). Saving throw proficiencies come only from your first class (' + main.def.name + '). Later classes gave you only part of their training: ' + cls.slice(1).map(function (c) { return c.def.name + ' (' + R.mcGainsText(c.def, on) + ')'; }).join('; ') + '.' + (spell && spell.casterLevel ? ' Your spell slots come from the Multiclass Spellcaster table at caster level ' + spell.casterLevel + '.' : '') + (spell && spell.hasPact && spell.slots.some(function (x) { return !x.pact; }) ? ' Pact Magic slots are kept separate and come back on a Short Rest; you can use either kind of slot for any of your spells.' : '') });
     var bgFeature = R.backgroundFeature(ch, bg, on);
-    if (bgFeature) features.push({ name: bgFeature.name, from: bg.name + ' (background feature)', text: bgFeature.text, source: bgFeature.sourceName || bg.sourceName });
-    if (species) species.traits.forEach(function (t) { features.push({ name: t.name, from: species.name, text: t.text, source: species.sourceName }); });
-    if (lineage) features.push({ name: lineage.name, from: species.name + (species.lineageLabel ? ' · ' + species.lineageLabel : ' lineage'), text: lineage.text, source: species.sourceName });
+    if (bgFeature) features.push({ name: bgFeature.name, from: bg.name + ' (background feature)', text: bgFeature.text, source: bgFeature.sourceName || bg.sourceName, kind: 'background' });
+    if (species) species.traits.forEach(function (t) { features.push({ name: t.name, from: species.name, text: t.text, source: species.sourceName, kind: 'species' }); });
+    if (lineage) features.push({ name: lineage.name, from: species.name + (species.lineageLabel ? ' · ' + species.lineageLabel : ' lineage'), text: lineage.text, source: lineage.sourceName || species.sourceName, kind: 'species' });
     (ch.feats || []).map(function (id) { return get('feats', id); }).filter(Boolean).forEach(function (f) {
       var from = bg && (bg.feat || (ch.background && ch.background.feat)) === f.id ? bg.name + ' (origin feat)' : (ch.species && ch.species.feat === f.id ? (species && species.id !== 'human' ? species.name + ' (feat)' : 'Human (Versatile)') : 'Feat');
       var fi = featInst.find(function (x) { return x.id === f.id && !/^lvl-/.test(x.key); });
-      features.push({ name: f.name, from: from, text: f.text + R.featPickText(f, fi && fi.picks), source: f.sourceName });
+      features.push({ name: f.name, from: from, text: f.text + R.featPickText(f, fi && fi.picks), source: f.sourceName, kind: 'feat' });
     });
 
     /* weight */
